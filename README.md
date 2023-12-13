@@ -2,6 +2,7 @@
 
 # How to use:
 ## STEP-1: Find the latent representations 
+```bash
 root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
 
 ls ${root} | while read file
@@ -17,7 +18,7 @@ do
 
     qsubshcom_gpu "$command" 1 50G GAT_${name} 2:00:00 "--qos gpu-huge -queue=v100,a40-tmp,a40-quad"
 done
-
+```
 
 ## STEP-2: Find marker genes
 ```bash
@@ -42,6 +43,7 @@ done
 
 
 ## STEP-3: markers to SNP annotations
+```bash
 root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
 ls ${root} | grep h5ad | while read file
 do
@@ -60,15 +62,12 @@ do
 
 	qsubshcom "$command" 5 60G annS_${name} 24:00:00 "-array=1-22 --qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
 done
-
+```
 ## STEP-4: LDSC analysis
+```bash
 gwas_root=/storage/yangjianLab/songliyang/GWAS_trait/LDSC
 gwas_trait=/storage/yangjianLab/songliyang/GWAS_trait/GWAS_Public_Use_MaxPower.csv 
 root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
-
-num=50
-latent=latent_GVAE
-
 
 ls ${root} | grep h5ad | while read file
 do
@@ -94,7 +93,7 @@ do
   
   done
 done
-
+```
 
 
 
