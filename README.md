@@ -20,7 +20,7 @@ done
 
 
 ## STEP-2: Find marker genes
-```bash```
+```bash
 root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
 ls ${root} | grep h5ad | while read file
 do
