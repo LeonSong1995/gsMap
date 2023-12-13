@@ -20,6 +20,7 @@ done
 
 
 ## STEP-2: Find marker genes
+```bash```
 root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
 ls ${root} | grep h5ad | while read file
 do
@@ -37,7 +38,7 @@ do
 
 	qsubshcom "$command" 4 50G mkS_${name} 24:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
 done
-
+```
 
 
 ## STEP-3: markers to SNP annotations
@@ -58,6 +59,40 @@ do
 	--ld_wind_cm 1"
 
 	qsubshcom "$command" 5 60G annS_${name} 24:00:00 "-array=1-22 --qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
+done
+
+## STEP-4: LDSC analysis
+gwas_root=/storage/yangjianLab/songliyang/GWAS_trait/LDSC
+gwas_trait=/storage/yangjianLab/songliyang/GWAS_trait/GWAS_Public_Use_MaxPower.csv 
+root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
+
+num=50
+latent=latent_GVAE
+
+
+ls ${root} | grep h5ad | while read file
+do
+
+  spe_name=($(echo ${file} | awk -F "." '{print $1}')) 
+  ld_pth=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${spe_name}/snp_annotation
+  out_pth=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/ldsc_enrichment/${spe_name}
+
+
+  awk -F"," 'NR>1 {print $1}' ${gwas_trait} | awk -F ".txt" '{print $1}' | while read gwas_file
+  do
+
+  out_file=${out_pth}/${spe_name}_${gwas_file}.gz
+  command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Spatial_LDSC.py \
+  --h2 ${gwas_root}/${gwas_file}.sumstats.gz \
+  --w_file /storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights. \
+  --data_name ${spe_name} \
+  --num_processes 3 \
+  --ld_file ${ld_pth} \
+  --out_file ${out_pth}"
+
+  qsubshcom "$command" 3 100G h2_${spe_name}_${gwas_file} 24:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
+  
+  done
 done
 
 
