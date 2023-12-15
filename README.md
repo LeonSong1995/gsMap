@@ -94,8 +94,31 @@ do
   done
 done
 ```
+## STEP-5: Do Cauchy combination test for pre-defined annotation
+```bash
+root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
+ldsc_root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/ldsc_enrichment/
 
+ls ${root} | grep h5ad | while read file 
+do
+  spe_name=($(echo ${file} | awk -F "." '{print $1}')) 
 
+  ls ${ldsc_root}/${spe_name} | grep '.gz' | grep -v 'Cauchy' | while read trait
+  do
+  
+  command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Cauchy_combination.py \
+  --ldsc_path ${ldsc_root}/${spe_name} \
+  --ldsc_name ${trait} \
+  --spe_path  /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${spe_name}/h5ad/ \
+  --spe_name ${spe_name}_add_latent.h5ad \
+  --annotation layer_guess"
+  
+  qsubshcom "$command" 1 20G cahchy_${trait} 2:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
+  # $command
+
+  done
+done
+```
 
 
 
