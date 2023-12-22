@@ -53,14 +53,8 @@ class Snp_Annotator:
         """
         Load marker scores of each cell.
         """
-        # mk_score = pd.read_parquet(self.mk_score_file)
-        mk_score = pd.read_feather(self.mk_score_file)
-        mk_score.index = mk_score.HUMAN_GENE_SYM
-        mk_score.drop(columns=['HUMAN_GENE_SYM'], inplace=True)
-        mk_score.index.name = 'gene_name'
-        mk_score['all_gene'] = 1
-        mk_score = mk_score[[mk_score.columns[-1]] + mk_score.columns[0:len(mk_score.columns)-1].to_list()]        
-        #
+        mk_score = pd.read_feather(self.mk_score_file).set_index('HUMAN_GENE_SYM').rename_axis('gene_name')
+        mk_score.insert(0, 'all_gene', 1)
         return mk_score
     
     #
@@ -134,6 +128,7 @@ class Snp_Annotator:
         overlaps['Distance'] = np.abs(overlaps['Start_b'] - overlaps['TSS'])
         # 
         # For SNPs in multiple gene windows, assign them to the nearest genes (snp pos - gene tss)
+        # TODO!!!: bug here, we need the SNP with the smallest distance to the TSS, but in the original code, it calculates the distance to the start of the gene in the gtf file, only when gene in plus strand, it is the same as the TSS, but when gene in minus strand, it is not the same as the TSS
         overlaps_small = overlaps.copy()
         overlaps_small = overlaps_small.loc[overlaps_small.groupby('SNP').Distance.idxmin()]
         return overlaps_small
@@ -165,7 +160,7 @@ class Snp_Annotator:
 
         # Save baseline annotations (in parquet format)
         file_base = f'{file_base_root}/baseline.{chr}.feather'
-        baseline_score.to_feather(file_base) 
+        # baseline_score.to_feather(file_base)
         
         return 0
     
@@ -174,8 +169,6 @@ class Snp_Annotator:
         """
         Annotate SNPs of each chr. 
         """
-        chunk_index = 1
-        
         # Load the baseline file
         baseline = None
         if self.base_root is not None:
@@ -188,41 +181,38 @@ class Snp_Annotator:
         overlaps_small = self.Overlaps_gtf_bim(bim_pr)
         
         # Do annotations
-        all_chunks = len(range(0, self.n_cells, self.max_chunk))
-        
-        bar = IncrementalBar(f'Mapping the gene marker scores to SNPs in chr{chr}', max = all_chunks)
-        bar.check_tty = False 
-        for left in range(0, self.n_cells, self.max_chunk):
-            
+        all_chunks = int(np.ceil(self.n_cells / self.max_chunk))
+        bar = IncrementalBar(f'Mapping the gene marker scores to SNPs in chr{chr}', max=all_chunks)
+        bar.check_tty = False
+
+        # Preprocess bim outside the loop as it doesn't change
+        anno_template = bim[["CHR", "BP", "SNP", "CM"]]
+
+        for chunk_index, left in enumerate(range(0, self.n_cells, self.max_chunk), start=1):
             right = min(left + self.max_chunk, self.n_cells)
-            mk_score_current = self.mk_score.iloc[:,left:right]
-             
-            # Assign marker score for SNPs
-            anno = bim.copy()
-            anno = anno[["CHR", "BP", "SNP", "CM"]]
-            temp = overlaps_small[['SNP', 'gene_name','TSS']].merge(mk_score_current, on='gene_name', how='left')
-            snp_score = pd.merge(anno, temp, how='left', on='SNP').fillna(0)
+            mk_score_current = self.mk_score.iloc[:, left:right]
+
+            # Process marker scores for SNPs
+            anno = anno_template.copy()
+            merged_data = overlaps_small[['SNP', 'gene_name', 'TSS']].merge(mk_score_current, on='gene_name',
+                                                                            how='left')
+            snp_score = pd.merge(anno, merged_data, how='left', on='SNP').fillna(0)
             snp_score = snp_score.rename(columns={'gene_name': 'Gene'})
             snp_score.loc[snp_score.Gene == 0, 'Gene'] = 'None'
-            
-            # Process the baseline annotations (only for the fisrt chunk, as this will be shared by all chunks)
-            if chunk_index == 1:       
-                self.map_baseline(snp_score,baseline,chr)
+
+            # Process baseline annotations for the first chunk
+            if chunk_index == 1:
+                self.map_baseline(snp_score, baseline, chr)
                 snp_score = snp_score.drop('all_gene', axis=1)
-                
-            # Create the folder (for each chunk)
+
+            # Create the folder and save SNP annotations
             file_root = f'{self.annot_root}/{self.data_name}_chunk{chunk_index}'
-            if not os.path.exists(file_root):
-                os.makedirs(file_root, mode=0o777, exist_ok=True)
-                
-            # Save SNP annotations (in parquet format)
+            os.makedirs(file_root, mode=0o777, exist_ok=True)
             file_anno = f'{file_root}/{self.data_name}.{chr}.feather'
-            snp_score.to_feather(file_anno)
-            
-            # Update the chunk index
-            chunk_index = chunk_index + 1
+            # snp_score.to_feather(file_anno)
+
             bar.next()
-            
+
         bar.finish()
         
         return all_chunks
@@ -296,7 +286,7 @@ class LDscore_Generator:
         # Save the LD score annotations
         ldscore = ldscore.reset_index()
         ldscore.drop(columns=['index'], inplace=True)
-        ldscore.to_feather(ld_score_file)
+        # ldscore.to_feather(ld_score_file)
         
         # Compute the .M (.M_5_50) file
         M = np.atleast_1d(np.squeeze(np.asarray(np.sum(annot_matrix, axis=0))))
@@ -304,8 +294,8 @@ class LDscore_Generator:
         M_5_50 = np.atleast_1d(np.squeeze(np.asarray(np.sum(annot_matrix[ii, :], axis=0))))
         
         # Save the sum of score annotations (all and maf > 0.05)
-        np.savetxt(M_file, M, delimiter='\t')
-        np.savetxt(M_5_file, M_5_50, delimiter='\t')
+        # np.savetxt(M_file, M, delimiter='\t')
+        # np.savetxt(M_5_file, M_5_50, delimiter='\t')
 
     
     def compute_ldscore_chr(self, chr):
@@ -334,7 +324,8 @@ class LDscore_Generator:
             print(f'Loading {num_snp} SNPs')
         else:
             snp = None
-        
+
+        # TODO : these three arguments are mutually exclusive, which should be processed in the initialization of the arguments parser
         #Determin LD blocks
         x = np.array((self.ld_wind_snps, self.ld_wind_kb, self.ld_wind_cm), dtype=bool)
         if np.sum(x) != 1:
@@ -406,7 +397,25 @@ FilterFile = ID_List_Factory(['ID'], 0, None, usecols=[0])
 if __name__ == '__main__':
 
     # Store the Params
-    args = parser.parse_args()
+    TEST = True
+    if TEST:
+        name='Cortex_151507'
+        TASK_ID = 21
+        args = parser.parse_args([
+            '--mk_score_file',
+            f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/gene_markers/{name}_rank.feather',
+            '--gtf_file', '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
+            '--bfile_root', '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
+            '--annot_root',
+            f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/snp_annotation',
+            '--keep_snp', '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
+            '--annot_name', f'{name}',
+            '--const_max_size', '500',
+            '--chr', f'{TASK_ID}',
+            '--ld_wind_cm', '1'
+        ])
+    else:
+        args = parser.parse_args()
 
     # Mapping gene score to SNPs
     snp_annotate = Snp_Annotator(mk_score_file=args.mk_score_file, gtf_file=args.gtf_file,

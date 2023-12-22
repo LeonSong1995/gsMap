@@ -25,6 +25,7 @@ from scipy.sparse import issparse, vstack
 from scipy import stats
 from multiprocessing import Pool
 from tqdm import tqdm
+import tqdm.contrib.concurrent
 from scipy.stats import rankdata
 from sklearn.neighbors import NearestNeighbors
 import argparse
@@ -75,7 +76,8 @@ def _build_spatial_net(adata,annotation,num_neighbour):
             spatial_net = pd.concat((spatial_net,spatial_net_temp),axis=0)
             print(f'{ct}: {coor_temp.shape[0]} cells')
 
-        # Cells labeled as nan    
+        # TODO : in the previous Find_Latent_Representations.py, adata without annotation is removed, so this part is not executed
+        # Cells labeled as nan
         if pd.isnull(adata.obs[annotation]).any():
             cell_nan = adata.obs.index[np.where(pd.isnull(adata.obs[annotation]))[0]]
             print(f'Nan: {len(cell_nan)} cells')
@@ -92,9 +94,9 @@ def _build_spatial_net(adata,annotation,num_neighbour):
 
 def find_Neighbors_Regional(cell):
     cell_use = spatial_net.loc[spatial_net.Cell1 == cell,'Cell2'].to_list()
+    # TODO: To modify the wrongly usage of global variable `coor_latent`
     similarity  = cosine_similarity(coor_latent.loc[cell].values.reshape(1, -1), 
                                     coor_latent.loc[cell_use].values).tolist()[0]
-
     if not args.annotation is None:
         annotation = adata.obs[args.annotation]
         df = pd.DataFrame({'Cell2': cell_use, 'Similarity': similarity,'Annotation':annotation[cell_use]})
@@ -220,7 +222,8 @@ def _compute_regional_ranks(cell_tg):
     ranks_tg = ranks.loc[cell_select]
     gene_ranks_region = gmean(ranks_tg, axis = 0)
     gene_ranks_region[gene_ranks_region <= 1] = 0
-    
+
+    # Simultaneously consider the ratio of expression fractions and ranks
     gene_ranks_region = pd.DataFrame(gene_ranks_region * frac_region)
     gene_ranks_region.columns = [cell_tg]
 
@@ -247,11 +250,43 @@ parser.add_argument('--species', default=None, type=str)
 parser.add_argument('--gs_species', default=None, type=str)
 parser.add_argument('--gM_slices', default=None, type=str)
 
+'''
+root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
+ls ${root} | grep h5ad | while read file
+do
+	name=($(echo ${file} | cut -d'.' -f 1))
 
+	command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Latent_to_Gene_V2.py \
+	--latent_representation latent_GVAE \
+	--spe_path /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/h5ad \
+	--spe_name ${name}_add_latent.h5ad \
+	--num_processes 4 \
+	--type count \
+	--annotation layer_guess \
+	--num_neighbour 51 \
+	--spe_out /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/gene_markers"
 
+	qsubshcom "$command" 4 50G mkS_${name} 24:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
+done
+'''
 if __name__ == '__main__':
-
-    args = parser.parse_args()
+    TEST=True
+    if TEST:
+        name='Cortex_151507'
+        args = parser.parse_args([
+            '--latent_representation', 'latent_GVAE',
+            '--spe_path',
+            f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/h5ad',
+            '--spe_name', f'{name}_add_latent.h5ad',
+            '--num_processes', '4',
+            '--type', 'count',
+            '--annotation', 'layer_guess',
+            '--num_neighbour', '51',
+            '--spe_out',
+            f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/gene_markers'
+        ])
+    else:
+        args = parser.parse_args()
     
     # Load and process the spatial data
     print('------Loading the spatial data...')
@@ -327,7 +362,11 @@ if __name__ == '__main__':
                 for mk_cell in p.imap(_compute_regional_ranks,[cell_tg for cell_tg in cell_list]):
                         mk_score.append(np.exp(mk_cell**2)-1)
                         progress_bar.update()
-
+        # use tqdm.progress_map instead of Pool.imap
+        # mk_score = list(tqdm.contrib.concurrent.process_map(_compute_regional_ranks, [cell_tg for cell_tg in cell_list],
+        #                                                     max_workers=num_cpus,
+        #                                                     chunksize=len(cell_list)//num_cpus//10,
+        #                                                     ))
     elif args.method == 'wilcox':
         prefix = 'wilcox.feather'
 

@@ -246,7 +246,30 @@ def process_columns_cpu(n_blocks, Nbar, n_snp, chunk_index,num_processes = 2):
 # Main function of analysis
 if __name__ == '__main__':
 
-    args = parser.parse_args()
+    TEST = True
+    if TEST:
+        gwas_root = "/storage/yangjianLab/songliyang/GWAS_trait/LDSC"
+        gwas_trait = "/storage/yangjianLab/songliyang/GWAS_trait/GWAS_Public_Use_MaxPower.csv"
+        root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad"
+
+        name='Cortex_151507'
+        spe_name = name
+        ld_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{spe_name}/snp_annotation"
+        out_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/ldsc_enrichment/{spe_name}"
+        gwas_file = "ADULT1_ADULT2_ONSET_ASTHMA"
+        # Prepare the arguments list using f-strings
+        args_list = [
+            "--h2", f"{gwas_root}/{gwas_file}.sumstats.gz",
+            "--w_file", "/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.",
+            "--data_name", spe_name,
+            "--num_processes", "3",
+            "--ld_file", ld_pth,
+            "--out_file", out_pth
+        ]
+        args = parser.parse_args(args_list)
+
+    else:
+        args = parser.parse_args()
 
     gwas_name = args.h2.split('/')[-1].split('.sumstats.gz')[0]
     data_name = args.data_name
