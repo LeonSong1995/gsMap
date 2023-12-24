@@ -507,11 +507,14 @@ class PlinkBEDFile(GenotypeArrayInMemory):
         self._currentSNP += b
         return Y
 
+
 class PlinkBEDFileWithR2Cache(PlinkBEDFile):
     def compute_r2_cache(self,
                          block_left,
-                         output_cache_file_path=None,
+                         output_cache_file_dir: Path,
+                         chunk_size=1_000_000_000,
                          c=500,
+                         r2_threshold=1e-4,
                          annot=None):
 
         func = np.square
@@ -519,16 +522,38 @@ class PlinkBEDFileWithR2Cache(PlinkBEDFile):
         data, rows, cols = [], [], []
 
         def add_rfuncAB(rfuncAB, l_A, l_B):
-            non_zero_indices = np.nonzero(rfuncAB)
+            non_zero_indices = np.nonzero(rfuncAB > r2_threshold)
             data.extend(rfuncAB[non_zero_indices])
             rows.extend(l_A + non_zero_indices[0])
             cols.extend(l_B + non_zero_indices[1])
 
-        def add_rfuncBB(rfuncBB, l_B):
-            non_zero_indices = np.nonzero(rfuncBB)
+        # def add_rfuncAB(rfuncAB, l_A, l_B):
+        #     # not need select non zero indices
+        #     data.extend(rfuncAB.flatten())
+        #     rows.extend(l_A + np.repeat(np.arange(rfuncAB.shape[0]), rfuncAB.shape[1]))
+        #     cols.extend(l_B + np.tile(np.arange(rfuncAB.shape[1]), rfuncAB.shape[0]))
+
+        # def add_rfuncBB(rfuncBB, l_B):
+        #     non_zero_indices = np.nonzero(rfuncBB)
+        #     data.extend(rfuncBB[non_zero_indices])
+        #     rows.extend(l_B + non_zero_indices[0])
+        #     cols.extend(l_B + non_zero_indices[1])
+
+        def add_rfuncBB(rfuncAB, l_B):
+            non_zero_indices = np.nonzero(rfuncBB > r2_threshold)
             data.extend(rfuncBB[non_zero_indices])
             rows.extend(l_B + non_zero_indices[0])
             cols.extend(l_B + non_zero_indices[1])
+            if len(data) > chunk_size:
+                r2_sparse_matrix = csr_matrix((data, (rows, cols)), shape=(self.m, self.m), dtype='float16')
+                r2_sparse_matrix.eliminate_zeros()
+                # save the cache
+                print(f'Saving the cache file: {output_cache_file_dir}_{l_B}.npz')
+                r2_sparse_matrix.dump(output_cache_file_dir / f'{l_B}.npz')
+                # reset the data
+                data.clear()
+                rows.clear()
+                cols.clear()
 
         m, n = self.m, self.n
         block_sizes = np.array(np.arange(m) - block_left)
@@ -571,7 +596,7 @@ class PlinkBEDFileWithR2Cache(PlinkBEDFile):
         b0 = b
         md = int(c * np.floor(m / c))
         end = md + 1 if md != m else md
-        for l_B in trange(b0, end, c):
+        for l_B in trange(b0, end, c, desc=f'Compute r2 cache for {output_cache_file_dir.name}'):
             # check if the annot matrix is all zeros for this block + chunk
             # this happens w/ sparse categories (i.e., pathways)
             # update the block
@@ -612,11 +637,12 @@ class PlinkBEDFileWithR2Cache(PlinkBEDFile):
             rfuncBB = func(rfuncBB)
             # cor_sum[l_B:l_B + c, :] += np.dot(rfuncBB, annot[l_B:l_B + c, :])
             add_rfuncBB(rfuncBB, l_B)
-        cor_sum_sparse = csr_matrix((data, (rows, cols)), shape=(m, m))
-        # to float16
-        cor_sum_sparse.data = cor_sum_sparse.data.astype('float16')
-        cor_sum_sparse.eliminate_zeros()
-        return cor_sum_sparse
+        # save remaining data
+        r2_sparse_matrix = csr_matrix((data, (rows, cols)), shape=(m, m), dtype='float16')
+        r2_sparse_matrix.eliminate_zeros()
+        # save the cache
+        r2_sparse_matrix.dump(output_cache_file_dir / f'{l_B}.npz')
+        print(f'Save the cache file: {output_cache_file_dir}_{l_B}.npz')
 
 
 def compute_ldscore_chunk(self, annot_file, ld_score_file, M_file, M_5_file, geno_array, block_left, snp):
@@ -677,31 +703,30 @@ def load_bfile(bfile_chr_prefix):
     geno_array = array_obj(array_file, n, array_snps, keep_snps=None, keep_indivs=None, mafMin=None)
 
     return array_snps, array_indivs, geno_array
-def generate_r2_matrix_chr(bfile_chr_prefix, ld_wind_cm):
+
+
+def generate_r2_matrix_chr_cache(bfile_chr_prefix, ld_wind_cm, output_cache_file_dir):
     # Load genotype array
     array_snps, array_indivs, geno_array = load_bfile(bfile_chr_prefix)
     # Compute block lefts
     block_left = getBlockLefts(geno_array.df[:, 3], ld_wind_cm)
     # Compute LD score
-    r2_matrix=geno_array.compute_r2_cache(block_left)
-    # heatmap of r2_matrix
-    import seaborn as sns
-    import matplotlib.pyplot as plt
-    sns.heatmap(r2_matrix.toarray())
-    plt.show()
-
-
-    pass
+    geno_array.compute_r2_cache(block_left, output_cache_file_dir=output_cache_file_dir,
+                                chunk_size=1_000_000_000,
+                                c=100)
 
 
 def generate_r2_matrix(bfile_prefix, chromosome_list, out_dir, ld_wind_cm=1):
     out_dir = Path(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+
     for chr in chromosome_list:
+        output_cache_file_prefix = out_dir / f'chr{chr}'
+        output_cache_file_prefix.mkdir(parents=True, exist_ok=True)
         bfile_chr_prefix = bfile_prefix + '.' + str(chr)
-        chr_sparse_marix = generate_r2_matrix_chr(bfile_chr_prefix, ld_wind_cm)
-        # save sparse matrix
-        chr_sparse_marix.save(out_dir / f'chr{chr}_r2_matrix.npz')
+        generate_r2_matrix_chr_cache(bfile_chr_prefix,
+                                     ld_wind_cm=ld_wind_cm,
+                                     output_cache_file_dir=output_cache_file_prefix)
+        print(f'Compute r2 matrix for chr{chr} done!')
 
 
 if __name__ == '__main__':
