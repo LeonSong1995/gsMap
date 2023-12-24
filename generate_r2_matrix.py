@@ -14,6 +14,9 @@ from scipy.stats import t as tdist
 from typing import Tuple
 
 from scipy.sparse import csr_matrix
+from tqdm import trange
+
+
 # Define the log class
 class Logger(object):
     # -
@@ -504,6 +507,117 @@ class PlinkBEDFile(GenotypeArrayInMemory):
         self._currentSNP += b
         return Y
 
+class PlinkBEDFileWithR2Cache(PlinkBEDFile):
+    def compute_r2_cache(self,
+                         block_left,
+                         output_cache_file_path=None,
+                         c=500,
+                         annot=None):
+
+        func = np.square
+        snp_getter = self.nextSNPs
+        data, rows, cols = [], [], []
+
+        def add_rfuncAB(rfuncAB, l_A, l_B):
+            non_zero_indices = np.nonzero(rfuncAB)
+            data.extend(rfuncAB[non_zero_indices])
+            rows.extend(l_A + non_zero_indices[0])
+            cols.extend(l_B + non_zero_indices[1])
+
+        def add_rfuncBB(rfuncBB, l_B):
+            non_zero_indices = np.nonzero(rfuncBB)
+            data.extend(rfuncBB[non_zero_indices])
+            rows.extend(l_B + non_zero_indices[0])
+            cols.extend(l_B + non_zero_indices[1])
+
+        m, n = self.m, self.n
+        block_sizes = np.array(np.arange(m) - block_left)
+        block_sizes = np.ceil(block_sizes / c) * c
+        if annot is None:
+            annot = np.ones((m, 1))
+        else:
+            annot_m = annot.shape[0]
+            if annot_m != self.m:
+                raise ValueError('Incorrect number of SNPs in annot')
+        # -
+        n_a = annot.shape[1]  # number of annotations
+        # cor_sum = np.zeros((m, n_a))
+        # b = index of first SNP for which SNP 0 is not included in LD Score
+        b = np.nonzero(block_left > 0)
+        if np.any(b):
+            b = b[0][0]
+        else:
+            b = m
+        b = int(np.ceil(b / c) * c)  # round up to a multiple of c
+        if b > m:
+            c = 1
+            b = m
+
+        l_A = 0  # l_A := index of leftmost SNP in matrix A
+        A = snp_getter(b)
+        rfuncAB = np.zeros((b, c))
+        rfuncBB = np.zeros((c, c))
+        # chunk inside of block
+        for l_B in np.arange(0, b, c):  # l_B := index of leftmost SNP in matrix B
+            B = A[:, l_B:l_B + c]
+            # ld matrix
+            np.dot(A.T, B / n, out=rfuncAB)
+            # ld matrix square
+            rfuncAB = func(rfuncAB)
+            add_rfuncAB(rfuncAB, l_A, l_B)
+            # cor_sum[l_A:l_A + b, :] += np.dot(rfuncAB, annot[l_B:l_B + c, :])
+
+        # chunk to right of block
+        b0 = b
+        md = int(c * np.floor(m / c))
+        end = md + 1 if md != m else md
+        for l_B in trange(b0, end, c):
+            # check if the annot matrix is all zeros for this block + chunk
+            # this happens w/ sparse categories (i.e., pathways)
+            # update the block
+            old_b = b
+            b = int(block_sizes[l_B])
+            if l_B > b0 and b > 0:
+                # block_size can't increase more than c
+                # block_size can't be less than c unless it is zero
+                # both of these things make sense
+                A = np.hstack((A[:, old_b - b + c:old_b], B))
+                l_A += old_b - b + c
+            elif l_B == b0 and b > 0:
+                A = A[:, b0 - b:b0]
+                l_A = b0 - b
+            elif b == 0:  # no SNPs to left in window, e.g., after a sequence gap
+                A = np.array(()).reshape((n, 0))
+                l_A = l_B
+            if l_B == md:
+                c = m - md
+                rfuncAB = np.zeros((b, c))
+                rfuncBB = np.zeros((c, c))
+            if b != old_b:
+                rfuncAB = np.zeros((b, c))
+            # -
+            B = snp_getter(c)
+            p1 = np.all(annot[l_A:l_A + b, :] == 0)
+            p2 = np.all(annot[l_B:l_B + c, :] == 0)
+            if p1 and p2:
+                continue
+            # -
+            np.dot(A.T, B / n, out=rfuncAB)
+            rfuncAB = func(rfuncAB)
+            # cor_sum[l_A:l_A + b, :] += np.dot(rfuncAB, annot[l_B:l_B + c, :])
+            # cor_sum[l_B:l_B + c, :] += np.dot(annot[l_A:l_A + b, :].T, rfuncAB).T
+            add_rfuncAB(rfuncAB, l_A, l_B)
+            add_rfuncAB(rfuncAB.T, l_B, l_A)
+            np.dot(B.T, B / n, out=rfuncBB)
+            rfuncBB = func(rfuncBB)
+            # cor_sum[l_B:l_B + c, :] += np.dot(rfuncBB, annot[l_B:l_B + c, :])
+            add_rfuncBB(rfuncBB, l_B)
+        cor_sum_sparse = csr_matrix((data, (rows, cols)), shape=(m, m))
+        # to float16
+        cor_sum_sparse.data = cor_sum_sparse.data.astype('float16')
+        cor_sum_sparse.eliminate_zeros()
+        return cor_sum_sparse
+
 
 def compute_ldscore_chunk(self, annot_file, ld_score_file, M_file, M_5_file, geno_array, block_left, snp):
     """
@@ -559,7 +673,7 @@ def load_bfile(bfile_chr_prefix):
     print(f'Read list of {n} individuals from {ind_file}')
 
     # Load genotype array
-    array_file, array_obj = bfile_chr_prefix + '.bed', PlinkBEDFile
+    array_file, array_obj = bfile_chr_prefix + '.bed', PlinkBEDFileWithR2Cache
     geno_array = array_obj(array_file, n, array_snps, keep_snps=None, keep_indivs=None, mafMin=None)
 
     return array_snps, array_indivs, geno_array
@@ -569,8 +683,12 @@ def generate_r2_matrix_chr(bfile_chr_prefix, ld_wind_cm):
     # Compute block lefts
     block_left = getBlockLefts(geno_array.df[:, 3], ld_wind_cm)
     # Compute LD score
-
-
+    r2_matrix=geno_array.compute_r2_cache(block_left)
+    # heatmap of r2_matrix
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    sns.heatmap(r2_matrix.toarray())
+    plt.show()
 
 
     pass
@@ -591,3 +709,4 @@ if __name__ == '__main__':
     chromosome_list = range(1, 22)
     out_dir = Path('/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix')
     ld_wind_cm = 1
+    generate_r2_matrix(bfile_prefix, chromosome_list, out_dir, ld_wind_cm)
