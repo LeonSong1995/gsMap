@@ -1,20 +1,10 @@
 from pathlib import Path
-
-import numpy as np
-import argparse
-import pandas as pd
-import os
-import time, sys, traceback, argparse
-import numpy as np
-import glob
 import bitarray as ba
-from subprocess import call
-from itertools import product
-from scipy.stats import t as tdist
-from typing import Tuple
-
+import numpy as np
+import pandas as pd
 from scipy.sparse import csr_matrix
-from tqdm import trange
+from scipy.sparse import save_npz, load_npz
+from tqdm import trange, tqdm
 
 
 # Define the log class
@@ -545,11 +535,10 @@ class PlinkBEDFileWithR2Cache(PlinkBEDFile):
             rows.extend(l_B + non_zero_indices[0])
             cols.extend(l_B + non_zero_indices[1])
             if len(data) > chunk_size:
-                r2_sparse_matrix = csr_matrix((data, (rows, cols)), shape=(self.m, self.m), dtype='float16')
-                r2_sparse_matrix.eliminate_zeros()
                 # save the cache
-                print(f'Saving the cache file: {output_cache_file_dir}_{l_B}.npz')
-                r2_sparse_matrix.dump(output_cache_file_dir / f'{l_B}.npz')
+                print(f'Start saving the cache file: {output_cache_file_dir / f"{l_B}.npz"}')
+                r2_sparse_matrix = csr_matrix((data, (rows, cols)), shape=(self.m, self.m), dtype='float16')
+                save_npz(output_cache_file_dir / f'{l_B}.npz', r2_sparse_matrix)
                 # reset the data
                 data.clear()
                 rows.clear()
@@ -637,13 +626,29 @@ class PlinkBEDFileWithR2Cache(PlinkBEDFile):
             rfuncBB = func(rfuncBB)
             # cor_sum[l_B:l_B + c, :] += np.dot(rfuncBB, annot[l_B:l_B + c, :])
             add_rfuncBB(rfuncBB, l_B)
-        # save remaining data
-        r2_sparse_matrix = csr_matrix((data, (rows, cols)), shape=(m, m), dtype='float16')
-        r2_sparse_matrix.eliminate_zeros()
-        # save the cache
-        r2_sparse_matrix.dump(output_cache_file_dir / f'{l_B}.npz')
-        print(f'Save the cache file: {output_cache_file_dir}_{l_B}.npz')
+        if len(data) > 0:
+            # save remaining data
+            # save the cache
+            print(f'Start saving the cache file: {output_cache_file_dir / f"{l_B}.npz"}')
+            r2_sparse_matrix = csr_matrix((data, (rows, cols)), shape=(m, m), dtype='float16')
+            save_npz(output_cache_file_dir / f'{l_B}.npz', r2_sparse_matrix)
 
+    def get_ldscore_using_r2_cache(self,  annot_matrix, cached_r2_matrix_dir):
+        """
+        Compute the r2 matrix multiplication with annot_matrix
+        """
+        # Compute the r2 matrix multiplication with annot_matrix
+        cached_r2_matrix_dir=Path(cached_r2_matrix_dir)
+        # iter the cached r2 matrix files
+        result_matrix = np.zeros((self.m, annot_matrix.shape[1]))
+        cached_r2_matrix_files = list(cached_r2_matrix_dir.glob('*.npz'))
+        assert len(cached_r2_matrix_files) > 0, (f'No cached r2 matrix files in {cached_r2_matrix_dir}'
+                                                 f'Please run the function compute_r2_cache first!')
+        for r2_matrix_file in tqdm(cached_r2_matrix_files, desc=f'Compute ld score for {cached_r2_matrix_dir.name}'):
+            print(f'Compute r2 matrix multiplication for {r2_matrix_file}')
+            r2_matrix = load_npz(r2_matrix_file)
+            result_matrix += r2_matrix.dot(annot_matrix)
+        return result_matrix
 
 def compute_ldscore_chunk(self, annot_file, ld_score_file, M_file, M_5_file, geno_array, block_left, snp):
     """
@@ -704,7 +709,6 @@ def load_bfile(bfile_chr_prefix):
 
     return array_snps, array_indivs, geno_array
 
-
 def generate_r2_matrix_chr_cache(bfile_chr_prefix, ld_wind_cm, output_cache_file_dir):
     # Load genotype array
     array_snps, array_indivs, geno_array = load_bfile(bfile_chr_prefix)
@@ -716,17 +720,20 @@ def generate_r2_matrix_chr_cache(bfile_chr_prefix, ld_wind_cm, output_cache_file
                                 c=100)
 
 
-def generate_r2_matrix(bfile_prefix, chromosome_list, out_dir, ld_wind_cm=1):
-    out_dir = Path(out_dir)
+
+def generate_r2_matrix(bfile_prefix, chromosome_list, r2_cache_dir, ld_wind_cm=1):
+    r2_cache_dir = Path(r2_cache_dir)
 
     for chr in chromosome_list:
-        output_cache_file_prefix = out_dir / f'chr{chr}'
+        output_cache_file_prefix = r2_cache_dir / f'chr{chr}'
         output_cache_file_prefix.mkdir(parents=True, exist_ok=True)
         bfile_chr_prefix = bfile_prefix + '.' + str(chr)
         generate_r2_matrix_chr_cache(bfile_chr_prefix,
                                      ld_wind_cm=ld_wind_cm,
                                      output_cache_file_dir=output_cache_file_prefix)
         print(f'Compute r2 matrix for chr{chr} done!')
+
+
 
 
 if __name__ == '__main__':

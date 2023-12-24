@@ -160,7 +160,7 @@ class Snp_Annotator:
 
         # Save baseline annotations (in parquet format)
         file_base = f'{file_base_root}/baseline.{chr}.feather'
-        # baseline_score.to_feather(file_base)
+        baseline_score.to_feather(file_base)
         
         return 0
     
@@ -209,7 +209,7 @@ class Snp_Annotator:
             file_root = f'{self.annot_root}/{self.data_name}_chunk{chunk_index}'
             os.makedirs(file_root, mode=0o777, exist_ok=True)
             file_anno = f'{file_root}/{self.data_name}.{chr}.feather'
-            # snp_score.to_feather(file_anno)
+            snp_score.to_feather(file_anno)
 
             bar.next()
 
@@ -263,6 +263,14 @@ class LDscore_Generator:
     def compute_ldscore_chunk(self,annot_file,ld_score_file,M_file,M_5_file,geno_array, block_left, snp):
         """
         Compute and save LD scores for each chunk
+        :param annot_file: Path to the annotation file
+        :param ld_score_file: Path to the LD score file
+        :param M_file: Path to the M file
+        :param M_5_file: Path to the M_5_50 file
+        :param geno_array: Genotype array
+        :param block_left: Block left
+        :param snp: SNP to be kept
+        :return: None
         """
         annot_df = pd.read_feather(annot_file)
         n_annot, ma = len(annot_df.columns) - 6, len(annot_df)
@@ -286,7 +294,7 @@ class LDscore_Generator:
         # Save the LD score annotations
         ldscore = ldscore.reset_index()
         ldscore.drop(columns=['index'], inplace=True)
-        # ldscore.to_feather(ld_score_file)
+        ldscore.to_feather(ld_score_file)
         
         # Compute the .M (.M_5_50) file
         M = np.atleast_1d(np.squeeze(np.asarray(np.sum(annot_matrix, axis=0))))
@@ -294,8 +302,8 @@ class LDscore_Generator:
         M_5_50 = np.atleast_1d(np.squeeze(np.asarray(np.sum(annot_matrix[ii, :], axis=0))))
         
         # Save the sum of score annotations (all and maf > 0.05)
-        # np.savetxt(M_file, M, delimiter='\t')
-        # np.savetxt(M_5_file, M_5_50, delimiter='\t')
+        np.savetxt(M_file, M, delimiter='\t')
+        np.savetxt(M_5_file, M_5_50, delimiter='\t')
 
     
     def compute_ldscore_chr(self, chr):
