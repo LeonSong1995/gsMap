@@ -8,7 +8,7 @@ Created on Mon Apr 10 11:34:35 2023
 import logging
 import sys
 from pathlib import Path
-
+import torch
 import pyranges as pr
 from progress.bar import IncrementalBar
 
@@ -412,6 +412,15 @@ class LDscore_Generator:
             
         bar.finish()
 
+def scipy_sparse_to_torch_sparse(matrix):
+    matrix = matrix.tocoo().astype(np.float16)
+    indices = torch.from_numpy(
+        np.vstack((matrix.row, matrix.col)).astype(np.int64)
+    )
+    values = torch.from_numpy(matrix.data)
+    shape = torch.Size(matrix.shape)
+    return torch.sparse.HalfTensor(indices, values, shape)
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mk_score_file', default=None, type=str)
@@ -457,17 +466,18 @@ if __name__ == '__main__':
             '--const_max_size', '500',
             '--chr', f'{TASK_ID}',
             '--ld_wind_cm', '1',
-            '--r2_cache_dir', '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
+            # '--r2_cache_dir', '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
         ])
     else:
         args = parser.parse_args()
 
     # Mapping gene score to SNPs
-    snp_annotate = Snp_Annotator(mk_score_file=args.mk_score_file, gtf_file=args.gtf_file,
-                                 bfile_root=args.bfile_root, annot_root=args.annot_root,
-                                 base_root=args.base_root,annot_name=args.annot_name,
-                                 window_size=args.window_size, chr=args.chr, const_max_size=args.const_max_size)
-    const_max_size = snp_annotate.annotate()
+    # snp_annotate = Snp_Annotator(mk_score_file=args.mk_score_file, gtf_file=args.gtf_file,
+    #                              bfile_root=args.bfile_root, annot_root=args.annot_root,
+    #                              base_root=args.base_root,annot_name=args.annot_name,
+    #                              window_size=args.window_size, chr=args.chr, const_max_size=args.const_max_size)
+    # const_max_size = snp_annotate.annotate()
+    const_max_size = 9
 
 
     # Generate LD scores annotations

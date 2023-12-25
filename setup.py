@@ -1,11 +1,11 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name='GPS',
     version='0.1a',
-    packages=['GPS'],
+    packages= find_packages('src'),
     package_dir={'': 'src'},
-    url='',
+    url='https://github.com/LeonSong1995/GPS/tree/main',
     license='MIT',
     author='liyang,wenhao',
     author_email='songliyang@westlake.edu.cn',
