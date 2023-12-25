@@ -13,8 +13,8 @@ import pyranges as pr
 from progress.bar import IncrementalBar
 
 sys.path.append('/storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1')
-from Build_LD_Score_old import *
-from GPS.src.GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache
+from GPS.Build_LD_Score_old import *
+from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
@@ -444,13 +444,14 @@ if __name__ == '__main__':
     if TEST:
         name='Cortex_151507'
         TASK_ID = 15
+        test_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
         args = parser.parse_args([
             '--mk_score_file',
             f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/gene_markers/{name}_rank.feather',
             '--gtf_file', '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
             '--bfile_root', '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
             '--annot_root',
-            f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/snp_annotation',
+            f'{test_dir}/{name}/snp_annotation',
             '--keep_snp', '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
             '--annot_name', f'{name}',
             '--const_max_size', '500',
@@ -462,12 +463,11 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
     # Mapping gene score to SNPs
-    # snp_annotate = Snp_Annotator(mk_score_file=args.mk_score_file, gtf_file=args.gtf_file,
-    #                              bfile_root=args.bfile_root, annot_root=args.annot_root,
-    #                              base_root=args.base_root,annot_name=args.annot_name,
-    #                              window_size=args.window_size, chr=args.chr, const_max_size=args.const_max_size)
-    # const_max_size = snp_annotate.annotate()
-    const_max_size = 7
+    snp_annotate = Snp_Annotator(mk_score_file=args.mk_score_file, gtf_file=args.gtf_file,
+                                 bfile_root=args.bfile_root, annot_root=args.annot_root,
+                                 base_root=args.base_root,annot_name=args.annot_name,
+                                 window_size=args.window_size, chr=args.chr, const_max_size=args.const_max_size)
+    const_max_size = snp_annotate.annotate()
 
 
     # Generate LD scores annotations
