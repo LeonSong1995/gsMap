@@ -157,7 +157,7 @@ def main():
         # Call the function for cauchy_combination
         pass
     else:
-        print('Use "python GPS.py <subcommand> -h" for more information on a specific subcommand')
+        print('Use "python GPS_main.py <subcommand> -h" for more information on a specific subcommand')
         parser.print_help()
         exit(1)
 
