@@ -14,7 +14,7 @@ from progress.bar import IncrementalBar
 
 sys.path.append('/storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1')
 from Build_LD_Score_old import *
-from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache
+from GPS.src.GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
@@ -462,11 +462,12 @@ if __name__ == '__main__':
         args = parser.parse_args()
 
     # Mapping gene score to SNPs
-    snp_annotate = Snp_Annotator(mk_score_file=args.mk_score_file, gtf_file=args.gtf_file,
-                                 bfile_root=args.bfile_root, annot_root=args.annot_root, 
-                                 base_root=args.base_root,annot_name=args.annot_name,
-                                 window_size=args.window_size, chr=args.chr, const_max_size=args.const_max_size)
-    const_max_size = snp_annotate.annotate()
+    # snp_annotate = Snp_Annotator(mk_score_file=args.mk_score_file, gtf_file=args.gtf_file,
+    #                              bfile_root=args.bfile_root, annot_root=args.annot_root,
+    #                              base_root=args.base_root,annot_name=args.annot_name,
+    #                              window_size=args.window_size, chr=args.chr, const_max_size=args.const_max_size)
+    # const_max_size = snp_annotate.annotate()
+    const_max_size = 7
 
 
     # Generate LD scores annotations
