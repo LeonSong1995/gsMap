@@ -32,8 +32,8 @@ logger.addHandler(handler)
 
 class Snp_Annotator:
     """
-    1. Annotate SNPs based on score of genes. 
-    2. Add baseline annotations. 
+    1. Annotate SNPs based on score of genes.
+    2. Add baseline annotations.
     """
 
     def __init__(self, mk_score_file, gtf_file, bfile_root, annot_root, annot_name, chr=None, base_root=None,
@@ -61,7 +61,7 @@ class Snp_Annotator:
 
         self.data_name = annot_name
 
-    #    
+    #
     def load_marker_score(self):
         """
         Load marker scores of each cell.
@@ -73,7 +73,7 @@ class Snp_Annotator:
     #
     def load_gtf(self, mk_score):
         """
-        Load the gene annotation file (gtf). 
+        Load the gene annotation file (gtf).
         """
         print("Loading gtf data")
         #
@@ -121,7 +121,7 @@ class Snp_Annotator:
         bim_file = f'{self.bfile_root}.{chr}.bim'
         bim = pd.read_csv(bim_file, sep='\t', header=None)
         bim.columns = ["CHR", "SNP", "CM", "BP", "A1", "A2"]
-        #    
+        #
         # Transform bim to PyRanges
         bim_pr = bim.copy()
         bim_pr.columns = ["Chromosome", "SNP", "CM", "Start", "A1", "A2"]
@@ -133,13 +133,13 @@ class Snp_Annotator:
     # -
     def Overlaps_gtf_bim(self, bim_pr):
         """
-        Find overlaps between gtf and bim file. 
+        Find overlaps between gtf and bim file.
         """
         # Select the overlapped regions (SNPs in gene windows)
         overlaps = self.gtf_pr.join(bim_pr)
         overlaps = overlaps.df
         overlaps['Distance'] = np.abs(overlaps['Start_b'] - overlaps['TSS'])
-        # 
+        #
         # For SNPs in multiple gene windows, assign them to the nearest genes (snp pos - gene tss)
         # TODO!!!: bug here, we need the SNP with the smallest distance to the TSS, but in the original code, it calculates the distance to the start of the gene in the gtf file, only when gene in plus strand, it is the same as the TSS, but when gene in minus strand, it is not the same as the TSS
         overlaps_small = overlaps.copy()
@@ -166,7 +166,7 @@ class Snp_Annotator:
             baseline_score = snp_score_baseline[header + ['all_gene'] + baseline.columns.to_list()]
             baseline_score = baseline_score.loc[:, ~baseline_score.columns.duplicated()].copy()
 
-        # Create the folder (for baseline annotation)     
+        # Create the folder (for baseline annotation)
         file_base_root = f'{self.annot_root}/baseline'
         if not os.path.exists(file_base_root):
             os.makedirs(file_base_root, mode=0o777, exist_ok=True)
@@ -180,14 +180,14 @@ class Snp_Annotator:
     # -
     def annotate_chr(self, chr):
         """
-        Annotate SNPs of each chr. 
+        Annotate SNPs of each chr.
         """
         # Load the baseline file
         baseline = None
         if self.base_root is not None:
             baseline = self.load_baseline(chr)
 
-        # Load the bim file    
+        # Load the bim file
         bim_pr, bim = self.Load_bim(chr)
 
         # Find overlapping
@@ -233,7 +233,7 @@ class Snp_Annotator:
     #
     def annotate(self):
         """
-        Perform SNP annotations for each chromosome. 
+        Perform SNP annotations for each chromosome.
         """
         if self.chr == None:
             for chr in range(1, 23):
@@ -355,7 +355,7 @@ class LDscore_Generator:
         array_snps = snp_obj(snp_file)
         m = len(array_snps.IDList)
         print(f'Read list of {m} SNPs from {snp_file}')
-        # 
+        #
         # Load fam
         ind_file, ind_obj = bfile + '.fam', PlinkFAMFile
         array_indivs = ind_obj(ind_file)
@@ -379,7 +379,7 @@ class LDscore_Generator:
         x = np.array((self.ld_wind_snps, self.ld_wind_kb, self.ld_wind_cm), dtype=bool)
         if np.sum(x) != 1:
             raise ValueError('Must specify exactly one ld-wind option')
-        # 
+        #
         if self.ld_wind_snps:
             max_dist = self.ld_wind_snps
             coords = np.array(range(geno_array.m))
@@ -399,7 +399,7 @@ class LDscore_Generator:
             r2_matrix = geno_array.load_combined_r2_matrix(cached_r2_matrix_dir=self.chr_r2_cache_dir)
             self.r2_matrix = cp.sparse.csr_matrix(r2_matrix, dtype=np.float32)
 
-        # Set the baseline root   
+        # Set the baseline root
         annot_file = f'{self.annot_root}/baseline/baseline.{chr}.feather'
         ld_score_file = f'{self.annot_root}/baseline/baseline.{chr}.l2.ldscore.feather'
         M_file = f'{self.annot_root}/baseline/baseline.{chr}.l2.M'
