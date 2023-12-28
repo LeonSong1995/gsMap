@@ -6,10 +6,11 @@ Created on Tue Jul  4 19:58:58 2023
 @author: songliyang
 """
 import time
+
 import torch
-import torch.nn.functional as F
 from progress.bar import Bar
-from Model import GNN_VAE_Model
+
+from GPS.GNN_VAE.model import GNN_VAE_Model
 
 
 def reconstruction_loss(decoded, x):

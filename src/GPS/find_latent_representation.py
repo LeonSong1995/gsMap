@@ -7,8 +7,8 @@ import pandas as pd
 import scanpy as sc
 from sklearn import preprocessing
 
-from GPS.GNN_VAE.Adjacency_Matrix import Construct_Adjacency_Matrix
-from GPS.GNN_VAE.Train import Model_Train
+from GPS.GNN_VAE.adjacency_matrix import Construct_Adjacency_Matrix
+from GPS.GNN_VAE.train import Model_Train
 
 random.seed(20230609)
 
