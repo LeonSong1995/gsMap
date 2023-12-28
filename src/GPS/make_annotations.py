@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 import cupy as cp
@@ -9,7 +10,7 @@ import numpy as np
 import pandas as pd
 import pyranges as pr
 from progress.bar import IncrementalBar
-
+from typing import Optional, Literal, Union
 import GPS.config
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
@@ -344,7 +345,7 @@ class LDscore_Generator:
         if self.use_gpu:
             logger.debug('Using GPU to compute LD score')
             annot_matrix = cp.asarray(annot_matrix, dtype=cp.float32)
-            for i,r2_matrix_chunk in enumerate(self.r2_matrix_chunk_list):
+            for i, r2_matrix_chunk in enumerate(self.r2_matrix_chunk_list):
                 r2_matrix_chunk = cp.sparse.csr_matrix(r2_matrix_chunk, dtype=cp.float32)
                 lN_chunk = cp.asnumpy(r2_matrix_chunk @ annot_matrix)
                 # convert to float16
@@ -355,7 +356,7 @@ class LDscore_Generator:
                     lN = np.concatenate([lN, lN_chunk], axis=0)
         else:
             logger.debug('Using CPU to compute LD score')
-            for i,r2_matrix_chunk in enumerate(self.r2_matrix_chunk_list):
+            for i, r2_matrix_chunk in enumerate(self.r2_matrix_chunk_list):
                 lN_chunk = r2_matrix_chunk @ annot_matrix
                 # convert to float16
                 lN_chunk = lN_chunk.astype(np.float16)
@@ -364,6 +365,7 @@ class LDscore_Generator:
                 else:
                     lN = np.concatenate([lN, lN_chunk], axis=0)
         return lN
+
     def compute_ldscore_chr(self, chr):
         PlinkBIMFile = ID_List_Factory(['CHR', 'SNP', 'CM', 'BP', 'A1', 'A2'], 1, '.bim', usecols=[0, 1, 2, 3, 4, 5])
         PlinkFAMFile = ID_List_Factory(['IID'], 0, '.fam', usecols=[1])
@@ -414,7 +416,7 @@ class LDscore_Generator:
             logger.info('Loading r2 cache')
             r2_matrix = geno_array.load_combined_r2_matrix(cached_r2_matrix_dir=self.chr_r2_cache_dir)
             self.r2_matrix_chunk_list = [r2_matrix[i:i + self.config.snps_per_chunk, :] for i in
-                                    range(0, r2_matrix.shape[0], self.config.snps_per_chunk)]
+                                         range(0, r2_matrix.shape[0], self.config.snps_per_chunk)]
             logger.info('Finished loading r2 cache')
         # Set the baseline root
         annot_file = f'{self.annot_root}/baseline/baseline.{chr}.feather'
@@ -474,7 +476,32 @@ def get_make_annotation_parser(parser):
 
 # Defin the Container for plink files
 
-def run_make_annotation(make_annotation_config: GPS.config.MAKE_ANNOTATION_Conifg):
+def run_make_annotation(args: Union[argparse.Namespace, GPS.config.MAKE_ANNOTATION_Conifg]):
+    if not isinstance(args, GPS.config.MAKE_ANNOTATION_Conifg):
+        sample_config = GPS.config.ST_SAMPLE_INFO(
+            sample_hdf5=args.sample_hdf5,
+            sample_name=args.sample_name,
+            annotation_layer_name=args.annotation_layer_name,
+            is_count=args.is_count
+        )
+        make_annotation_config = GPS.config.MAKE_ANNOTATION_Conifg(
+            sample_info=sample_config,
+            gtf_file=args.gtf_file,
+            bfile_root=args.bfile_root,
+            baseline_annotation=args.baseline_annotation,
+            keep_snp_root=args.keep_snp_root,
+            chr=args.chr,
+            window_size=args.window_size,
+            cells_per_chunk=args.cells_per_chunk_size,
+            ld_wind=args.ld_wind,
+            ld_wind_unit=args.ld_wind_unit,
+            r2_cache_dir=args.r2_cache_dir,
+            output_dir=args.output_dir,
+            use_gpu=args.use_gpu,
+            snps_per_chunk=args.snps_per_chunk
+        )
+    else:
+        make_annotation_config = args
     mk_score_file = Path(
         make_annotation_config.output_dir) / f'gene_markers/{make_annotation_config.sample_info.sample_name}_rank.feather'
     # snp_annotate = Snp_Annotator(mk_score_file=mk_score_file,
@@ -506,7 +533,7 @@ if __name__ == '__main__':
     TEST = True
     if TEST:
         name = 'Cortex_151507'
-        TASK_ID = 1
+        TASK_ID = 2
         test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
 
         sample_config = GPS.config.ST_SAMPLE_INFO(
@@ -531,28 +558,8 @@ if __name__ == '__main__':
             use_gpu=True,
             snps_per_chunk=100_000
         )
+        run_make_annotation(make_annotation_config)
 
     else:
         args = parser.parse_args()
-        sample_config = GPS.config.ST_SAMPLE_INFO(
-            sample_hdf5=args.sample_hdf5,
-            sample_name=args.sample_name,
-            annotation_layer_name=args.annotation_layer_name,
-            is_count=args.is_count
-        )
-        make_annotation_config = GPS.config.MAKE_ANNOTATION_Conifg(
-            sample_info=sample_config,
-            gtf_file=args.gtf_file,
-            bfile_root=args.bfile_root,
-            baseline_annotation=args.baseline_annotation,
-            keep_snp_root=args.keep_snp_root,
-            chr=args.chr,
-            window_size=args.window_size,
-            chunk_size=args.chunk_size,
-            ld_wind=args.ld_wind,
-            ld_wind_unit=args.ld_wind_unit,
-            r2_cache_dir=args.r2_cache_dir,
-            output_dir=args.output_dir,
-        )
-
-    run_make_annotation(make_annotation_config)
+        run_make_annotation(args)
