@@ -31,7 +31,6 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--input_pca', default=True, type=bool, help="Whether to perform PCA on input features. Default is True.")
     parser.add_argument('--n_comps', default=300, type=int, help="Number of principal components to keep if PCA is performed. Default is 300.")
     parser.add_argument('--weighted_adj', default=False, type=bool, help="Whether to use a weighted adjacency matrix in GCN. Default is False.")
-    parser.add_argument('--var', default=False, type=bool, )
     parser.add_argument('--nheads', default=3, type=int, help="Number of heads in the attention mechanism of the GNN. Default is 3.")
     parser.add_argument('--convergence_threshold', default=1e-4, type=float, help="Threshold for convergence during training. Training stops if the loss change is below this threshold. Default is 1e-4.")
     parser.add_argument('--hierarchically', default=False, type=bool, help="Whether to find latent representations hierarchically. Default is False.")
@@ -40,7 +39,8 @@ def add_sample_info_args(parser):
     parser.add_argument('--sample_hdf5', default=None, type=str, help='Path to the sample hdf5 file', required=True)
     parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
     parser.add_argument('--annotation_layer_name', default=None, type=str, help='Name of the annotation layer',dest='annotation')
-    parser.add_argument('--is_count', action='store_true', help='Whether the data is count data')
+    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts'). This specifies the data layer to be used.",)
+
 
 
 # The class for finding latent representations
@@ -51,7 +51,7 @@ class Latent_Representation_Finder:
         self.Params = Params
 
         # Standard process
-        if self.Params.is_count:
+        if self.Params.type == 'count' or self.Params.type == 'counts':
             self.adata.X = self.adata.layers[self.Params.type]
             sc.pp.highly_variable_genes(self.adata, flavor="seurat_v3", n_top_genes=self.Params.feat_cell)
             sc.pp.normalize_total(self.adata, target_sum=1e4)
@@ -176,7 +176,7 @@ if __name__ == '__main__':
                 '--sample_hdf5','/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad/Cortex_151507.h5ad',
                 '--sample_name', name,
                 '--annotation_layer_name','layer_guess',
-                '--is_count',
+                '--type','count',
                 '--output_dir',f'{test_dir}/{name}',
             ]
 
