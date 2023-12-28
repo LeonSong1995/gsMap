@@ -51,7 +51,7 @@ class MAKE_ANNOTATION_Conifg:
     window_size: int = 50_000
     chunk_size: int = 100
     ld_wind: int = 1
-    ld_wind_unit: Literal['cm', 'bp'] = 'cm'
+    ld_wind_unit: Literal['CM', 'BP','SNP'] = 'CM'
     r2_cache_dir: Optional[str] = None
     output_dir:str = II('output_dir')
 

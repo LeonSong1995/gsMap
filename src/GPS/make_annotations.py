@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import time
 from pathlib import Path
 
 import cupy as cp
@@ -242,41 +243,41 @@ class Snp_Annotator:
 
 
 class LDscore_Generator:
-    def __init__(self, bfile_root, annot_root, const_max_size, annot_name,
-                 chr=None, keep_snp=None,
-                 r2_cache_dir=None,ld_wind=None,ld_wind_unit='cm'
-                 ):
-        self.bfile_root = bfile_root
-        self.annot_root = annot_root
-        self.ld_wind=ld_wind
-        self.ld_wind_unit=ld_wind_unit
-        self.keep_snp = keep_snp
-        self.chr = chr
-
-        self.data_name = annot_name
+    def __init__(self, make_annotation_config: GPS.config.MAKE_ANNOTATION_Conifg, const_max_size):
+        self.bfile_root = make_annotation_config.bfile_root
+        self.annot_root = Path(make_annotation_config.output_dir) / 'snp_annotation'
         self.const_max_size = const_max_size
+        self.data_name = make_annotation_config.sample_info.sample_name
+        self.chr = make_annotation_config.chr
+        self.ld_wind = make_annotation_config.ld_wind
+        self.ld_wind_unit = make_annotation_config.ld_wind_unit
+        self.keep_snp = make_annotation_config.keep_snp_root
+        self.r2_cache_dir = make_annotation_config.r2_cache_dir
+        self.use_gpu = make_annotation_config.use_gpu
+        self.config = make_annotation_config
         self.generate_r2_cache = False
 
         # Set the r2 cache
-        if r2_cache_dir is None:
+        if self.r2_cache_dir is None:
             logger.info('No r2 cache directory specified, will not use r2 cache')
             self.chr_r2_cache_dir = None
         else:
-            assert chr is not None, 'Must specify chr when using r2 cache'
-            chr_r2_cache_dir = os.path.join(r2_cache_dir, f'chr{chr}')
+            assert self.chr is not None, 'Must specify chr when using r2 cache'
+            chr_r2_cache_dir = os.path.join(self.r2_cache_dir, f'chr{self.chr}')
             self.chr_r2_cache_dir = chr_r2_cache_dir
             if not os.path.exists(os.path.join(chr_r2_cache_dir, 'combined_r2_matrix.npz')):
                 logger.warning(
-                    f'No r2 cache found for chr{chr}, will generate r2 cache for this chromosome, first time may take a while')
+                    f'No r2 cache found for chr{self.chr}, will generate r2 cache for this chromosome, first time may take a while')
                 os.makedirs(chr_r2_cache_dir, exist_ok=True, mode=0o777, )
                 self.generate_r2_cache = True
             else:
-                logger.info(f'Found r2 cache for chr{chr}, will use r2 cache for this chromosome')
+                logger.info(f'Found r2 cache for chr{self.chr}, will use r2 cache for this chromosome')
 
     def compute_ldscore(self):
         """
         Compute LD scores.
         """
+        start_time = time.time()
         if self.chr == None:
             for chr in range(1, 23):
                 logger.info(f'Computing LD scores for chr{chr}')
@@ -286,6 +287,8 @@ class LDscore_Generator:
             logger.info(f'Computing LD scores for chr{self.chr}')
             self.compute_ldscore_chr(chr=self.chr)
             logger.info(f'Finished computing LD scores for chr{self.chr}')
+        end_time = time.time()
+        logger.info(f'Finished computing LD scores, time elapsed: {(end_time - start_time) / 60} minutes')
 
     def compute_ldscore_chunk(self, annot_file, ld_score_file, M_file, M_5_file, geno_array: PlinkBEDFileWithR2Cache,
                               block_left, snp):
@@ -440,7 +443,8 @@ def get_make_annotation_parser(parser):
     parser.add_argument('--chunk_size', default=500, type=int,
                         help='Chunk size for number of cells for batch processing')
     parser.add_argument('--ld_wind', default=1, type=float)
-    parser.add_argument('--ld_wind_unit', default='CM', type=str, choices=['CM', 'BP','SNP'], help='LD window size unit')
+    parser.add_argument('--ld_wind_unit', default='CM', type=str, choices=['CM', 'BP', 'SNP'],
+                        help='LD window size unit')
     parser.add_argument('--r2_cache_dir', default=None, type=str, help='Directory for r2 cache')
     parser.add_argument('--output_dir', default=None, type=str, help='Output directory', required=True)
 
@@ -449,29 +453,21 @@ def get_make_annotation_parser(parser):
 
 def run_make_annotation(make_annotation_config: GPS.config.MAKE_ANNOTATION_Conifg):
     mk_score_file = Path(
-        make_annotation_config.output_dir) / f'{make_annotation_config.sample_info.sample_name}_rank.feather'
-    snp_annotate = Snp_Annotator(mk_score_file=mk_score_file,
-                                 gtf_file=make_annotation_config.gtf_file,
-                                 bfile_root=make_annotation_config.bfile_root,
-                                 annot_root=Path(make_annotation_config.output_dir)/'snp_annotation',
-                                 annot_name=make_annotation_config.sample_info.sample_name,
-                                 chr=make_annotation_config.chr,
-                                 base_root=make_annotation_config.baseline_annotation,
-                                 window_size=make_annotation_config.window_size,
-                                 const_max_size=make_annotation_config.chunk_size,
-                                 )
-    const_max_size = snp_annotate.annotate()
-
+        make_annotation_config.output_dir) / f'gene_markers/{make_annotation_config.sample_info.sample_name}_rank.feather'
+    # snp_annotate = Snp_Annotator(mk_score_file=mk_score_file,
+    #                              gtf_file=make_annotation_config.gtf_file,
+    #                              bfile_root=make_annotation_config.bfile_root,
+    #                              annot_root=Path(make_annotation_config.output_dir)/'snp_annotation',
+    #                              annot_name=make_annotation_config.sample_info.sample_name,
+    #                              chr=make_annotation_config.chr,
+    #                              base_root=make_annotation_config.baseline_annotation,
+    #                              window_size=make_annotation_config.window_size,
+    #                              const_max_size=make_annotation_config.chunk_size,
+    #                              )
+    # const_max_size = snp_annotate.annotate()
+    const_max_size = 9
     ldscore_generate = LDscore_Generator(
-        bfile_root=make_annotation_config.bfile_root,
-        annot_root=Path(make_annotation_config.output_dir)/'snp_annotation',
-        const_max_size=const_max_size,
-        annot_name=make_annotation_config.sample_info.sample_name,
-        chr=make_annotation_config.chr,
-        ld_wind=make_annotation_config.ld_wind,
-        ld_wind_unit=make_annotation_config.ld_wind_unit,
-        keep_snp=make_annotation_config.keep_snp_root,
-        r2_cache_dir=make_annotation_config.r2_cache_dir,
+        make_annotation_config, const_max_size
     )
     ldscore_generate.compute_ldscore()
 
@@ -506,7 +502,7 @@ if __name__ == '__main__':
             window_size=50000,
             chunk_size=100,
             ld_wind=1,
-            ld_wind_unit='cm',
+            ld_wind_unit='CM',
             r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
             output_dir=f'{test_dir}/{name}/',
         )
