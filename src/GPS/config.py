@@ -49,10 +49,12 @@ class MAKE_ANNOTATION_Conifg:
     keep_snp_root: Optional[str] = None
     chr: Optional[int] = None
     window_size: int = 50_000
-    chunk_size: int = 100
+    cells_per_chunk: int = 100
     ld_wind: int = 1
     ld_wind_unit: Literal['CM', 'BP','SNP'] = 'CM'
     r2_cache_dir: Optional[str] = None
+    use_gpu: bool = True
+    snps_per_chunk :int = 50_000
     output_dir:str = II('output_dir')
 
 @dataclass

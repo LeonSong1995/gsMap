@@ -341,11 +341,29 @@ class LDscore_Generator:
         np.savetxt(M_5_file, M_5_50, delimiter='\t')
 
     def get_ldscore_use_cache(self, annot_matrix, ):
-
-        return cp.asnumpy(self.r2_matrix.dot(
-            cp.asarray(annot_matrix
-                       )))
-
+        if self.use_gpu:
+            logger.debug('Using GPU to compute LD score')
+            annot_matrix = cp.asarray(annot_matrix, dtype=cp.float32)
+            for i in range(0, annot_matrix.shape[0], self.config.snps_per_chunk):
+                r2_matrix_chunk = self.r2_matrix[i:i + self.config.snps_per_chunk, :]
+                r2_matrix_chunk = cp.sparse.csr_matrix(r2_matrix_chunk, dtype=cp.float32)
+                lN_chunk = cp.asnumpy(r2_matrix_chunk @ annot_matrix)
+                # convert to float16
+                lN_chunk = lN_chunk.astype(np.float16)
+                if i == 0:
+                    lN = lN_chunk
+                else:
+                    lN = np.concatenate([lN, lN_chunk], axis=0)
+        else:
+            logger.debug('Using CPU to compute LD score')
+            for i in range(0, annot_matrix.shape[0], self.config.snps_per_chunk):
+                r2_matrix_chunk = self.r2_matrix[i:i + self.config.snps_per_chunk, :]
+                lN_chunk = r2_matrix_chunk @ annot_matrix
+                if i == 0:
+                    lN = lN_chunk
+                else:
+                    lN = np.concatenate([lN, lN_chunk], axis=0)
+        return lN
     def compute_ldscore_chr(self, chr):
         PlinkBIMFile = ID_List_Factory(['CHR', 'SNP', 'CM', 'BP', 'A1', 'A2'], 1, '.bim', usecols=[0, 1, 2, 3, 4, 5])
         PlinkFAMFile = ID_List_Factory(['IID'], 0, '.fam', usecols=[1])
@@ -394,7 +412,7 @@ class LDscore_Generator:
             logger.info(f'Finished generating r2 cache for chr{chr}')
         if self.chr_r2_cache_dir is not None:
             r2_matrix = geno_array.load_combined_r2_matrix(cached_r2_matrix_dir=self.chr_r2_cache_dir)
-            self.r2_matrix = cp.sparse.csr_matrix(r2_matrix, dtype=np.float32)
+            self.r2_matrix = r2_matrix
 
         # Set the baseline root
         annot_file = f'{self.annot_root}/baseline/baseline.{chr}.feather'
@@ -440,12 +458,15 @@ def get_make_annotation_parser(parser):
     parser.add_argument('--chr', default=None, type=int, help='Chromosome ID', )
     parser.add_argument('--window_size', default=50000, type=int,
                         help='Window size for SNP annotation')
-    parser.add_argument('--chunk_size', default=500, type=int,
+    parser.add_argument('--cells_per_chunk_size', default=500, type=int,
                         help='Chunk size for number of cells for batch processing')
     parser.add_argument('--ld_wind', default=1, type=float)
     parser.add_argument('--ld_wind_unit', default='CM', type=str, choices=['CM', 'BP', 'SNP'],
                         help='LD window size unit')
     parser.add_argument('--r2_cache_dir', default=None, type=str, help='Directory for r2 cache')
+    parser.add_argument('--use_gpu', action='store_true', help='Whether to use GPU to compute LD score')
+    parser.add_argument('--snps_per_chunk', default=50_000, type=int,
+                        help='Chunk size for number of SNPs for batch processing')
     parser.add_argument('--output_dir', default=None, type=str, help='Output directory', required=True)
 
 
@@ -500,11 +521,13 @@ if __name__ == '__main__':
             keep_snp_root='/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
             chr=TASK_ID,
             window_size=50000,
-            chunk_size=100,
+            cells_per_chunk=500,
             ld_wind=1,
             ld_wind_unit='CM',
             r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
             output_dir=f'{test_dir}/{name}/',
+            use_gpu=True,
+            snps_per_chunk=100_000
         )
 
     else:
