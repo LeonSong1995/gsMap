@@ -223,6 +223,8 @@ class GPS:
     make_annotation: MAKE_ANNOTATION = field(default_factory=MAKE_ANNOTATION)
     output_dir: str = MISSING
 
+
+
 cf: GPS = OmegaConf.structured(GPS)
 config_yaml_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/test/config.yaml'
 OmegaConf.to_yaml(cf)

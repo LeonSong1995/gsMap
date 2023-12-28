@@ -468,7 +468,7 @@ if __name__ == '__main__':
     TEST = True
     if TEST:
         name = 'Cortex_151507'
-        TASK_ID = 1
+        TASK_ID = 21
         test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
         args = parser.parse_args([
             '--mk_score_file',

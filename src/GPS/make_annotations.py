@@ -1,26 +1,19 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 10 11:34:35 2023
-
-@author: songliyang
-"""
+import argparse
 import logging
-import sys
+import os
 from pathlib import Path
 
+import cupy as cp
 import numpy as np
-import torch
+import pandas as pd
 import pyranges as pr
 from progress.bar import IncrementalBar
-import cupy as cp
+
+import GPS.config
+from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
 pool = cp.cuda.MemoryPool(cp.cuda.malloc_managed)
 cp.cuda.set_allocator(pool.malloc)
-
-sys.path.append('/storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1')
-from GPS.Build_LD_Score_old import *
-from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -92,13 +85,20 @@ class Snp_Annotator:
         gtf = gtf.drop_duplicates(subset='gene_name', keep="first")
         #
         # Process the GTF (open 100-KB window: Tss - Ted)
-        gtf_bed = gtf[['Chromosome', 'Start', 'End', 'gene_name']].copy()
+        gtf_bed = gtf[['Chromosome', 'Start', 'End', 'gene_name', 'Strand']].copy()
         gtf_bed.loc[:, 'TSS'] = gtf_bed['Start']
         gtf_bed.loc[:, 'TED'] = gtf_bed['End']
 
         gtf_bed.loc[:, 'Start'] = gtf_bed['TSS'] - self.window_size
         gtf_bed.loc[:, 'End'] = gtf_bed['TED'] + self.window_size
         gtf_bed.loc[gtf_bed['Start'] < 0, 'Start'] = 0
+        #
+        # Correct the negative strand
+        tss_neg = gtf_bed.loc[gtf_bed['Strand'] == '-', 'TSS']
+        ted_neg = gtf_bed.loc[gtf_bed['Strand'] == '-', 'TED']
+        gtf_bed.loc[gtf_bed['Strand'] == '-', 'TSS'] = ted_neg
+        gtf_bed.loc[gtf_bed['Strand'] == '-', 'TED'] = tss_neg
+        gtf_bed = gtf_bed.drop('Strand', axis=1)
         #
         # Transform the GTF to PyRanges
         gtf_pr = pr.PyRanges(gtf_bed)
@@ -139,9 +139,6 @@ class Snp_Annotator:
         overlaps = self.gtf_pr.join(bim_pr)
         overlaps = overlaps.df
         overlaps['Distance'] = np.abs(overlaps['Start_b'] - overlaps['TSS'])
-        #
-        # For SNPs in multiple gene windows, assign them to the nearest genes (snp pos - gene tss)
-        # TODO!!!: bug here, we need the SNP with the smallest distance to the TSS, but in the original code, it calculates the distance to the start of the gene in the gtf file, only when gene in plus strand, it is the same as the TSS, but when gene in minus strand, it is not the same as the TSS
         overlaps_small = overlaps.copy()
         overlaps_small = overlaps_small.loc[overlaps_small.groupby('SNP').Distance.idxmin()]
         return overlaps_small
@@ -246,14 +243,13 @@ class Snp_Annotator:
 
 class LDscore_Generator:
     def __init__(self, bfile_root, annot_root, const_max_size, annot_name,
-                 chr=None, ld_wind_snps=None, ld_wind_kb=None, ld_wind_cm=1, keep_snp=None,
-                 r2_cache_dir=None,
+                 chr=None, keep_snp=None,
+                 r2_cache_dir=None,ld_wind=None,ld_wind_unit='cm'
                  ):
         self.bfile_root = bfile_root
         self.annot_root = annot_root
-        self.ld_wind_snps = ld_wind_snps
-        self.ld_wind_kb = ld_wind_kb
-        self.ld_wind_cm = ld_wind_cm
+        self.ld_wind=ld_wind
+        self.ld_wind_unit=ld_wind_unit
         self.keep_snp = keep_snp
         self.chr = chr
 
@@ -348,6 +344,9 @@ class LDscore_Generator:
                        )))
 
     def compute_ldscore_chr(self, chr):
+        PlinkBIMFile = ID_List_Factory(['CHR', 'SNP', 'CM', 'BP', 'A1', 'A2'], 1, '.bim', usecols=[0, 1, 2, 3, 4, 5])
+        PlinkFAMFile = ID_List_Factory(['IID'], 0, '.fam', usecols=[1])
+
         bfile = f"{self.bfile_root}.{chr}"
         #
         # Load bim file
@@ -374,20 +373,15 @@ class LDscore_Generator:
         else:
             snp = None
 
-        # TODO : these three arguments are mutually exclusive, which should be processed in the initialization of the arguments parser
-        # Determin LD blocks
-        x = np.array((self.ld_wind_snps, self.ld_wind_kb, self.ld_wind_cm), dtype=bool)
-        if np.sum(x) != 1:
-            raise ValueError('Must specify exactly one ld-wind option')
-        #
-        if self.ld_wind_snps:
-            max_dist = self.ld_wind_snps
+        # Load the annotations of the baseline
+        if self.ld_wind_unit == 'SNP':
+            max_dist = self.ld_wind
             coords = np.array(range(geno_array.m))
-        elif self.ld_wind_kb:
-            max_dist = self.ld_wind_kb * 1000
+        elif self.ld_wind_unit == 'BP':
+            max_dist = self.ld_wind * 1000
             coords = np.array(array_snps.df['BP'])[geno_array.kept_snps]
-        elif self.ld_wind_cm:
-            max_dist = self.ld_wind_cm
+        elif self.ld_wind_unit == 'CM':
+            max_dist = self.ld_wind
             coords = np.array(array_snps.df['CM'])[geno_array.kept_snps]
         block_left = getBlockLefts(coords, max_dist)
         if self.generate_r2_cache:
@@ -427,42 +421,67 @@ class LDscore_Generator:
         bar.finish()
 
 
-def scipy_sparse_to_torch_sparse(matrix):
-    matrix = matrix.tocoo().astype(np.float16)
-    indices = torch.from_numpy(
-        np.vstack((matrix.row, matrix.col)).astype(np.int64)
-    )
-    values = torch.from_numpy(matrix.data)
-    shape = torch.Size(matrix.shape)
-    return torch.sparse.HalfTensor(indices, values, shape)
+def get_sample_info_parser(parser):
+    parser.add_argument('--sample_hdf5', default=None, type=str, help='Path to the sample hdf5 file', )
+    parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
+    parser.add_argument('--annotation_layer_name', default=None, type=str, help='Name of the annotation layer')
+    parser.add_argument('--is_count', action='store_true', help='Whether the data is count data')
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--mk_score_file', default=None, type=str)
-parser.add_argument('--gtf_file', default=None, type=str)
-parser.add_argument('--bfile_root', default=None, type=str)
-parser.add_argument('--annot_root', default=None, type=str)
-parser.add_argument('--annot_name', default=None, type=str)
-parser.add_argument('--base_root', default=None, type=str)
-parser.add_argument('--keep_snp', default=None, type=str)
-
-parser.add_argument('--chr', default=None, type=int)
-parser.add_argument('--window_size', default=50000, type=int)
-parser.add_argument('--const_max_size', default=100, type=int)
-parser.add_argument('--ld_wind_snps', default=None, type=float)
-parser.add_argument('--ld_wind_kb', default=None, type=float)
-parser.add_argument('--ld_wind_cm', default=None, type=float)
-parser.add_argument('--r2_cache_dir', default=None, type=str)
-
-
+def get_make_annotation_parser(parser):
+    parser.add_argument('--gtf_file', default=None, type=str, help='Path to the GTF file', required=True)
+    parser.add_argument('--bfile_root', default=None, type=str, help='Bfile root for LD score', required=True)
+    parser.add_argument('--baseline_annotation', default=None, type=str, help='Baseline annotation')
+    parser.add_argument('--keep_snp_root', default=None, type=str,
+                        help='Only keep these SNP file after calculating LD score')
+    parser.add_argument('--chr', default=None, type=int, help='Chromosome ID', )
+    parser.add_argument('--window_size', default=50000, type=int,
+                        help='Window size for SNP annotation')
+    parser.add_argument('--chunk_size', default=500, type=int,
+                        help='Chunk size for number of cells for batch processing')
+    parser.add_argument('--ld_wind', default=1, type=float)
+    parser.add_argument('--ld_wind_unit', default='CM', type=str, choices=['CM', 'BP','SNP'], help='LD window size unit')
+    parser.add_argument('--r2_cache_dir', default=None, type=str, help='Directory for r2 cache')
+    parser.add_argument('--output_dir', default=None, type=str, help='Output directory', required=True)
 
 
 # Defin the Container for plink files
-PlinkBIMFile = ID_List_Factory(['CHR', 'SNP', 'CM', 'BP', 'A1', 'A2'], 1, '.bim', usecols=[0, 1, 2, 3, 4, 5])
-PlinkFAMFile = ID_List_Factory(['IID'], 0, '.fam', usecols=[1])
-FilterFile = ID_List_Factory(['ID'], 0, None, usecols=[0])
+
+def run_make_annotation(make_annotation_config: GPS.config.MAKE_ANNOTATION_Conifg):
+    mk_score_file = Path(
+        make_annotation_config.output_dir) / f'{make_annotation_config.sample_info.sample_name}_rank.feather'
+    snp_annotate = Snp_Annotator(mk_score_file=mk_score_file,
+                                 gtf_file=make_annotation_config.gtf_file,
+                                 bfile_root=make_annotation_config.bfile_root,
+                                 annot_root=Path(make_annotation_config.output_dir)/'snp_annotation',
+                                 annot_name=make_annotation_config.sample_info.sample_name,
+                                 chr=make_annotation_config.chr,
+                                 base_root=make_annotation_config.baseline_annotation,
+                                 window_size=make_annotation_config.window_size,
+                                 const_max_size=make_annotation_config.chunk_size,
+                                 )
+    const_max_size = snp_annotate.annotate()
+
+    ldscore_generate = LDscore_Generator(
+        bfile_root=make_annotation_config.bfile_root,
+        annot_root=Path(make_annotation_config.output_dir)/'snp_annotation',
+        const_max_size=const_max_size,
+        annot_name=make_annotation_config.sample_info.sample_name,
+        chr=make_annotation_config.chr,
+        ld_wind=make_annotation_config.ld_wind,
+        ld_wind_unit=make_annotation_config.ld_wind_unit,
+        keep_snp=make_annotation_config.keep_snp_root,
+        r2_cache_dir=make_annotation_config.r2_cache_dir,
+    )
+    ldscore_generate.compute_ldscore()
+
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='make_annotations.py',
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    get_sample_info_parser(parser)
+    get_make_annotation_parser(parser)
+    parser.print_help()
 
     # Store the Params
     TEST = True
@@ -470,36 +489,49 @@ if __name__ == '__main__':
         name = 'Cortex_151507'
         TASK_ID = 1
         test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
-        args = parser.parse_args([
-            '--mk_score_file',
-            f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/gene_markers/{name}_rank.feather',
-            '--gtf_file', '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
-            '--bfile_root', '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
-            '--annot_root',
-            f'{test_dir}/{name}/snp_annotation',
-            '--keep_snp', '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
-            '--annot_name', f'{name}',
-            '--const_max_size', '500',
-            '--chr', f'{TASK_ID}',
-            '--ld_wind_cm', '1',
-            '--r2_cache_dir', '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
-        ])
+
+        sample_config = GPS.config.ST_SAMPLE_INFO(
+            sample_hdf5=f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad/{name}.hdf5',
+            sample_name=name,
+            annotation_layer_name='spatial',
+            is_count=True
+        )
+        make_annotation_config = GPS.config.MAKE_ANNOTATION_Conifg(
+            sample_info=sample_config,
+            gtf_file='/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
+            bfile_root='/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
+            baseline_annotation=None,
+            keep_snp_root='/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
+            chr=TASK_ID,
+            window_size=50000,
+            chunk_size=100,
+            ld_wind=1,
+            ld_wind_unit='cm',
+            r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
+            output_dir=f'{test_dir}/{name}/',
+        )
+
     else:
         args = parser.parse_args()
+        sample_config = GPS.config.ST_SAMPLE_INFO(
+            sample_hdf5=args.sample_hdf5,
+            sample_name=args.sample_name,
+            annotation_layer_name=args.annotation_layer_name,
+            is_count=args.is_count
+        )
+        make_annotation_config = GPS.config.MAKE_ANNOTATION_Conifg(
+            sample_info=sample_config,
+            gtf_file=args.gtf_file,
+            bfile_root=args.bfile_root,
+            baseline_annotation=args.baseline_annotation,
+            keep_snp_root=args.keep_snp_root,
+            chr=args.chr,
+            window_size=args.window_size,
+            chunk_size=args.chunk_size,
+            ld_wind=args.ld_wind,
+            ld_wind_unit=args.ld_wind_unit,
+            r2_cache_dir=args.r2_cache_dir,
+            output_dir=args.output_dir,
+        )
 
-    # Mapping gene score to SNPs
-    snp_annotate = Snp_Annotator(mk_score_file=args.mk_score_file, gtf_file=args.gtf_file,
-                                 bfile_root=args.bfile_root, annot_root=args.annot_root,
-                                 base_root=args.base_root,annot_name=args.annot_name,
-                                 window_size=args.window_size, chr=args.chr, const_max_size=args.const_max_size)
-    const_max_size = snp_annotate.annotate()
-    # const_max_size = 9
-
-    # Generate LD scores annotations
-    ldscore_generate = LDscore_Generator(bfile_root=args.bfile_root, annot_root=args.annot_root,
-                                         const_max_size=const_max_size,
-                                         annot_name=args.annot_name, chr=args.chr, ld_wind_snps=args.ld_wind_snps,
-                                         ld_wind_kb=args.ld_wind_kb,
-                                         ld_wind_cm=args.ld_wind_cm, keep_snp=args.keep_snp,
-                                         r2_cache_dir=args.r2_cache_dir)
-    ldscore_generate.compute_ldscore()
+    run_make_annotation(make_annotation_config)
