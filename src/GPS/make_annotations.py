@@ -13,7 +13,7 @@ from progress.bar import IncrementalBar
 import GPS.config
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
-pool = cp.cuda.MemoryPool(cp.cuda.malloc_managed)
+pool = cp.cuda.MemoryPool(cp.cuda.malloc_async)
 cp.cuda.set_allocator(pool.malloc)
 
 logger = logging.getLogger(__name__)
@@ -344,8 +344,7 @@ class LDscore_Generator:
         if self.use_gpu:
             logger.debug('Using GPU to compute LD score')
             annot_matrix = cp.asarray(annot_matrix, dtype=cp.float32)
-            for i in range(0, annot_matrix.shape[0], self.config.snps_per_chunk):
-                r2_matrix_chunk = self.r2_matrix[i:i + self.config.snps_per_chunk, :]
+            for i,r2_matrix_chunk in enumerate(self.r2_matrix_chunk_list):
                 r2_matrix_chunk = cp.sparse.csr_matrix(r2_matrix_chunk, dtype=cp.float32)
                 lN_chunk = cp.asnumpy(r2_matrix_chunk @ annot_matrix)
                 # convert to float16
@@ -356,9 +355,10 @@ class LDscore_Generator:
                     lN = np.concatenate([lN, lN_chunk], axis=0)
         else:
             logger.debug('Using CPU to compute LD score')
-            for i in range(0, annot_matrix.shape[0], self.config.snps_per_chunk):
-                r2_matrix_chunk = self.r2_matrix[i:i + self.config.snps_per_chunk, :]
+            for i,r2_matrix_chunk in enumerate(self.r2_matrix_chunk_list):
                 lN_chunk = r2_matrix_chunk @ annot_matrix
+                # convert to float16
+                lN_chunk = lN_chunk.astype(np.float16)
                 if i == 0:
                     lN = lN_chunk
                 else:
@@ -411,9 +411,11 @@ class LDscore_Generator:
                                         Path(self.chr_r2_cache_dir))
             logger.info(f'Finished generating r2 cache for chr{chr}')
         if self.chr_r2_cache_dir is not None:
+            logger.info('Loading r2 cache')
             r2_matrix = geno_array.load_combined_r2_matrix(cached_r2_matrix_dir=self.chr_r2_cache_dir)
-            self.r2_matrix = r2_matrix
-
+            self.r2_matrix_chunk_list = [r2_matrix[i:i + self.config.snps_per_chunk, :] for i in
+                                    range(0, r2_matrix.shape[0], self.config.snps_per_chunk)]
+            logger.info('Finished loading r2 cache')
         # Set the baseline root
         annot_file = f'{self.annot_root}/baseline/baseline.{chr}.feather'
         ld_score_file = f'{self.annot_root}/baseline/baseline.{chr}.l2.ldscore.feather'
