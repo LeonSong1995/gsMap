@@ -164,7 +164,7 @@ def main():
         # Call the function for cauchy_combination
         pass
     else:
-        print('Use "python GPS_main.py <subcommand> -h" for more information on a specific subcommand')
+        print('Use "python main.py <subcommand> -h" for more information on a specific subcommand')
         parser.print_help()
         exit(1)
 
@@ -225,9 +225,9 @@ class GPS:
 
 
 
-cf: GPS = OmegaConf.structured(GPS)
-config_yaml_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/test/config.yaml'
-OmegaConf.to_yaml(cf)
-OmegaConf.save(config=cf, f=config_yaml_path)
+# cf: GPS = OmegaConf.structured(GPS)
+# config_yaml_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/test/config.yaml'
+# OmegaConf.to_yaml(cf)
+# OmegaConf.save(config=cf, f=config_yaml_path)
 if __name__ == "__main__":
     main()

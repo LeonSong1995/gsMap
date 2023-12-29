@@ -3,12 +3,40 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "GPS"
-authors = [{name = "liyang", email = "songliyang@westlake.edu.cn"}]
+name = "GPS-mapping"
+authors = [{name = "liyang", email = "songliyang@westlake.edu.cn"},
+             {name = "wenhao", email = "chenwenhao@westlake.edu.cn"}]
 readme = "README.md"
 license = {file = "LICENSE"}
-classifiers = ["License :: OSI Approved :: MIT License"]
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Operating System :: POSIX :: Linux",
+]
 dynamic = ["version", "description"]
+dependencies = [
+    "numpy",
+    "pandas",
+    "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "seaborn",
+    "tqdm",
+    "pyyaml",
+]
+
 
 [project.urls]
 Home = "https://github.com/LeonSong1995/GPS"
+Documentation = "https://..."
+Website = "https://..."
+
+[project.scripts]
+GPS = "GPS.main:main"
+
+[tool.flit.module]
+name = "GPS"
