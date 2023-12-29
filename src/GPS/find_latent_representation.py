@@ -32,6 +32,7 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--n_comps', default=300, type=int, help="Number of principal components to keep if PCA is performed. Default is 300.")
     parser.add_argument('--weighted_adj', default=False, type=bool, help="Whether to use a weighted adjacency matrix in GCN. Default is False.")
     parser.add_argument('--nheads', default=3, type=int, help="Number of heads in the attention mechanism of the GNN. Default is 3.")
+    parser.add_argument('--var', default=False, type=bool)
     parser.add_argument('--convergence_threshold', default=1e-4, type=float, help="Threshold for convergence during training. Training stops if the loss change is below this threshold. Default is 1e-4.")
     parser.add_argument('--hierarchically', default=False, type=bool, help="Whether to find latent representations hierarchically. Default is False.")
     parser.add_argument('--output_dir', default=None, type=str, help="Path to the output directory. Default is None.")

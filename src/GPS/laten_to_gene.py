@@ -245,6 +245,12 @@ parser.add_argument('--species', default=None, type=str)
 parser.add_argument('--gs_species', default=None, type=str)
 parser.add_argument('--gM_slices', default=None, type=str)
 
+def add_sample_info_args(parser):
+    parser.add_argument('--sample_hdf5', default=None, type=str, help='Path to the sample hdf5 file', )
+    parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
+    parser.add_argument('--annotation_layer_name', default=None, type=str, help='Name of the annotation layer',dest='annotation')
+    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts'). This specifies the data layer to be used.",)
+
 '''
 root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
 ls ${root} | grep h5ad | while read file
