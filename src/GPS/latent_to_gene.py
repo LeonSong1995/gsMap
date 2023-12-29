@@ -1,38 +1,49 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 10 11:34:35 2023
-
-@author: songliyang
-"""
-
-import scanpy as sc
-import os
-import anndata
-import pandas as pd
-import numpy as np
+import argparse
+import dataclasses
+import logging
 import multiprocessing
-import plotnine as pn
-import matplotlib.pyplot as plt
-from sklearn.preprocessing import normalize
-from sklearn import metrics
-import sklearn
-import sklearn.neighbors
-from scipy.spatial.distance import pdist, squareform
-from progress.bar import IncrementalBar
+import pprint
+import time
+from multiprocessing import Pool
+from pathlib import Path
+from typing import get_type_hints
+
+import numpy as np
+import pandas as pd
+import scanpy as sc
+from tqdm import tqdm
 from math import floor
 from scipy.sparse import issparse, vstack
-from scipy import stats
-from multiprocessing import Pool
-from tqdm import tqdm
-import tqdm.contrib.concurrent
-from scipy.stats import rankdata
-from sklearn.neighbors import NearestNeighbors
-import argparse
 from scipy.stats import gmean
-
-from sklearn.metrics.pairwise import euclidean_distances
+from scipy.stats import rankdata
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.neighbors import NearestNeighbors
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
+logger.addHandler(handler)
+
+@dataclasses.dataclass
+class LatentToGeneConfig:
+    input_hdf5_path: str
+    sample_name: str
+    output_feather_path: str
+
+    method: str = 'rank'
+    latent_representation: str = 'latent_GVAE'
+    num_neighbour: int = 21
+    num_neighbour_spatial: int = 101
+    num_processes: int = 4
+    fold: float = 1.0
+    pst: float = 0.2
+    species: str = None
+    gs_species: str = None
+    gM_slices: str = None
+    annotation: str = None
+    type: str = None
 
 
 def find_Neighbors(coor, num_neighbour):
@@ -88,24 +99,6 @@ def _build_spatial_net(adata, annotation, num_neighbour):
         spatial_net = find_Neighbors(coor, num_neighbour)
 
     return spatial_net
-
-
-def find_Neighbors_Regional(cell):
-    cell_use = spatial_net.loc[spatial_net.Cell1 == cell, 'Cell2'].to_list()
-    # TODO: To modify the wrongly usage of global variable `coor_latent`
-    similarity = cosine_similarity(coor_latent.loc[cell].values.reshape(1, -1),
-                                   coor_latent.loc[cell_use].values).tolist()[0]
-    if not args.annotation is None:
-        annotation = adata.obs[args.annotation]
-        df = pd.DataFrame({'Cell2': cell_use, 'Similarity': similarity, 'Annotation': annotation[cell_use]})
-        df = df.loc[df.loc[cell_use, 'Annotation'] == df.loc[cell, 'Annotation']]
-    else:
-        df = pd.DataFrame({'Cell2': cell_use, 'Similarity': similarity})
-
-    df = df.sort_values(by='Similarity', ascending=False)
-    cell_select = df.Cell2[0:args.num_neighbour].to_list()
-
-    return cell_select
 
 
 def _ranks(X, mask=None, mask_rest=None):
@@ -182,6 +175,38 @@ def compute_z_score(adata, cell_select, fold, pst):
     return df
 
 
+
+def generate_parser_from_dataclass(dataclass_type):
+    parser = argparse.ArgumentParser(description='Arguments for LatentToGeneConfig')
+    type_hints = get_type_hints(dataclass_type)
+
+    for field in dataclasses.fields(dataclass_type):
+        # Determine the argument type, default value, and help string
+        arg_type = type_hints[field.name]
+        default = field.default if field.default != dataclasses.MISSING else None
+        help_string = f"{field.name} (default: {default})"
+
+        # Add argument to the parser
+        parser.add_argument(f'--{field.name}', type=arg_type, default=default, help=help_string)
+
+    return parser
+
+def find_Neighbors_Regional(cell):
+    cell_use = spatial_net.loc[spatial_net.Cell1 == cell, 'Cell2'].to_list()
+    similarity = cosine_similarity(coor_latent.loc[cell].values.reshape(1, -1),
+                                   coor_latent.loc[cell_use].values).tolist()[0]
+    if not args.annotation is None:
+        annotation = adata.obs[args.annotation]
+        df = pd.DataFrame({'Cell2': cell_use, 'Similarity': similarity, 'Annotation': annotation[cell_use]})
+        df = df.loc[df.loc[cell_use, 'Annotation'] == df.loc[cell, 'Annotation']]
+    else:
+        df = pd.DataFrame({'Cell2': cell_use, 'Similarity': similarity})
+
+    df = df.sort_values(by='Similarity', ascending=False)
+    cell_select = df.Cell2[0:args.num_neighbour].to_list()
+
+    return cell_select
+
 def _compute_dge(args):
     """
     calculate z score for one spatial spot or cell
@@ -202,8 +227,7 @@ def _compute_dge(args):
 
     return scores_df
 
-
-def _compute_regional_ranks(cell_tg):
+def _compute_regional_ranks(cell_tg, ):
     """
     compute gmean ranks of a region
     """
@@ -225,59 +249,15 @@ def _compute_regional_ranks(cell_tg):
     gene_ranks_region.columns = [cell_tg]
 
     return gene_ranks_region
-
-
-parser = argparse.ArgumentParser()
-def add_laten_to_gene_args(parser):
-    parser.add_argument('--spe_path', default=None, type=str)
-    parser.add_argument('--spe_name', default=None, type=str)
-    parser.add_argument('--spe_out', default=None, type=str)
-    parser.add_argument('--method', default='rank', type=str)
-    parser.add_argument('--latent_representation', default='latent_GVAE', choices=['latent_GVAE', 'latent_PCA'], type=str,help='Name of the latent representation to be used.')
-    parser.add_argument('--num_neighbour', default=21, type=int)
-    parser.add_argument('--num_neighbour_spatial', default=101, type=int)
-    parser.add_argument('--num_processes', default=4, type=int)
-    parser.add_argument('--fold', default=1.0, type=float)
-    parser.add_argument('--pst', default=0.2, type=float)
-    parser.add_argument('--species', default=None, type=str)
-    parser.add_argument('--gs_species', default=None, type=str)
-    parser.add_argument('--gM_slices', default=None, type=str)
-
-def add_sample_info_args(parser):
-    parser.add_argument('--sample_hdf5', default=None, type=str, help='Path to the sample hdf5 file', required=True)
-    parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
-    parser.add_argument('--annotation_layer_name', default=None, type=str, help='Name of the annotation layer',dest='annotation')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts'). This specifies the data layer to be used.",)
-
-
-if __name__ == '__main__':
-    TEST = True
-    if TEST:
-        name = 'Cortex_151507'
-        args = parser.parse_args([
-            '--latent_representation', 'latent_GVAE',
-            '--spe_path',
-            f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/h5ad',
-            '--spe_name', f'{name}_add_latent.h5ad',
-            '--num_processes', '4',
-            '--type', 'count',
-            '--annotation', 'layer_guess',
-            '--num_neighbour', '51',
-            '--spe_out',
-            f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/gene_markers'
-        ])
-    else:
-        args = parser.parse_args()
-
+def run_latent_to_gene(args: LatentToGeneConfig):
+    global adata, coor_latent, spatial_net, ranks, frac_whole
     # Load and process the spatial data
     print('------Loading the spatial data...')
-    adata = sc.read_h5ad(f'{args.spe_path}/{args.spe_name}')
+    adata = sc.read_h5ad(args.input_hdf5_path)
     num_cpus = min(multiprocessing.cpu_count(), args.num_processes)
-
     if not args.annotation is None:
         print(f'------Cell annotations are provided as {args.annotation}...')
         adata = adata[~pd.isnull(adata.obs[args.annotation]), :]
-
     # Homologs transformation
     if not args.species is None:
         print(f'------Transforming the {args.species} to HUMAN_GENE_SYM...')
@@ -286,7 +266,6 @@ if __name__ == '__main__':
         adata = adata[:, adata.var_names.isin(homologs[args.species])]
         print(f'{adata.shape[1]} genes left after homologs transformation.')
         adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM']
-
     # Process the data
     if args.type == 'count':
         adata.X = adata.layers[args.type]
@@ -299,18 +278,14 @@ if __name__ == '__main__':
     print(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')
     adata = adata[adata.X.sum(axis=1) > 0, adata.X.sum(axis=0) > 0]
     print(f'Number of cells, genes after transformation: {adata.shape[0]},{adata.shape[1]}')
-
     # Buid the spatial graph
     spatial_net = _build_spatial_net(adata, args.annotation, args.num_neighbour_spatial)
-
     # Extract the latent representation
     coor_latent = pd.DataFrame(adata.obsm[args.latent_representation])
     coor_latent.index = adata.obs.index
-
     # Find marker genes
     mk_score = []
     cell_list = adata.obs.index.tolist()
-
     if args.method == 'rank':
         prefix = 'rank.feather'
 
@@ -356,31 +331,66 @@ if __name__ == '__main__':
                 for mk_cell in p.imap(_compute_dge, [(cell_tg, args.fold, args.pst) for cell_tg in cell_list]):
                     mk_score.append(mk_cell ** 2)
                     progress_bar.update()
-
     # Normalize the marker scores
     mk_score = pd.concat(mk_score, axis=1)
     mk_score.index = adata.var_names
     # mk_score_normalized = mk_score.div(mk_score.sum())*1e+2
-
     # Remove the mitochondrial genes
     mt_genes = [gene for gene in mk_score.index if gene.startswith('MT-') or gene.startswith('mt-')]
     mk_score_normalized = mk_score.loc[~mk_score.index.isin(mt_genes), :]
     print(mk_score_normalized.shape)
-
     # Save the marker scores
     print(f'------Saving marker scores ...')
-    if not os.path.exists(args.spe_out):
-        os.makedirs(args.spe_out, mode=0o777, exist_ok=True)
-
-    data_name = args.spe_name.split('_add_latent.h5ad')[0]
+    output_file_path = Path(args.output_feather_path)
+    output_file_path.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
     mk_score_normalized = mk_score_normalized.reset_index()
     mk_score_normalized.rename(columns={mk_score_normalized.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
-    mk_score_normalized.to_feather(f'{args.spe_out}/{data_name}_{prefix}')
+    mk_score_normalized.to_feather(output_file_path)
 
+def add_latent_to_gene_args(parser):
+    parser.add_argument('--input_hdf5_path', type=str, required=True, help='Path to the input HDF5 file.')
+    parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
+    parser.add_argument('--output_feather_path', type=str, required=True, help='Path to save output feather file.')
+    parser.add_argument('--method', type=str, default='rank', choices=['rank', 'other_method'], help='Method to be used. Default is "rank".')
+    parser.add_argument('--latent_representation', type=str, default='latent_GVAE', choices=['latent_GVAE', 'latent_PCA'], help='Type of latent representation. Default is "latent_GVAE".')
+    parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbours to consider. Default is 21.')
+    parser.add_argument('--num_neighbour_spatial', type=int, default=101, help='Number of spatial neighbours to consider. Default is 101.')
+    parser.add_argument('--num_processes', type=int, default=4, help='Number of processes to use. Default is 4.')
+    parser.add_argument('--fold', type=float, default=1.0, help='Fold change threshold. Default is 1.0.')
+    parser.add_argument('--pst', type=float, default=0.2, help='PST value. Default is 0.2.')
+    parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
+    parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
+    parser.add_argument('--gM_slices', type=str, default=None, help='Path to gene model slices file, if applicable.')
+    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
+    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
 
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description="Process latent to gene data.")
+    add_latent_to_gene_args(parser)
+    TEST = True
+    if TEST:
+        name = 'Cortex_151507'
+        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
 
+        args = parser.parse_args([
+            '--input_hdf5_path', f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
+            '--sample_name', f'{name}',
+            '--output_feather_path', f'{test_dir}/{name}/gene_markers/{name}_rank.feather',
+            '--method', 'rank',
+            '--latent_representation', 'latent_GVAE',
 
+            '--num_processes', '4',
+            '--type', 'count',
+            '--annotation', 'layer_guess',
+            '--num_neighbour', '51',
 
-
-
-
+        ])
+    else:
+        args = parser.parse_args()
+    logger.info(f'Latent to gene for {args.sample_name}...')
+    config=LatentToGeneConfig(**vars(args))
+    pprint.pprint(config)
+    start_time = time.time()
+    run_latent_to_gene(config)
+    end_time = time.time()
+    logger.info(f'Latent to gene for {config.sample_name} finished. Time spent: {(end_time - start_time) / 60:.2f} min.')
