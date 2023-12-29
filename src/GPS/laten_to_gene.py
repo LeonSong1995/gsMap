@@ -75,7 +75,6 @@ def _build_spatial_net(adata, annotation, num_neighbour):
             spatial_net = pd.concat((spatial_net, spatial_net_temp), axis=0)
             print(f'{ct}: {coor_temp.shape[0]} cells')
 
-        # TODO : in the previous Find_Latent_Representations.py, adata without annotation is removed, so this part is not executed
         # Cells labeled as nan
         if pd.isnull(adata.obs[annotation]).any():
             cell_nan = adata.obs.index[np.where(pd.isnull(adata.obs[annotation]))[0]]
@@ -229,47 +228,28 @@ def _compute_regional_ranks(cell_tg):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--latent_representation', default=None, type=str)
-parser.add_argument('--spe_path', default=None, type=str)
-parser.add_argument('--spe_name', default=None, type=str)
-parser.add_argument('--spe_out', default=None, type=str)
-parser.add_argument('--method', default='rank', type=str)
-parser.add_argument('--type', default=None, type=str)
-parser.add_argument('--annotation', default=None, type=str)
-parser.add_argument('--num_neighbour', default=21, type=int)
-parser.add_argument('--num_neighbour_spatial', default=101, type=int)
-parser.add_argument('--num_processes', default=4, type=int)
-parser.add_argument('--fold', default=1.0, type=float)
-parser.add_argument('--pst', default=0.2, type=float)
-parser.add_argument('--species', default=None, type=str)
-parser.add_argument('--gs_species', default=None, type=str)
-parser.add_argument('--gM_slices', default=None, type=str)
+def add_laten_to_gene_args(parser):
+    parser.add_argument('--spe_path', default=None, type=str)
+    parser.add_argument('--spe_name', default=None, type=str)
+    parser.add_argument('--spe_out', default=None, type=str)
+    parser.add_argument('--method', default='rank', type=str)
+    parser.add_argument('--latent_representation', default='latent_GVAE', choices=['latent_GVAE', 'latent_PCA'], type=str,help='Name of the latent representation to be used.')
+    parser.add_argument('--num_neighbour', default=21, type=int)
+    parser.add_argument('--num_neighbour_spatial', default=101, type=int)
+    parser.add_argument('--num_processes', default=4, type=int)
+    parser.add_argument('--fold', default=1.0, type=float)
+    parser.add_argument('--pst', default=0.2, type=float)
+    parser.add_argument('--species', default=None, type=str)
+    parser.add_argument('--gs_species', default=None, type=str)
+    parser.add_argument('--gM_slices', default=None, type=str)
 
 def add_sample_info_args(parser):
-    parser.add_argument('--sample_hdf5', default=None, type=str, help='Path to the sample hdf5 file', )
+    parser.add_argument('--sample_hdf5', default=None, type=str, help='Path to the sample hdf5 file', required=True)
     parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
     parser.add_argument('--annotation_layer_name', default=None, type=str, help='Name of the annotation layer',dest='annotation')
     parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts'). This specifies the data layer to be used.",)
 
-'''
-root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
-ls ${root} | grep h5ad | while read file
-do
-	name=($(echo ${file} | cut -d'.' -f 1))
 
-	command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Latent_to_Gene_V2.py \
-	--latent_representation latent_GVAE \
-	--spe_path /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/h5ad \
-	--spe_name ${name}_add_latent.h5ad \
-	--num_processes 4 \
-	--type count \
-	--annotation layer_guess \
-	--num_neighbour 51 \
-	--spe_out /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/gene_markers"
-
-	qsubshcom "$command" 4 50G mkS_${name} 24:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
-done
-'''
 if __name__ == '__main__':
     TEST = True
     if TEST:

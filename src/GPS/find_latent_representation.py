@@ -1,6 +1,10 @@
-
+import logging
 import os
+import pprint
 import random
+import time
+from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -11,6 +15,41 @@ from GPS.GNN_VAE.adjacency_matrix import Construct_Adjacency_Matrix
 from GPS.GNN_VAE.train import Model_Train
 
 random.seed(20230609)
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
+logger.addHandler(handler)
+
+@dataclass
+class FindLatentRepresentationsConfig:
+    input_hdf5_path: str
+    output_hdf5_path: str
+    sample_name: str
+    annotation: str = None
+    type: str = None
+
+    epochs: int = 300
+    feat_hidden1: int = 256
+    feat_hidden2: int = 128
+    feat_cell: int = 3000
+    gcn_hidden1: int = 64
+    gcn_hidden2: int = 30
+    p_drop: float = 0.1
+    gcn_lr: float = 0.001
+    gcn_decay: float = 0.01
+    n_neighbors: int = 11
+    label_w: float = 1
+    rec_w: float = 1
+    input_pca: bool = True
+    n_comps: int = 300
+    weighted_adj: bool = False
+    nheads: int = 3
+    var: bool = False
+    convergence_threshold: float = 1e-4
+    hierarchically: bool = False
+
 
 # Set args
 import argparse
@@ -35,12 +74,13 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--var', default=False, type=bool)
     parser.add_argument('--convergence_threshold', default=1e-4, type=float, help="Threshold for convergence during training. Training stops if the loss change is below this threshold. Default is 1e-4.")
     parser.add_argument('--hierarchically', default=False, type=bool, help="Whether to find latent representations hierarchically. Default is False.")
-    parser.add_argument('--output_dir', default=None, type=str, help="Path to the output directory. Default is None.")
-def add_sample_info_args(parser):
-    parser.add_argument('--sample_hdf5', default=None, type=str, help='Path to the sample hdf5 file', required=True)
-    parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
-    parser.add_argument('--annotation_layer_name', default=None, type=str, help='Name of the annotation layer',dest='annotation')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts'). This specifies the data layer to be used.",)
+def add_io_args(parser):
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
+    parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
+    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
+    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
+    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
+
 
 
 
@@ -89,12 +129,13 @@ class Latent_Representation_Finder:
         return self.adata.obsm['X_pca'][:, 0:self.Params.n_comps]
 
 
-def run_find_latent_representation(args):
+def run_find_latent_representation(args:FindLatentRepresentationsConfig):
     num_features = args.feat_cell
-    args.output_dir = os.path.join(args.output_dir,'find_latent_representations')
+    args.output_dir = Path(args.output_hdf5_path).parent
+    args.output_dir.mkdir(parents=True, exist_ok=True,mode=0o755)
     # Load the ST data
     print(f'------Loading ST data of {args.sample_name}...')
-    adata = sc.read_h5ad(f'{args.sample_hdf5}')
+    adata = sc.read_h5ad(f'{args.input_hdf5_path}')
     adata.var_names_make_unique()
     print('The ST data contains %d cells, %d genes.' % (adata.shape[0], adata.shape[1]))
     # Load the cell type annotation
@@ -155,16 +196,12 @@ def run_find_latent_representation(args):
             adata.obsm["latent_GVAE_hierarchy"] = np.array(GVAE_all.loc[adata.obs_names,])
             adata.obsm["latent_PCA_hierarchy"] = np.array(PCA_all.loc[adata.obs_names,])
     print(f'------Saving ST data...')
-    # Save the data
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir, mode=0o777, exist_ok=True)
-    data_name = args.sample_name
-    adata.write(f'{args.output_dir}/{data_name}_add_latent.h5ad')
+    adata.write(args.output_hdf5_path)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="This script is designed to find latent representations in spatial transcriptomics data using a Graph Neural Network Variational Autoencoder (GNN-VAE). It processes input data, constructs a neighboring graph, and runs GNN-VAE to output latent representations.")
-    add_sample_info_args(parser)
+    add_io_args(parser)
     add_find_latent_representations_args(parser)
     TEST=True
     if TEST:
@@ -174,14 +211,21 @@ if __name__ == '__main__':
 
         args = parser.parse_args(
             [
-                '--sample_hdf5','/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad/Cortex_151507.h5ad',
+                '--input_hdf5_path','/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad/Cortex_151507.h5ad',
+                '--output_hdf5_path',f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
                 '--sample_name', name,
-                '--annotation_layer_name','layer_guess',
+                '--annotation','layer_guess',
                 '--type','count',
-                '--output_dir',f'{test_dir}/{name}',
             ]
 
         )
+
     else:
         args = parser.parse_args()
-    run_find_latent_representation(args)
+    config=FindLatentRepresentationsConfig(**vars(args))
+    start_time = time.time()
+    logger.info(f'Find latent representations for {config.sample_name}...')
+    pprint.pprint(config)
+    run_find_latent_representation(config)
+    end_time = time.time()
+    logger.info(f'Find latent representations for {config.sample_name} finished. Time spent: {(end_time - start_time) / 60:.2f} min.')
