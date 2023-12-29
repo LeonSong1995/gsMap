@@ -5,13 +5,11 @@ Created on Tue Jul  4 21:31:27 2023
 
 @author: songliyang
 """
-import pandas as pd
 import numpy as np
+import pandas as pd
+import scipy.sparse as sp
 import sklearn.neighbors
 import torch
-import scanpy as sc
-import scipy.sparse as sp
-from scipy.spatial import distance_matrix
 
 
 def Cal_Spatial_Net(adata, n_neighbors=5, verbose=True):

@@ -165,6 +165,7 @@ def M(fh, common=False):
 
 
 def _check_variance(M_annot, ref_ld):
+    # TODO: need to optimize this
     '''
     Remove zero-variance LD Scores.
     '''

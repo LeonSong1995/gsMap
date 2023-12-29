@@ -7,10 +7,8 @@ Created on Mon Jul  3 11:42:44 2023
 """
 
 import torch
-import torch.nn.functional as F
-from torch.nn.modules.module import Module
-from torch.nn.parameter import Parameter
 import torch.nn as nn
+import torch.nn.functional as F
 from torch_geometric.nn import GATConv
 
 
