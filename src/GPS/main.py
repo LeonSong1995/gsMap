@@ -6,6 +6,8 @@ from omegaconf import OmegaConf, II
 from dataclasses import dataclass, field
 from omegaconf import MISSING
 
+from GPS.find_latent_representation import add_find_latent_representations_args
+from GPS.latent_to_gene import add_latent_to_gene_args
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -93,36 +95,14 @@ def main():
 
     # Find_Latent_Representations subparser
     flr_parser = subparsers.add_parser("find_latent_representations", help="Find Latent Representations")
-    flr_parser.add_argument("--spe_path", required=True, help="Path to SPE")
-    flr_parser.add_argument("--spe_name", required=True, help="SPE Name")
-    flr_parser.add_argument("--annotation", default="layer_guess", help="Annotation type")
-    flr_parser.add_argument("--type", default="count", help="Type of analysis")
-    flr_parser.add_argument("--spe_out", required=True, help="Output path for SPE")
-    flr_parser.set_defaults(func=find_latent_representations)
+    add_find_latent_representations_args(flr_parser)
 
     # Latent_to_Gene_V2 subparser
     ltg_parser = subparsers.add_parser("latent_to_gene", help="Latent to Gene V2")
-    ltg_parser.add_argument("--latent_representation", default="latent_GVAE", help="Latent representation")
-    ltg_parser.add_argument("--spe_path", required=True, help="Path to SPE")
-    ltg_parser.add_argument("--spe_name", required=True, help="SPE Name")
-    ltg_parser.add_argument("--num_processes", type=int, default=4, help="Number of processes")
-    ltg_parser.add_argument("--type", default="count", help="Type of analysis")
-    ltg_parser.add_argument("--annotation", default="layer_guess", help="Annotation type")
-    ltg_parser.add_argument("--num_neighbour", type=int, default=51, help="Number of neighbours")
-    ltg_parser.add_argument("--spe_out", required=True, help="Output path")
-    ltg_parser.set_defaults(func=latent_to_gene)
+    add_latent_to_gene_args(ltg_parser)
 
     # Make_Annotations_V2 subparser
     ma_parser = subparsers.add_parser("make_annotations_v2", help="Make Annotations V2")
-    ma_parser.add_argument("--mk_score_file", required=True, help="Path to the MK score file")
-    ma_parser.add_argument("--gtf_file", required=True, help="Path to the GTF file")
-    ma_parser.add_argument("--bfile_root", required=True, help="Bfile root")
-    ma_parser.add_argument("--annot_root", required=True, help="Annotation root")
-    ma_parser.add_argument("--keep_snp", required=True, help="Keep SNP file")
-    ma_parser.add_argument("--annot_name", required=True, help="Annotation name")
-    ma_parser.add_argument("--const_max_size", type=int, default=500, help="Constant max size")
-    ma_parser.add_argument("--chr", required=True, help="Chromosome ID")
-    ma_parser.add_argument("--ld_wind_cm", type=float, default=1, help="LD window size in centiMorgans")
     ma_parser.set_defaults(func=make_snp_annotations)
 
     # Spatial_LDSC subparser

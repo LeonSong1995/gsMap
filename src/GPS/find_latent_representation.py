@@ -74,7 +74,7 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--var', default=False, type=bool)
     parser.add_argument('--convergence_threshold', default=1e-4, type=float, help="Threshold for convergence during training. Training stops if the loss change is below this threshold. Default is 1e-4.")
     parser.add_argument('--hierarchically', default=False, type=bool, help="Whether to find latent representations hierarchically. Default is False.")
-def add_io_args(parser):
+
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
     parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
     parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
@@ -201,7 +201,6 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="This script is designed to find latent representations in spatial transcriptomics data using a Graph Neural Network Variational Autoencoder (GNN-VAE). It processes input data, constructs a neighboring graph, and runs GNN-VAE to output latent representations.")
-    add_io_args(parser)
     add_find_latent_representations_args(parser)
     TEST=True
     if TEST:

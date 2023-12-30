@@ -350,7 +350,10 @@ def run_latent_to_gene(args: LatentToGeneConfig):
 def add_latent_to_gene_args(parser):
     parser.add_argument('--input_hdf5_path', type=str, required=True, help='Path to the input HDF5 file.')
     parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
-    parser.add_argument('--output_feather_path', type=str, required=True, help='Path to save output feather file.')
+    parser.add_argument('--output_feather_path', type=str, required=True, help='Path to save output gene marker score feather file.')
+    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
+    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
+
     parser.add_argument('--method', type=str, default='rank', choices=['rank', 'other_method'], help='Method to be used. Default is "rank".')
     parser.add_argument('--latent_representation', type=str, default='latent_GVAE', choices=['latent_GVAE', 'latent_PCA'], help='Type of latent representation. Default is "latent_GVAE".')
     parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbours to consider. Default is 21.')
@@ -361,8 +364,6 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
     parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
     parser.add_argument('--gM_slices', type=str, default=None, help='Path to gene model slices file, if applicable.')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process latent to gene data.")

@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import pprint
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,6 +24,31 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
     '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
 logger.addHandler(handler)
+from dataclasses import dataclass, field
+from typing import Optional
+
+@dataclass
+class MakeAnnotationConfig:
+    input_feather_file: str
+    output_dir: str
+    sample_name: str
+    gtf_file: Optional[str] = None
+    bfile_root: Optional[str] = None
+    baseline_annotation: Optional[str] = None
+    keep_snp_root: Optional[str] = None
+    chr: Optional[int] = None
+    window_size: int = 50000
+    cells_per_chunk: int = 500
+    ld_wind: float = 1.0
+    ld_wind_unit: str = field(default='CM', metadata={'choices': ['CM', 'BP', 'SNP']})
+    r2_cache_dir: Optional[str] = None
+    use_gpu: bool = False
+    snps_per_chunk: int = 50_000
+
+    def __post_init__(self):
+        if self.ld_wind_unit not in self.__dataclass_fields__['ld_wind_unit'].metadata['choices']:
+            raise ValueError(f"Invalid ld_wind_unit: {self.ld_wind_unit}. Choose from 'CM', 'BP', or 'SNP'.")
+
 
 
 class Snp_Annotator:
@@ -244,11 +270,11 @@ class Snp_Annotator:
 
 
 class LDscore_Generator:
-    def __init__(self, make_annotation_config: GPS.config.MAKE_ANNOTATION_Conifg, const_max_size):
+    def __init__(self, make_annotation_config: MakeAnnotationConfig, const_max_size):
         self.bfile_root = make_annotation_config.bfile_root
         self.annot_root = Path(make_annotation_config.output_dir) / 'snp_annotation'
         self.const_max_size = const_max_size
-        self.data_name = make_annotation_config.sample_info.sample_name
+        self.data_name = make_annotation_config.sample_name
         self.chr = make_annotation_config.chr
         self.ld_wind = make_annotation_config.ld_wind
         self.ld_wind_unit = make_annotation_config.ld_wind_unit
@@ -446,14 +472,11 @@ class LDscore_Generator:
         bar.finish()
 
 
-def get_sample_info_parser(parser):
-    parser.add_argument('--sample_hdf5', default=None, type=str, help='Path to the sample hdf5 file', )
+
+def add_make_annotation_args(parser):
+    parser.add_argument('--input_feather_file', required=True, type=str, help='Input feather file for marker genes score (output of GPS latent_to_gene)')
+    parser.add_argument('--output_dir', required=True, type=str, help='Output directory to save the SNP annotation files')
     parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
-    parser.add_argument('--annotation_layer_name', default=None, type=str, help='Name of the annotation layer')
-    parser.add_argument('--is_count', action='store_true', help='Whether the data is count data')
-
-
-def get_make_annotation_parser(parser):
     parser.add_argument('--gtf_file', default=None, type=str, help='Path to the GTF file', required=True)
     parser.add_argument('--bfile_root', default=None, type=str, help='Bfile root for LD score', required=True)
     parser.add_argument('--baseline_annotation', default=None, type=str, help='Baseline annotation')
@@ -462,7 +485,7 @@ def get_make_annotation_parser(parser):
     parser.add_argument('--chr', default=None, type=int, help='Chromosome ID', )
     parser.add_argument('--window_size', default=50000, type=int,
                         help='Window size for SNP annotation')
-    parser.add_argument('--cells_per_chunk_size', default=500, type=int,
+    parser.add_argument('--cells_per_chunk', default=500, type=int,
                         help='Chunk size for number of cells for batch processing')
     parser.add_argument('--ld_wind', default=1, type=float)
     parser.add_argument('--ld_wind_unit', default='CM', type=str, choices=['CM', 'BP', 'SNP'],
@@ -471,53 +494,25 @@ def get_make_annotation_parser(parser):
     parser.add_argument('--use_gpu', action='store_true', help='Whether to use GPU to compute LD score')
     parser.add_argument('--snps_per_chunk', default=50_000, type=int,
                         help='Chunk size for number of SNPs for batch processing')
-    parser.add_argument('--output_dir', default=None, type=str, help='Output directory', required=True)
 
 
 # Defin the Container for plink files
 
-def run_make_annotation(args: Union[argparse.Namespace, GPS.config.MAKE_ANNOTATION_Conifg]):
-    if not isinstance(args, GPS.config.MAKE_ANNOTATION_Conifg):
-        sample_config = GPS.config.ST_SAMPLE_INFO(
-            sample_hdf5=args.sample_hdf5,
-            sample_name=args.sample_name,
-            annotation_layer_name=args.annotation_layer_name,
-            is_count=args.is_count
-        )
-        make_annotation_config = GPS.config.MAKE_ANNOTATION_Conifg(
-            sample_info=sample_config,
-            gtf_file=args.gtf_file,
-            bfile_root=args.bfile_root,
-            baseline_annotation=args.baseline_annotation,
-            keep_snp_root=args.keep_snp_root,
-            chr=args.chr,
-            window_size=args.window_size,
-            cells_per_chunk=args.cells_per_chunk_size,
-            ld_wind=args.ld_wind,
-            ld_wind_unit=args.ld_wind_unit,
-            r2_cache_dir=args.r2_cache_dir,
-            output_dir=args.output_dir,
-            use_gpu=args.use_gpu,
-            snps_per_chunk=args.snps_per_chunk
-        )
-    else:
-        make_annotation_config = args
-    mk_score_file = Path(
-        make_annotation_config.output_dir) / f'gene_markers/{make_annotation_config.sample_info.sample_name}_rank.feather'
-    # snp_annotate = Snp_Annotator(mk_score_file=mk_score_file,
-    #                              gtf_file=make_annotation_config.gtf_file,
-    #                              bfile_root=make_annotation_config.bfile_root,
-    #                              annot_root=Path(make_annotation_config.output_dir)/'snp_annotation',
-    #                              annot_name=make_annotation_config.sample_info.sample_name,
-    #                              chr=make_annotation_config.chr,
-    #                              base_root=make_annotation_config.baseline_annotation,
-    #                              window_size=make_annotation_config.window_size,
-    #                              const_max_size=make_annotation_config.chunk_size,
-    #                              )
-    # const_max_size = snp_annotate.annotate()
-    const_max_size = 9
+def run_make_annotation(args: MakeAnnotationConfig):
+
+    snp_annotate = Snp_Annotator(mk_score_file=args.input_feather_file,
+                                 gtf_file=args.gtf_file,
+                                 bfile_root=args.bfile_root,
+                                 annot_root=Path(args.output_dir),
+                                 annot_name=args.sample_name,
+                                 chr=args.chr,
+                                 base_root=args.baseline_annotation,
+                                 window_size=args.window_size,
+                                 const_max_size=args.cells_per_chunk
+                                 )
+    const_max_size = snp_annotate.annotate()
     ldscore_generate = LDscore_Generator(
-        make_annotation_config, const_max_size
+        args, const_max_size
     )
     ldscore_generate.compute_ldscore()
 
@@ -525,9 +520,7 @@ def run_make_annotation(args: Union[argparse.Namespace, GPS.config.MAKE_ANNOTATI
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='make_annotations.py',
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    get_sample_info_parser(parser)
-    get_make_annotation_parser(parser)
-    parser.print_help()
+    add_make_annotation_args(parser)
 
     # Store the Params
     TEST = True
@@ -535,15 +528,10 @@ if __name__ == '__main__':
         name = 'Cortex_151507'
         TASK_ID = 2
         test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
-
-        sample_config = GPS.config.ST_SAMPLE_INFO(
-            sample_hdf5=f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad/{name}.hdf5',
+        config = MakeAnnotationConfig(
+            input_feather_file=f'{test_dir}/gene_markers/{name}_rank.feather',
             sample_name=name,
-            annotation_layer_name='spatial',
-            is_count=True
-        )
-        make_annotation_config = GPS.config.MAKE_ANNOTATION_Conifg(
-            sample_info=sample_config,
+            output_dir=f'{test_dir}/{name}/snp_annotation',
             gtf_file='/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
             bfile_root='/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
             baseline_annotation=None,
@@ -554,12 +542,17 @@ if __name__ == '__main__':
             ld_wind=1,
             ld_wind_unit='CM',
             r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
-            output_dir=f'{test_dir}/{name}/',
             use_gpu=True,
             snps_per_chunk=100_000
         )
-        run_make_annotation(make_annotation_config)
 
     else:
         args = parser.parse_args()
-        run_make_annotation(args)
+        config=MakeAnnotationConfig(**vars(args))
+
+    logger.info(f'Running make_annotation for {config.sample_name}')
+    pprint.pprint(config)
+    start_time = time.time()
+    run_make_annotation(config)
+    end_time = time.time()
+    logger.info(f'Make SNP annotation for {config.sample_name} finished. Time spent: {(end_time - start_time) / 60:.2f} min.')
