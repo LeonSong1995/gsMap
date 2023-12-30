@@ -3,20 +3,16 @@ import logging
 import os
 import pprint
 import time
-from dataclasses import dataclass
 from pathlib import Path
 
-import cupy as cp
+
 import numpy as np
 import pandas as pd
 import pyranges as pr
 from progress.bar import IncrementalBar
-from typing import Optional, Literal, Union
-import GPS.config
+
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
-pool = cp.cuda.MemoryPool(cp.cuda.malloc_async)
-cp.cuda.set_allocator(pool.malloc)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -26,7 +22,13 @@ handler.setFormatter(logging.Formatter(
 logger.addHandler(handler)
 from dataclasses import dataclass, field
 from typing import Optional
-
+try:
+    import cupy as cp
+    pool = cp.cuda.MemoryPool(cp.cuda.malloc_async)
+    cp.cuda.set_allocator(pool.malloc)
+except ImportError:
+    logger.warning('Cupy not found, will not use GPU to compute LD score')
+    cp = None
 @dataclass
 class MakeAnnotationConfig:
     input_feather_file: str
@@ -272,7 +274,7 @@ class Snp_Annotator:
 class LDscore_Generator:
     def __init__(self, make_annotation_config: MakeAnnotationConfig, const_max_size):
         self.bfile_root = make_annotation_config.bfile_root
-        self.annot_root = Path(make_annotation_config.output_dir) / 'snp_annotation'
+        self.annot_root = Path(make_annotation_config.output_dir)
         self.const_max_size = const_max_size
         self.data_name = make_annotation_config.sample_name
         self.chr = make_annotation_config.chr
@@ -356,7 +358,7 @@ class LDscore_Generator:
         # Save the LD score annotations
         ldscore = ldscore.reset_index()
         ldscore.drop(columns=['index'], inplace=True)
-        # ldscore.to_feather(ld_score_file)
+        ldscore.to_feather(ld_score_file)
 
         # Compute the .M (.M_5_50) file
         M = np.atleast_1d(np.squeeze(np.asarray(np.sum(annot_matrix, axis=0))))
@@ -529,7 +531,7 @@ if __name__ == '__main__':
         TASK_ID = 2
         test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
         config = MakeAnnotationConfig(
-            input_feather_file=f'{test_dir}/gene_markers/{name}_rank.feather',
+            input_feather_file=f'{test_dir}/{name}/gene_markers/{name}_rank.feather',
             sample_name=name,
             output_dir=f'{test_dir}/{name}/snp_annotation',
             gtf_file='/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
@@ -542,7 +544,7 @@ if __name__ == '__main__':
             ld_wind=1,
             ld_wind_unit='CM',
             r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
-            use_gpu=True,
+            use_gpu=False,
             snps_per_chunk=100_000
         )
 
