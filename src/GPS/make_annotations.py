@@ -533,7 +533,7 @@ if __name__ == '__main__':
         config = MakeAnnotationConfig(
             input_feather_file=f'{test_dir}/{name}/gene_markers/{name}_rank.feather',
             sample_name=name,
-            output_dir=f'{test_dir}/{name}/snp_annotation',
+            output_dir=f'{test_dir}/{name}/snp_annotation/new_run',
             gtf_file='/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
             bfile_root='/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
             baseline_annotation=None,
@@ -544,7 +544,7 @@ if __name__ == '__main__':
             ld_wind=1,
             ld_wind_unit='CM',
             r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
-            use_gpu=False,
+            use_gpu=True,
             snps_per_chunk=100_000
         )
 
