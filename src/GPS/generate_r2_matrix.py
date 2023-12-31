@@ -288,7 +288,7 @@ class GenotypeArrayInMemory(object):
         b0 = b
         md = int(c * np.floor(m / c))
         end = md + 1 if md != m else md
-        for l_B in np.arange(b0, end, c):
+        for l_B in tqdm(np.arange(b0, end, c), desc=f'Compute SNP Gene Weight'):
             # check if the annot matrix is all zeros for this block + chunk
             # this happens w/ sparse categories (i.e., pathways)
             # update the block
