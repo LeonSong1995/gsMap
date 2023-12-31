@@ -1,10 +1,11 @@
+import argparse
 from pathlib import Path
 
+import numpy as np
 # %%
 import pandas as pd
-import numpy as np
 import pyranges as pr
-from tqdm import trange, tqdm
+from tqdm import trange
 
 # %%
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
@@ -101,41 +102,6 @@ def load_marker_score(mk_score_file):
     mk_score.insert(0, 'all_gene', 1)
     mk_score = mk_score.astype(np.float32, copy=False)
     return mk_score
-
-
-# %%
-# config = MakeAnnotationConfig(
-#     input_feather_file=f'{test_dir}/{name}/gene_markers/{name}_rank.feather',
-#     sample_name=name,
-#     output_dir=f'{test_dir}/{name}/snp_annotation',
-#     gtf_file='/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
-#     bfile_root='/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
-#     baseline_annotation=None,
-#     keep_snp_root='/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
-#     chr=TASK_ID,
-#     window_size=50000,
-#     cells_per_chunk=500,
-#     ld_wind=1,
-#     ld_wind_unit='CM',
-#     r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
-#     use_gpu=False,
-#     snps_per_chunk=100_000
-# )
-
-# %%
-name = 'Cortex_151507'
-CHROM = 2
-test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
-# %%
-gtf_file = '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf'
-feather_file = f'{test_dir}/{name}/gene_markers/{name}_rank.feather'
-bfile_root = '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC'
-# %%
-mk_score = load_marker_score(feather_file)
-gtf_pr, mk_score_common = load_gtf(gtf_file, mk_score, window_size=50000)
-
-
-# gtf_pr = load_gtf_all_gene(gtf_file, window_size=50000)
 
 
 # %%
@@ -305,105 +271,157 @@ def calculate_M_use_SNP_gene_pair_dummy_by_chunk(SNP_gene_pair_dummy: pd.DataFra
 
 
 def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix, mk_score_common, spots_per_chunk,
-                                                        save_dir, chrom,
-                                                        snp_pass_maf,
-                                                        keep_snp_root=None):
+                                                        save_dir, chrom, snp_pass_maf, sample_name, keep_snp_root=None):
     """
     Calculate the LD score using the SNP-gene weight matrix.
+    :param sample_name:
     """
     # Calculate the LD score
-
+    chunk_index = 0
     for i in trange(0, mk_score_common.shape[1], spots_per_chunk, desc=f'Calculating LD score by chunk for chr{chrom}'):
         mk_score_chunk = mk_score_common.iloc[:, i:i + spots_per_chunk]
-        save_file_name = f'{save_dir}/chr{chrom}_ldscore_{i}.feather'
+
+        ld_score_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.ldscore.feather'
+        M_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.M'
+        M_5_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.M_5_50'
+
         calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(snp_gene_weight_matrix,
                                                               mk_score_chunk,
                                                               chrom,
-                                                              save_file_name,
+                                                              save_file_name=ld_score_file,
                                                               keep_snp_root=keep_snp_root)
         calculate_M_use_SNP_gene_pair_dummy_by_chunk(snp_gene_weight_matrix,
                                                      mk_score_chunk,
                                                      snp_pass_maf,
-                                                     f'{save_dir}/chr{chrom}_M_{i}',
-                                                     f'{save_dir}/chr{chrom}_M_5_{i}',
+                                                     M_file,
+                                                     M_5_file,
                                                      )
 
+        chunk_index += 1
+
+
+def calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy, snp_pass_maf, save_dir, chrom,
+                                    sample_name, keep_snp_root=None):
+    # save baseline ld score
+    baseline_mk_score = np.ones((snp_gene_weight_matrix.shape[1], 2))
+    baseline_mk_score[-1, 0] = 0  # all_gene
+    baseline_mk_score_df = pd.DataFrame(baseline_mk_score, index=snp_gene_weight_matrix.columns,
+                                        columns=['all_gene', 'base'])
+    ld_score_file = f'{save_dir}/baseline/baseline.{chrom}.l2.ldscore.feather'
+    M_file = f'{save_dir}/baseline/baseline.{chrom}.l2.M'
+    M_5_file = f'{save_dir}/baseline/baseline.{chrom}.l2.M_5_50'
+
+    calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(snp_gene_weight_matrix,
+                                                          baseline_mk_score_df,
+                                                          chrom,
+                                                          ld_score_file,
+                                                          keep_snp_root=keep_snp_root)
+    # save baseline M
+    calculate_M_use_SNP_gene_pair_dummy_by_chunk(SNP_gene_pair_dummy,
+                                                 baseline_mk_score_df,
+                                                 snp_pass_maf,
+                                                 M_file,
+                                                 M_5_file,
+                                                 )
+
+
+from dataclasses import dataclass
+
+
+@dataclass
+class GenerateLDScoreConfig:
+    sample_name: str
+    chrom: int
+    save_dir: str
+    gtf_file: str
+    mkscore_feather_file: str
+    bfile_root: str
+    keep_snp_root: str
+    window_size: int = 50000
+    spots_per_chunk: int = 10_000
+
+
+def generate_ldscore(config: GenerateLDScoreConfig):
+    # Load marker score
+    mk_score = load_marker_score(config.mkscore_feather_file)
+
+    # Load GTF and get common markers
+    gtf_pr, mk_score_common = load_gtf(config.gtf_file, mk_score, window_size=config.window_size)
+
+    # Process SNPs
+    keep_snp = pd.read_csv(f'{config.keep_snp_root}.{config.chrom}.snp', header=None)[0].to_list()
+    num_snp = len(keep_snp)
+    snp_pass_maf = get_snp_pass_maf(config.bfile_root, config.chrom, maf_min=0.05)
+
+    # Get SNP-Gene dummy pairs
+    SNP_gene_pair_dummy = get_snp_gene_dummy(config.chrom, config.bfile_root, gtf_pr, dummy_na=True)
+
+    # Calculate SNP-Gene weight matrix
+    snp_gene_weight_matrix = calculate_SNP_Gene_weight_matrix(SNP_gene_pair_dummy, config.chrom, config.bfile_root,
+                                                              ld_wind=1, ld_unit='CM')
+
+    # Calculate baseline LD score
+    calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy, snp_pass_maf, config.save_dir,
+                                    config.chrom, config.sample_name, keep_snp_root=config.keep_snp_root)
+
+    # Process common genes and calculate LD score
+    common_gene_chr = SNP_gene_pair_dummy.columns[:-1]
+    calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix.iloc[:, :-1],
+                                                        mk_score_common.loc[common_gene_chr],
+                                                        spots_per_chunk=config.spots_per_chunk,
+                                                        save_dir=config.save_dir,
+                                                        chrom=config.chrom, snp_pass_maf=snp_pass_maf,
+                                                        sample_name=config.sample_name,
+                                                        keep_snp_root=config.keep_snp_root)
+
+
+def add_generate_ldscore_args(parser):
+    parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
+    parser.add_argument('--chrom', type=int, required=True, help='Chromosome number')
+    parser.add_argument('--save_dir', type=str, required=True, help='Directory to save the data')
+    parser.add_argument('--gtf_file', type=str, required=True, help='GTF file path')
+    parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
+    parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
+    parser.add_argument('--keep_snp_root', type=str, required=True, help='Keep SNP root path')
+
+    # Arguments with defaults
+    parser.add_argument('--window_size', type=int, default=50000, help='Window size')
+    parser.add_argument('--spots_per_chunk', type=int, default=10000, help='Number of spots per chunk')
+
 
 # %%
-keep_snp_root = '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm'
-keep_snp = pd.read_csv(f'{keep_snp_root}.{CHROM}.snp', header=None)[0].to_list()
-num_snp = len(keep_snp)
-# %%
-SNP_gene_pair_dummy = get_snp_gene_dummy(CHROM, bfile_root, gtf_pr, dummy_na=True)
-snp_gene_weight_matrix = calculate_SNP_Gene_weight_matrix(SNP_gene_pair_dummy, CHROM, bfile_root, ld_wind=1,
-                                                          ld_unit='CM')
-# %%
-# save baseline ld score
-baseline_mk_score = np.ones((snp_gene_weight_matrix.shape[1], 2))
-baseline_mk_score[-1, 0] = 0  # all_gene
-baseline_mk_score_df = pd.DataFrame(baseline_mk_score, index=snp_gene_weight_matrix.columns,
-                                    columns=['all_gene', 'base'])
-baseline_ldscore_save_path = f'{test_dir}/{name}/snp_annotation/test/baseline/baseline.{CHROM}.feather'
+if __name__ == '__main__':
+    TEST = True
+    if TEST:
+        # %%
+        sample_name = 'Cortex_151507'
+        chrom = 1
+        save_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101'
+        # %%
+        gtf_file = '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf'
+        mkscore_feather_file = f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/{sample_name}/gene_markers/{sample_name}_rank.feather'
+        bfile_root = '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC'
+        window_size = 50000
+        keep_snp_root = '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm'
+        spots_per_chunk = 10_000
 
-calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(snp_gene_weight_matrix,
-                                                      baseline_mk_score_df,
-                                                      CHROM,
-                                                      baseline_ldscore_save_path,
-                                                      keep_snp_root=keep_snp_root)
-# %%
-# save baseline M
-# %%
-snp_pass_maf = get_snp_pass_maf(bfile_root, CHROM, maf_min=0.05)
-calculate_M_use_SNP_gene_pair_dummy_by_chunk(SNP_gene_pair_dummy,
-                                             baseline_mk_score_df,
-                                             snp_pass_maf,
-                                             f'{test_dir}/{name}/snp_annotation/test/baseline/baseline.{CHROM}.M',
-                                             f'{test_dir}/{name}/snp_annotation/test/baseline/baseline.{CHROM}.M_5', )
-# %%
-common_gene_chr = SNP_gene_pair_dummy.columns[:-1]
-save_ldscore = calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix.iloc[:, :-1],
-                                                                   mk_score_common.loc[common_gene_chr],
-                                                                   spots_per_chunk=10_000,
-                                                                   save_dir=f'{test_dir}/{name}/snp_annotation/test/ldscore',
-                                                                   chrom=CHROM,
-                                                                   snp_pass_maf=snp_pass_maf,
-                                                                   keep_snp_root=keep_snp_root)
+        # %%
+        config1 = GenerateLDScoreConfig(
+            sample_name=sample_name,
+            chrom=chrom,
+            save_dir=save_dir,
+            gtf_file=gtf_file,
+            mkscore_feather_file=mkscore_feather_file,
+            bfile_root=bfile_root,
+            keep_snp_root=keep_snp_root,
+            window_size=window_size,
+            spots_per_chunk=spots_per_chunk,
+        )
+        generate_ldscore(config1)
+    else:
+        parser = argparse.ArgumentParser(description="Configuration for the application.")
+        add_generate_ldscore_args(parser)
+        args = parser.parse_args()
+        config = GenerateLDScoreConfig(**vars(args))
+        generate_ldscore(config)
 
-# %%
-# calcualte LDscore
-mk_score_chr = mk_score_common.loc[SNP_gene_pair_dummy.columns].values
-# # %%
-# mk_score_chr_large= mk_score_chr.repeat(2, axis=1).astype(np.float16, )
-# ldscore_chr_large= lN_df @ mk_score_chr_large
-
-# %%
-true_set_path = '/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/Cortex_151507/snp_annotation/baseline/baseline.2.l2.ldscore.feather'
-true_set_df = pd.read_feather(true_set_path).set_index('SNP')
-
-# %%
-now = pd.read_feather(baseline_ldscore_save_path)
-now_df = now.set_index('SNP')
-# %%
-before_path = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/baseline/baseline.2.l2.ldscore.feather'
-before_df = pd.read_feather(before_path).set_index('SNP')
-
-# %%
-# calcualte correlaton coefficient before and true
-before_df.loc[true_set_df.index].corrwith(true_set_df)
-# %%
-# calcualte correlaton coefficient now and true
-now_df.loc[true_set_df.index].corrwith(true_set_df)
-
-# %%
-true_chunk1_path = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/Cortex_151507_chunk1/Cortex_151507.2.l2.ldscore.feather'
-true_chunk1_df = pd.read_feather(true_chunk1_path).set_index('SNP')
-# %%
-now_chunk1_path = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/ldscore/chr2_ldscore_0.feather'
-now_chunk1_df = pd.read_feather(now_chunk1_path).set_index('SNP')
-# %%
-now_chunk1_df.loc[true_chunk1_df.index, true_chunk1_df.columns[6:]].corrwith(
-    true_chunk1_df.loc[:, true_chunk1_df.columns[6:]])
-
-# %%
-now_new = pd.concat([true_chunk1_df.iloc[:, :6], now_chunk1_df.loc[true_chunk1_df.index, true_chunk1_df.columns[5:6]]],
-                    axis=1)
