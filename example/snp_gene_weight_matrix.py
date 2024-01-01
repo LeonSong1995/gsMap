@@ -339,6 +339,8 @@ class GenerateLDScoreConfig:
     keep_snp_root: str
     window_size: int = 50000
     spots_per_chunk: int = 10_000
+    ld_wind: int = 1
+    ld_unit: str = 'CM'
 
 
 def generate_ldscore(config: GenerateLDScoreConfig):
@@ -348,36 +350,52 @@ def generate_ldscore(config: GenerateLDScoreConfig):
     # Load GTF and get common markers
     gtf_pr, mk_score_common = load_gtf(config.gtf_file, mk_score, window_size=config.window_size)
 
-    # Process SNPs
-    keep_snp = pd.read_csv(f'{config.keep_snp_root}.{config.chrom}.snp', header=None)[0].to_list()
-    num_snp = len(keep_snp)
-    snp_pass_maf = get_snp_pass_maf(config.bfile_root, config.chrom, maf_min=0.05)
+    def process_chromosome(chrom:int):
+        # Process SNPs
+        snp_pass_maf = get_snp_pass_maf(config.bfile_root, chrom, maf_min=0.05)
 
-    # Get SNP-Gene dummy pairs
-    SNP_gene_pair_dummy = get_snp_gene_dummy(config.chrom, config.bfile_root, gtf_pr, dummy_na=True)
+        # Get SNP-Gene dummy pairs
+        SNP_gene_pair_dummy = get_snp_gene_dummy(chrom, config.bfile_root, gtf_pr, dummy_na=True)
 
-    # Calculate SNP-Gene weight matrix
-    snp_gene_weight_matrix = calculate_SNP_Gene_weight_matrix(SNP_gene_pair_dummy, config.chrom, config.bfile_root,
-                                                              ld_wind=1, ld_unit='CM')
+        # Calculate SNP-Gene weight matrix
+        snp_gene_weight_matrix = calculate_SNP_Gene_weight_matrix(SNP_gene_pair_dummy, chrom, config.bfile_root,
+                                                                  ld_wind=config.ld_wind, ld_unit=config.ld_unit)
 
-    # Calculate baseline LD score
-    calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy, snp_pass_maf, config.save_dir,
-                                    config.chrom, config.sample_name, keep_snp_root=config.keep_snp_root)
+        # Calculate baseline LD score
+        calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy, snp_pass_maf, config.save_dir,
+                                        chrom, config.sample_name, keep_snp_root=config.keep_snp_root)
 
-    # Process common genes and calculate LD score
-    common_gene_chr = SNP_gene_pair_dummy.columns[:-1]
-    calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix.iloc[:, :-1],
-                                                        mk_score_common.loc[common_gene_chr],
-                                                        spots_per_chunk=config.spots_per_chunk,
-                                                        save_dir=config.save_dir,
-                                                        chrom=config.chrom, snp_pass_maf=snp_pass_maf,
-                                                        sample_name=config.sample_name,
-                                                        keep_snp_root=config.keep_snp_root)
+        # Process common genes and calculate LD score
+        common_gene_chr = SNP_gene_pair_dummy.columns[:-1]
+        calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix.iloc[:, :-1],
+                                                            mk_score_common.loc[common_gene_chr],
+                                                            spots_per_chunk=config.spots_per_chunk,
+                                                            save_dir=config.save_dir,
+                                                            chrom=chrom, snp_pass_maf=snp_pass_maf,
+                                                            sample_name=config.sample_name,
+                                                            keep_snp_root=config.keep_snp_root)
+    # Handle 'all' case
+    if config.chrom == 'all':
+        for chrom in range(1, 23):
+            process_chromosome(chrom)
+    else:
+        process_chromosome(config.chrom)
+
+
 
 
 def add_generate_ldscore_args(parser):
+    def chrom_choice(value):
+        if value.isdigit():
+            ivalue = int(value)
+            if 1 <= ivalue <= 22:
+                return ivalue
+        elif value.lower() == 'all':
+            return value
+        else:
+            raise argparse.ArgumentTypeError(f"'{value}' is an invalid chromosome choice. Choose from 1-22 or 'all'.")
     parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
-    parser.add_argument('--chrom', type=int, required=True, help='Chromosome number')
+    parser.add_argument('--chrom', type=chrom_choice, required=True, help='Chromosome number (1-22) or "all"')
     parser.add_argument('--save_dir', type=str, required=True, help='Directory to save the data')
     parser.add_argument('--gtf_file', type=str, required=True, help='GTF file path')
     parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
@@ -385,8 +403,10 @@ def add_generate_ldscore_args(parser):
     parser.add_argument('--keep_snp_root', type=str, required=True, help='Keep SNP root path')
 
     # Arguments with defaults
-    parser.add_argument('--window_size', type=int, default=50000, help='Window size')
+    parser.add_argument('--window_size', type=int, default=50000, help='Annotation window size for each gene')
     parser.add_argument('--spots_per_chunk', type=int, default=10000, help='Number of spots per chunk')
+    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size')
+    parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',choices=['SNP','KB','CM'])
 
 
 # %%
