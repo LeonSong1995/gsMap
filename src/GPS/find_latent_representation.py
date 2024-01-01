@@ -165,7 +165,6 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
         sc.tl.umap(adata)
         adata.obsm['X_umap_' + name] = adata.obsm['X_umap']
 
-        # TODO : Don't know the meaning of the following code
         # Find the latent representations hierarchically (optionally)
     if not args.annotation is None and args.hierarchically:
         print(f'------Finding latent representations hierarchically...')

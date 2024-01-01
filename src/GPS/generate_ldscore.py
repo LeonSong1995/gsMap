@@ -331,7 +331,7 @@ from dataclasses import dataclass
 @dataclass
 class GenerateLDScoreConfig:
     sample_name: str
-    chrom: int
+    chrom: int | str
     save_dir: str
     gtf_file: str
     mkscore_feather_file: str
@@ -343,14 +343,14 @@ class GenerateLDScoreConfig:
     ld_unit: str = 'CM'
 
 
-def generate_ldscore(config: GenerateLDScoreConfig):
+def run_generate_ldscore(config: GenerateLDScoreConfig):
     # Load marker score
     mk_score = load_marker_score(config.mkscore_feather_file)
 
     # Load GTF and get common markers
     gtf_pr, mk_score_common = load_gtf(config.gtf_file, mk_score, window_size=config.window_size)
 
-    def process_chromosome(chrom:int):
+    def process_chromosome(chrom: int):
         # Process SNPs
         snp_pass_maf = get_snp_pass_maf(config.bfile_root, chrom, maf_min=0.05)
 
@@ -374,14 +374,13 @@ def generate_ldscore(config: GenerateLDScoreConfig):
                                                             chrom=chrom, snp_pass_maf=snp_pass_maf,
                                                             sample_name=config.sample_name,
                                                             keep_snp_root=config.keep_snp_root)
+
     # Handle 'all' case
     if config.chrom == 'all':
         for chrom in range(1, 23):
             process_chromosome(chrom)
     else:
         process_chromosome(config.chrom)
-
-
 
 
 def add_generate_ldscore_args(parser):
@@ -394,6 +393,7 @@ def add_generate_ldscore_args(parser):
             return value
         else:
             raise argparse.ArgumentTypeError(f"'{value}' is an invalid chromosome choice. Choose from 1-22 or 'all'.")
+
     parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
     parser.add_argument('--chrom', type=chrom_choice, required=True, help='Chromosome number (1-22) or "all"')
     parser.add_argument('--save_dir', type=str, required=True, help='Directory to save the data')
@@ -406,7 +406,8 @@ def add_generate_ldscore_args(parser):
     parser.add_argument('--window_size', type=int, default=50000, help='Annotation window size for each gene')
     parser.add_argument('--spots_per_chunk', type=int, default=10000, help='Number of spots per chunk')
     parser.add_argument('--ld_wind', type=int, default=1, help='LD window size')
-    parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',choices=['SNP','KB','CM'])
+    parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
+                        choices=['SNP', 'KB', 'CM'])
 
 
 # %%
@@ -415,7 +416,7 @@ if __name__ == '__main__':
     if TEST:
         # %%
         sample_name = 'Cortex_151507'
-        chrom = 1
+        chrom = 'all'
         save_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101'
         # %%
         gtf_file = '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf'
@@ -437,11 +438,10 @@ if __name__ == '__main__':
             window_size=window_size,
             spots_per_chunk=spots_per_chunk,
         )
-        generate_ldscore(config1)
+        run_generate_ldscore(config1)
     else:
         parser = argparse.ArgumentParser(description="Configuration for the application.")
         add_generate_ldscore_args(parser)
         args = parser.parse_args()
         config = GenerateLDScoreConfig(**vars(args))
-        generate_ldscore(config)
-
+        run_generate_ldscore(config)
