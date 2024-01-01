@@ -1,15 +1,12 @@
 import argparse
 import logging
-from typing import Optional, Literal
 from collections import OrderedDict, namedtuple
-from omegaconf import OmegaConf, II
-from dataclasses import dataclass, field
-from omegaconf import MISSING
+
+from GPS import (__version__)
 from GPS.find_latent_representation import add_find_latent_representations_args, run_find_latent_representation, \
     FindLatentRepresentationsConfig
-from GPS.latent_to_gene import add_latent_to_gene_args, run_latent_to_gene, LatentToGeneConfig
 from GPS.generate_ldscore import add_generate_ldscore_args, run_generate_ldscore, GenerateLDScoreConfig
-from GPS import (__version__)
+from GPS.latent_to_gene import add_latent_to_gene_args, run_latent_to_gene, LatentToGeneConfig
 
 subcommand_config = namedtuple('subcommand_config',
                                ['name',
@@ -38,7 +35,7 @@ generate_ldscore_subcommand_config = subcommand_config(
     run_config=GenerateLDScoreConfig,
     run_function=run_generate_ldscore,
     add_args_function=add_generate_ldscore_args,
-    description='Generate LD Score'
+    description='Generate LD Sc ore'
 )
 
 subcommand_list = [find_latent_subcommand_config, latent_to_gene_subcommand_config, generate_ldscore_subcommand_config]
@@ -54,8 +51,7 @@ logger.addHandler(handler)
 
 def main():
     parser = argparse.ArgumentParser(description=" GPS: Genetics-informed pathogenic spatial mapping")
-    parser.add_argument('--version', action='version', version=f'GPS version {__version__}')
-    parser.add_argument('--verbose', '-v', action='store_true', help='Print debug messages')
+    parser.add_argument('--version','-v', action='version', version=f'GPS version {__version__}')
     subparsers = parser.add_subparsers(dest="subcommand", help="Subcommands")
 
     for subcommand in subcommand_list:

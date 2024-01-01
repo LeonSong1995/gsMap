@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import pyranges as pr
 from tqdm import trange
+from typing import Union
 
 # %%
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
@@ -331,7 +332,7 @@ from dataclasses import dataclass
 @dataclass
 class GenerateLDScoreConfig:
     sample_name: str
-    chrom: int | str
+    chrom: Union[int, str]
     save_dir: str
     gtf_file: str
     mkscore_feather_file: str

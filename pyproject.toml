@@ -26,8 +26,11 @@ dependencies = [
     "matplotlib",
     "seaborn",
     "tqdm",
-    "progress"
+    "progress",
     "pyyaml",
+    "torch",
+    "torch-geometric",
+    "pyranges",
 ]
 
 
