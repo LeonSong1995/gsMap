@@ -25,26 +25,7 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
     '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
 logger.addHandler(handler)
-
-@dataclasses.dataclass
-class LatentToGeneConfig:
-    input_hdf5_path: str
-    sample_name: str
-    output_feather_path: str
-
-    method: str = 'rank'
-    latent_representation: str = 'latent_GVAE'
-    num_neighbour: int = 21
-    num_neighbour_spatial: int = 101
-    num_processes: int = 4
-    fold: float = 1.0
-    pst: float = 0.2
-    species: str = None
-    gs_species: str = None
-    gM_slices: str = None
-    annotation: str = None
-    type: str = None
-
+from GPS.config import add_latent_to_gene_args, LatentToGeneConfig
 
 def find_Neighbors(coor, num_neighbour):
     """
@@ -253,7 +234,7 @@ def run_latent_to_gene(args: LatentToGeneConfig):
     global adata, coor_latent, spatial_net, ranks, frac_whole
     # Load and process the spatial data
     print('------Loading the spatial data...')
-    adata = sc.read_h5ad(args.input_hdf5_path)
+    adata = sc.read_h5ad(args.input_hdf5_with_latent_path)
     num_cpus = min(multiprocessing.cpu_count(), args.num_processes)
     if not args.annotation is None:
         print(f'------Cell annotations are provided as {args.annotation}...')
@@ -347,23 +328,6 @@ def run_latent_to_gene(args: LatentToGeneConfig):
     mk_score_normalized.rename(columns={mk_score_normalized.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
     mk_score_normalized.to_feather(output_file_path)
 
-def add_latent_to_gene_args(parser):
-    parser.add_argument('--input_hdf5_path', type=str, required=True, help='Path to the input HDF5 file.')
-    parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
-    parser.add_argument('--output_feather_path', type=str, required=True, help='Path to save output gene marker score feather file.')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
-
-    parser.add_argument('--method', type=str, default='rank', choices=['rank', 'other_method'], help='Method to be used. Default is "rank".')
-    parser.add_argument('--latent_representation', type=str, default='latent_GVAE', choices=['latent_GVAE', 'latent_PCA'], help='Type of latent representation. Default is "latent_GVAE".')
-    parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbours to consider. Default is 21.')
-    parser.add_argument('--num_neighbour_spatial', type=int, default=101, help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--num_processes', type=int, default=4, help='Number of processes to use. Default is 4.')
-    parser.add_argument('--fold', type=float, default=1.0, help='Fold change threshold. Default is 1.0.')
-    parser.add_argument('--pst', type=float, default=0.2, help='PST value. Default is 0.2.')
-    parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
-    parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None, help='Path to gene model slices file, if applicable.')
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process latent to gene data.")

@@ -10,7 +10,7 @@ from typing import Union
 
 # %%
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
-
+from GPS.config import add_generate_ldscore_args, GenerateLDScoreConfig
 
 # %%
 # load gtf
@@ -329,19 +329,6 @@ def calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy,
 from dataclasses import dataclass
 
 
-@dataclass
-class GenerateLDScoreConfig:
-    sample_name: str
-    chrom: Union[int, str]
-    save_dir: str
-    gtf_file: str
-    mkscore_feather_file: str
-    bfile_root: str
-    keep_snp_root: str
-    window_size: int = 50000
-    spots_per_chunk: int = 10_000
-    ld_wind: int = 1
-    ld_unit: str = 'CM'
 
 
 def run_generate_ldscore(config: GenerateLDScoreConfig):
@@ -363,7 +350,7 @@ def run_generate_ldscore(config: GenerateLDScoreConfig):
                                                                   ld_wind=config.ld_wind, ld_unit=config.ld_unit)
 
         # Calculate baseline LD score
-        calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy, snp_pass_maf, config.save_dir,
+        calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy, snp_pass_maf, config.ldscore_save_dir,
                                         chrom, config.sample_name, keep_snp_root=config.keep_snp_root)
 
         # Process common genes and calculate LD score
@@ -371,7 +358,7 @@ def run_generate_ldscore(config: GenerateLDScoreConfig):
         calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix.iloc[:, :-1],
                                                             mk_score_common.loc[common_gene_chr],
                                                             spots_per_chunk=config.spots_per_chunk,
-                                                            save_dir=config.save_dir,
+                                                            save_dir=config.ldscore_save_dir,
                                                             chrom=chrom, snp_pass_maf=snp_pass_maf,
                                                             sample_name=config.sample_name,
                                                             keep_snp_root=config.keep_snp_root)
@@ -384,31 +371,6 @@ def run_generate_ldscore(config: GenerateLDScoreConfig):
         process_chromosome(config.chrom)
 
 
-def add_generate_ldscore_args(parser):
-    def chrom_choice(value):
-        if value.isdigit():
-            ivalue = int(value)
-            if 1 <= ivalue <= 22:
-                return ivalue
-        elif value.lower() == 'all':
-            return value
-        else:
-            raise argparse.ArgumentTypeError(f"'{value}' is an invalid chromosome choice. Choose from 1-22 or 'all'.")
-
-    parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
-    parser.add_argument('--chrom', type=chrom_choice, required=True, help='Chromosome number (1-22) or "all"')
-    parser.add_argument('--save_dir', type=str, required=True, help='Directory to save the data')
-    parser.add_argument('--gtf_file', type=str, required=True, help='GTF file path')
-    parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
-    parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
-    parser.add_argument('--keep_snp_root', type=str, required=True, help='Keep SNP root path')
-
-    # Arguments with defaults
-    parser.add_argument('--window_size', type=int, default=50000, help='Annotation window size for each gene')
-    parser.add_argument('--spots_per_chunk', type=int, default=10000, help='Number of spots per chunk')
-    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size')
-    parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
-                        choices=['SNP', 'KB', 'CM'])
 
 
 # %%
@@ -431,7 +393,7 @@ if __name__ == '__main__':
         config1 = GenerateLDScoreConfig(
             sample_name=sample_name,
             chrom=chrom,
-            save_dir=save_dir,
+            ldscore_save_dir=save_dir,
             gtf_file=gtf_file,
             mkscore_feather_file=mkscore_feather_file,
             bfile_root=bfile_root,

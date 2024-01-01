@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 from sklearn import preprocessing
-
+import argparse
 from GPS.GNN_VAE.adjacency_matrix import Construct_Adjacency_Matrix
 from GPS.GNN_VAE.train import Model_Train
-
+from GPS.config import add_find_latent_representations_args, FindLatentRepresentationsConfig
 random.seed(20230609)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -22,64 +22,6 @@ handler.setFormatter(logging.Formatter(
     '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
 logger.addHandler(handler)
 
-@dataclass
-class FindLatentRepresentationsConfig:
-    input_hdf5_path: str
-    output_hdf5_path: str
-    sample_name: str
-    annotation: str = None
-    type: str = None
-
-    epochs: int = 300
-    feat_hidden1: int = 256
-    feat_hidden2: int = 128
-    feat_cell: int = 3000
-    gcn_hidden1: int = 64
-    gcn_hidden2: int = 30
-    p_drop: float = 0.1
-    gcn_lr: float = 0.001
-    gcn_decay: float = 0.01
-    n_neighbors: int = 11
-    label_w: float = 1
-    rec_w: float = 1
-    input_pca: bool = True
-    n_comps: int = 300
-    weighted_adj: bool = False
-    nheads: int = 3
-    var: bool = False
-    convergence_threshold: float = 1e-4
-    hierarchically: bool = False
-
-
-# Set args
-import argparse
-def add_find_latent_representations_args(parser):
-
-    parser.add_argument('--epochs', default=300, type=int, help="Number of training epochs for the GNN-VAE model. Default is 300.")
-    parser.add_argument('--feat_hidden1', default=256, type=int, help="Number of neurons in the first hidden layer of the feature extraction network. Default is 256.")
-    parser.add_argument('--feat_hidden2', default=128, type=int, help="Number of neurons in the second hidden layer of the feature extraction network. Default is 128.")
-    parser.add_argument('--feat_cell', default=3000, type=int, help="Number of top variable genes to select. Default is 3000.")
-    parser.add_argument('--gcn_hidden1', default=64, type=int, help="Number of units in the first hidden layer of the GCN. Default is 64.")
-    parser.add_argument('--gcn_hidden2', default=30, type=int, help="Number of units in the second hidden layer of the GCN. Default is 30.")
-    parser.add_argument('--p_drop', default=0.1, type=float, help="Dropout rate used in the GNN-VAE model. Default is 0.1.")
-    parser.add_argument('--gcn_lr', default=0.001, type=float, help="Learning rate for the GCN network. Default is 0.001.")
-    parser.add_argument('--gcn_decay', default=0.01, type=float, help="Weight decay (L2 penalty) for the GCN network. Default is 0.01.")
-    parser.add_argument('--n_neighbors', default=11, type=int, help="Number of neighbors to consider for graph construction in GCN. Default is 11.")
-    parser.add_argument('--label_w', default=1, type=float, help="Weight of the label loss in the loss function. Default is 1.")
-    parser.add_argument('--rec_w', default=1, type=float, help="Weight of the reconstruction loss in the loss function. Default is 1.")
-    parser.add_argument('--input_pca', default=True, type=bool, help="Whether to perform PCA on input features. Default is True.")
-    parser.add_argument('--n_comps', default=300, type=int, help="Number of principal components to keep if PCA is performed. Default is 300.")
-    parser.add_argument('--weighted_adj', default=False, type=bool, help="Whether to use a weighted adjacency matrix in GCN. Default is False.")
-    parser.add_argument('--nheads', default=3, type=int, help="Number of heads in the attention mechanism of the GNN. Default is 3.")
-    parser.add_argument('--var', default=False, type=bool)
-    parser.add_argument('--convergence_threshold', default=1e-4, type=float, help="Threshold for convergence during training. Training stops if the loss change is below this threshold. Default is 1e-4.")
-    parser.add_argument('--hierarchically', default=False, type=bool, help="Whether to find latent representations hierarchically. Default is False.")
-
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
-    parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
-    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
 
 
 

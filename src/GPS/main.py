@@ -1,12 +1,10 @@
-import argparse
 import logging
 from collections import OrderedDict, namedtuple
-
 from GPS import (__version__)
-from GPS.find_latent_representation import add_find_latent_representations_args, run_find_latent_representation, \
-    FindLatentRepresentationsConfig
-from GPS.generate_ldscore import add_generate_ldscore_args, run_generate_ldscore, GenerateLDScoreConfig
-from GPS.latent_to_gene import add_latent_to_gene_args, run_latent_to_gene, LatentToGeneConfig
+from GPS.config import *
+from GPS.find_latent_representation import run_find_latent_representation
+from GPS.generate_ldscore import run_generate_ldscore
+from GPS.latent_to_gene import run_latent_to_gene
 
 subcommand_config = namedtuple('subcommand_config',
                                ['name',
@@ -51,7 +49,7 @@ logger.addHandler(handler)
 
 def main():
     parser = argparse.ArgumentParser(description=" GPS: Genetics-informed pathogenic spatial mapping")
-    parser.add_argument('--version','-v', action='version', version=f'GPS version {__version__}')
+    parser.add_argument('--version', '-v', action='version', version=f'GPS version {__version__}')
     subparsers = parser.add_subparsers(dest="subcommand", help="Subcommands")
 
     for subcommand in subcommand_list:
@@ -69,4 +67,4 @@ def main():
     args.func(
         subcommand_ordered_dict[args.subcommand].run_config(
             **vars(args)
-    ))
+        ))
