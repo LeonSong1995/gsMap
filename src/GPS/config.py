@@ -4,7 +4,7 @@ from typing import Union
 
 from collections import OrderedDict, namedtuple
 from typing import Callable
-
+import pyfiglet
 # Global registry to hold functions
 cli_function_registry = OrderedDict()
 subcommand = namedtuple('subcommand', ['name', 'func', 'add_args_function', 'description'])
@@ -15,7 +15,16 @@ def register_cli(name: str, description: str, add_args_function: Callable) -> Ca
     def decorator(func: Callable) -> Callable:
         cli_function_registry[name] = subcommand(name=name, func=func, add_args_function=add_args_function,
                                                  description=description)
-        return func
+        def wrapper(*args, **kwargs):
+            print(pyfiglet.figlet_format('GPS'))
+            print(pyfiglet.figlet_format('Genetics-informed pathogenic spatial mapping',
+                                         font='contessa'))
+
+            print(pyfiglet.figlet_format(name))
+
+            print(f'Running {name}...')
+            return func(*args, **kwargs)
+        return wrapper
 
     return decorator
 
@@ -79,7 +88,8 @@ def chrom_choice(value):
 
 def filter_args_for_dataclass(args_dict, data_class: dataclass):
     return {k: v for k, v in args_dict.items() if k in data_class.__dataclass_fields__}
-
+def get_dataclass_from_parser(parser, data_class: dataclass):
+    return data_class(**filter_args_for_dataclass(vars(parser), data_class))
 
 def add_generate_ldscore_args(parser):
     parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
@@ -231,12 +241,11 @@ def get_runall_mode_config(args: argparse.ArgumentParser):
     args.chrom = 'all'
 
     # find_latent_representations
-    flr_config = FindLatentRepresentationsConfig(
-        **filter_args_for_dataclass(vars(args), FindLatentRepresentationsConfig))
+    flr_config = get_dataclass_from_parser(args, FindLatentRepresentationsConfig)
     # latent_to_gene
-    ltg_config = LatentToGeneConfig(**filter_args_for_dataclass(vars(args), LatentToGeneConfig))
+    ltg_config = get_dataclass_from_parser(args, LatentToGeneConfig)
     # generate_ldscore
-    gls_config = GenerateLDScoreConfig(**filter_args_for_dataclass(vars(args), GenerateLDScoreConfig))
+    gls_config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
 
     return RunAllModeConfig(flr_config=flr_config, ltg_config=ltg_config, gls_config=gls_config)
 
@@ -317,7 +326,7 @@ class RunAllModeConfig:
               add_args_function=add_find_latent_representations_args)
 def run_find_latent_representation_from_cli(args: argparse.ArgumentParser):
     from GPS.find_latent_representation import run_find_latent_representation
-    config = FindLatentRepresentationsConfig(**vars(args))
+    config = get_dataclass_from_parser(args, FindLatentRepresentationsConfig)
     run_find_latent_representation(config)
 
 
@@ -326,7 +335,7 @@ def run_find_latent_representation_from_cli(args: argparse.ArgumentParser):
               add_args_function=add_latent_to_gene_args)
 def run_latent_to_gene_from_cli(args: argparse.ArgumentParser):
     from GPS.latent_to_gene import run_latent_to_gene
-    config = LatentToGeneConfig(**vars(args))
+    config = get_dataclass_from_parser(args, LatentToGeneConfig)
     run_latent_to_gene(config)
 
 @register_cli(name='run_generate_ldscore',
@@ -334,7 +343,7 @@ def run_latent_to_gene_from_cli(args: argparse.ArgumentParser):
                 add_args_function=add_generate_ldscore_args)
 def run_generate_ldscore_from_cli(args: argparse.ArgumentParser):
     from GPS.generate_ldscore import run_generate_ldscore
-    config = GenerateLDScoreConfig(**vars(args))
+    config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
     run_generate_ldscore(config)
 
 @register_cli(name='run_all_mode',
