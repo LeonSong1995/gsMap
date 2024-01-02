@@ -2,7 +2,22 @@ import argparse
 from dataclasses import dataclass
 from typing import Union
 
-parser = argparse.ArgumentParser(description=" GPS: Genetics-informed pathogenic spatial mapping")
+from collections import OrderedDict, namedtuple
+from typing import Callable
+
+# Global registry to hold functions
+cli_function_registry = OrderedDict()
+subcommand = namedtuple('subcommand', ['name', 'func', 'add_args_function', 'description'])
+
+
+# Decorator to register functions for cli parsing
+def register_cli(name: str, description: str, add_args_function: Callable) -> Callable:
+    def decorator(func: Callable) -> Callable:
+        cli_function_registry[name] = subcommand(name=name, func=func, add_args_function=add_args_function,
+                                                 description=description)
+        return func
+
+    return decorator
 
 
 def add_find_latent_representations_args(parser):
@@ -50,6 +65,7 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
     parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
 
+
 def chrom_choice(value):
     if value.isdigit():
         ivalue = int(value)
@@ -60,12 +76,12 @@ def chrom_choice(value):
     else:
         raise argparse.ArgumentTypeError(f"'{value}' is an invalid chromosome choice. Choose from 1-22 or 'all'.")
 
+
 def filter_args_for_dataclass(args_dict, data_class: dataclass):
     return {k: v for k, v in args_dict.items() if k in data_class.__dataclass_fields__}
 
+
 def add_generate_ldscore_args(parser):
-
-
     parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
     parser.add_argument('--chrom', type=chrom_choice, required=True, help='Chromosome number (1-22) or "all"')
     parser.add_argument('--ldscore_save_dir', type=str, required=True, help='Directory to save ld score files')
@@ -83,7 +99,8 @@ def add_generate_ldscore_args(parser):
 
 
 def add_latent_to_gene_args(parser):
-    parser.add_argument('--input_hdf5_with_latent_path', type=str, required=True, help='Path to the input HDF5 file which contains latent representations.')
+    parser.add_argument('--input_hdf5_with_latent_path', type=str, required=True,
+                        help='Path to the input HDF5 file which contains latent representations.')
     parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
     parser.add_argument('--output_feather_path', type=str, required=True,
                         help='Path to save output gene marker score feather file.')
@@ -132,7 +149,7 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--gM_slices', type=str, default=None, help='Path to gene model slices file, if applicable.')
 
 
-def run_all_mode_args(parser):
+def add_all_mode_args(parser):
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
     parser.add_argument('--save_dir', required=True, type=str, help='Path to the running results.')
     # output
@@ -180,7 +197,6 @@ def run_all_mode_args(parser):
     parser.add_argument('--hierarchically', default=False, type=bool,
                         help="Whether to find latent representations hierarchically. Default is False.")
 
-
     # latent_to_gene
     # input
     # parser.add_argument('--input_hdf5_path', type=str, required=True, help='Path to the input HDF5 file.')
@@ -207,7 +223,6 @@ def run_all_mode_args(parser):
     parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
     parser.add_argument('--gM_slices', type=str, default=None, help='Path to gene model slices file, if applicable.')
 
-
     # generate_ldscore
     # parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
     # should be all
@@ -228,10 +243,7 @@ def run_all_mode_args(parser):
                         choices=['SNP', 'KB', 'CM'])
 
 
-
-
-
-def get_runall_mode_config(args:argparse.ArgumentParser):
+def get_runall_mode_config(args: argparse.ArgumentParser):
     # output
     args.output_hdf5_path = f'{args.save_dir}/{args.sample_name}/find_latent_representations/{args.sample_name}_add_latent.h5ad'
     args.output_feather_path = f'{args.save_dir}/{args.sample_name}/latent_to_gene/{args.sample_name}_gene_marker_score.feather'
@@ -243,15 +255,14 @@ def get_runall_mode_config(args:argparse.ArgumentParser):
     args.chrom = 'all'
 
     # find_latent_representations
-    flr_config= FindLatentRepresentationsConfig(**filter_args_for_dataclass(vars(args),FindLatentRepresentationsConfig))
+    flr_config = FindLatentRepresentationsConfig(
+        **filter_args_for_dataclass(vars(args), FindLatentRepresentationsConfig))
     # latent_to_gene
-    ltg_config= LatentToGeneConfig(**filter_args_for_dataclass(vars(args),LatentToGeneConfig))
+    ltg_config = LatentToGeneConfig(**filter_args_for_dataclass(vars(args), LatentToGeneConfig))
     # generate_ldscore
-    gls_config= GenerateLDScoreConfig(**filter_args_for_dataclass(vars(args),GenerateLDScoreConfig))
+    gls_config = GenerateLDScoreConfig(**filter_args_for_dataclass(vars(args), GenerateLDScoreConfig))
 
-    return RunAllModeConfig(flr_config=flr_config,ltg_config=ltg_config,gls_config=gls_config)
-
-
+    return RunAllModeConfig(flr_config=flr_config, ltg_config=ltg_config, gls_config=gls_config)
 
 
 @dataclass
@@ -317,8 +328,47 @@ class LatentToGeneConfig:
     annotation: str = None
     type: str = None
 
+
 @dataclass
 class RunAllModeConfig:
     flr_config: FindLatentRepresentationsConfig
     ltg_config: LatentToGeneConfig
     gls_config: GenerateLDScoreConfig
+
+
+@register_cli(name='run_all_mode',
+              description='Run Find_latent_representations \nFind the latent representations of each spot by running GNN-VAE',
+              add_args_function=add_find_latent_representations_args)
+def run_find_latent_representation_from_cli(args: argparse.ArgumentParser):
+    from GPS.find_latent_representation import run_find_latent_representation
+    config = FindLatentRepresentationsConfig(**vars(args))
+    run_find_latent_representation(config)
+
+
+@register_cli(name='run_latent_to_gene',
+              description='Run Latent_to_gene \nFind gene marker gene scores for each spot by using latent representations from nearby spots',
+              add_args_function=add_latent_to_gene_args)
+def run_latent_to_gene_from_cli(args: argparse.ArgumentParser):
+    from GPS.latent_to_gene import run_latent_to_gene
+    config = LatentToGeneConfig(**vars(args))
+    run_latent_to_gene(config)
+
+@register_cli(name='run_generate_ldscore',
+                description='Run Generate_ldscore \nGenerate LD scores for each spot',
+                add_args_function=add_generate_ldscore_args)
+def run_generate_ldscore_from_cli(args: argparse.ArgumentParser):
+    from GPS.generate_ldscore import run_generate_ldscore
+    config = GenerateLDScoreConfig(**vars(args))
+    run_generate_ldscore(config)
+
+@register_cli(name='run_all_mode',
+                description='Run GPS Pipeline \nGSP Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order',
+                add_args_function=add_all_mode_args)
+def run_all_mode_from_cli(args: argparse.ArgumentParser):
+    from GPS.find_latent_representation import run_find_latent_representation
+    from GPS.latent_to_gene import run_latent_to_gene
+    from GPS.generate_ldscore import run_generate_ldscore
+    config = get_runall_mode_config(args)
+    run_find_latent_representation(config.flr_config)
+    run_latent_to_gene(config.ltg_config)
+    run_generate_ldscore(config.gls_config)
