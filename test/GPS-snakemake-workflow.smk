@@ -4,7 +4,7 @@ sample_name = "Cortex_151507"
 chrom = "all"
 rule test_run:
     input:
-        f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_{chrom}.done'
+        f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done'
 
 rule find_latent_representations:
     input:
@@ -26,17 +26,42 @@ rule find_latent_representations:
         n_neighbors = 11,
         label_w = 1,
         rec_w = 1,
-        input_pca = True,
         n_comps = 300,
         weighted_adj = False,
         nheads = 3,
         var = False,
         convergence_threshold = 1e-4,
         hierarchically = False
-    shell:
+    run:
+        command=f"""
+        GPS run_find_latent_representations \
+            --input_hdf5_path {input.hdf5_path} \
+            --sample_name {wildcards.sample_name} \
+            --output_hdf5_path {output.hdf5_output} \
+            --annotation {params.annotation} \
+            --type {params.type} \
+            --epochs {params.epochs} \
+            --feat_hidden1 {params.feat_hidden1} \
+            --feat_hidden2 {params.feat_hidden2} \
+            --feat_cell {params.feat_cell} \
+            --gcn_hidden1 {params.gcn_hidden1} \
+            --gcn_hidden2 {params.gcn_hidden2} \
+            --p_drop {params.p_drop} \
+            --gcn_lr {params.gcn_lr} \
+            --gcn_decay {params.gcn_decay} \
+            --n_neighbors {params.n_neighbors} \
+            --label_w {params.label_w} \
+            --rec_w {params.rec_w} \
+            --n_comps {params.n_comps} \
+            {'--weighted_adj' if params.weighted_adj else ''} \
+            --nheads {params.nheads} \
+            {'--var' if params.var else ''} \
+            --convergence_threshold {params.convergence_threshold} \
+            {'--hierarchically' if params.hierarchically else ''}
         """
-        GPS run_find_latent_representations --input_hdf5_path {input.hdf5_path}  --output_hdf5_path {output.hdf5_output} --sample_name {wildcards.sample_name} --annotation {params.annotation} --type {params.type} --epochs {params.epochs} --feat_hidden1 {params.feat_hidden1} --feat_hidden2 {params.feat_hidden2} --feat_cell {params.feat_cell} --gcn_hidden1 {params.gcn_hidden1} --gcn_hidden2 {params.gcn_hidden2} --p_drop {params.p_drop} --gcn_lr {params.gcn_lr} --gcn_decay {params.gcn_decay} --n_neighbors {params.n_neighbors} --label_w {params.label_w} --rec_w {params.rec_w}
-        """
+        shell(
+            f'{command}'
+        )
 
 
 rule latent_to_gene:
@@ -57,17 +82,37 @@ rule latent_to_gene:
         gM_slices = None,
         annotation = "layer_guess",
         type = "count"
-    shell:
+    run:
+        command=f"""
+        GPS run_latent_to_gene \
+            --input_hdf5_with_latent_path {input.hdf5_with_latent_path} \
+            --sample_name {wildcards.sample_name} \
+            --output_feather_path {output.feather_path} \
+            --annotation {params.annotation} \
+            --type {params.type} \
+            --method {params.method} \
+            --latent_representation {params.latent_representation} \
+            --num_neighbour {params.num_neighbour} \
+            --num_neighbour_spatial {params.num_neighbour_spatial} \
+            --num_processes {params.num_processes} \
+            --fold {params.fold} \
+            --pst {params.pst} \
+             {'--species' + params.species if params.species is not None else ''} \
+             {'--gs_species' + params.gs_species if params.gs_species is not None else ''} \
+             {'--gM_slices' + params.gM_slices if params.gM_slices is not None else ''}
         """
-        # python latent_to_gene.py --input_hdf5_with_latent_path {input.hdf5_with_latent_path} --sample_name {wildcards.sample_name} --output_feather_path {output.feather_path} --annotation {params.annotation} --type {params.type} --method {params.method} --latent_representation {params.latent_representation} --num_neighbour {params.num_neighbour} --num_neighbour_spatial {params.num_neighbour_spatial} --num_processes {params.num_processes} --fold {params.fold} --pst {params.pst} --species {params.species} --gs_species {params.gs_species} --gM_slices {params.gM_slices}
-        GPS run_latent_to_gene --input_hdf5_with_latent_path {input.hdf5_with_latent_path} --sample_name {wildcards.sample_name} --output_feather_path {output.feather_path} --annotation {params.annotation} --type {params.type} --method {params.method} --latent_representation {params.latent_representation} --num_neighbour {params.num_neighbour} --num_neighbour_spatial {params.num_neighbour_spatial} --num_processes {params.num_processes} --fold {params.fold} --pst {params.pst} --species {params.species} --gs_species {params.gs_species} --gM_slices {params.gM_slices}
-        """
+        shell(
+            f'{command}'
+            'touch({output.done})'
+        )
+
+
 
 rule generate_ldscore:
     input:
         mkscore_feather_file = rules.latent_to_gene.output.feather_path
     output:
-        done = '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_{chrom}.done'
+        done = '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done'
     params:
         ld_score_save_dir ='{sample_name}/generate_ldscore',
         chrom = "all",
