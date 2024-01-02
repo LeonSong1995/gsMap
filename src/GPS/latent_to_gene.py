@@ -28,6 +28,7 @@ handler.setFormatter(logging.Formatter(
     '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
 logger.addHandler(handler)
 
+
 def find_Neighbors(coor, num_neighbour):
     """
     find Neighbors of each cell (based on spatial coordinates)
@@ -157,7 +158,6 @@ def compute_z_score(adata, cell_select, fold, pst):
     return df
 
 
-
 def generate_parser_from_dataclass(dataclass_type):
     parser = argparse.ArgumentParser(description='Arguments for LatentToGeneConfig')
     type_hints = get_type_hints(dataclass_type)
@@ -172,6 +172,7 @@ def generate_parser_from_dataclass(dataclass_type):
         parser.add_argument(f'--{field.name}', type=arg_type, default=default, help=help_string)
 
     return parser
+
 
 def find_Neighbors_Regional(cell):
     cell_use = spatial_net.loc[spatial_net.Cell1 == cell, 'Cell2'].to_list()
@@ -188,6 +189,7 @@ def find_Neighbors_Regional(cell):
     cell_select = df.Cell2[0:args.num_neighbour].to_list()
 
     return cell_select
+
 
 def _compute_dge(args):
     """
@@ -208,6 +210,7 @@ def _compute_dge(args):
     scores_df.columns = [cell_tg]
 
     return scores_df
+
 
 def _compute_regional_ranks(cell_tg, ):
     """
@@ -231,50 +234,53 @@ def _compute_regional_ranks(cell_tg, ):
     gene_ranks_region.columns = [cell_tg]
 
     return gene_ranks_region
-def run_latent_to_gene(args: LatentToGeneConfig):
-    global adata, coor_latent, spatial_net, ranks, frac_whole
+
+
+def run_latent_to_gene(config: LatentToGeneConfig):
+    global adata, coor_latent, spatial_net, ranks, frac_whole, args
+    args = config
     # Load and process the spatial data
     print('------Loading the spatial data...')
-    adata = sc.read_h5ad(args.input_hdf5_with_latent_path)
-    num_cpus = min(multiprocessing.cpu_count(), args.num_processes)
-    if not args.annotation is None:
-        print(f'------Cell annotations are provided as {args.annotation}...')
-        adata = adata[~pd.isnull(adata.obs[args.annotation]), :]
+    adata = sc.read_h5ad(config.input_hdf5_with_latent_path)
+    num_cpus = min(multiprocessing.cpu_count(), config.num_processes)
+    if not config.annotation is None:
+        print(f'------Cell annotations are provided as {config.annotation}...')
+        adata = adata[~pd.isnull(adata.obs[config.annotation]), :]
     # Homologs transformation
-    if not args.species is None:
-        print(f'------Transforming the {args.species} to HUMAN_GENE_SYM...')
-        homologs = pd.read_csv(args.gs_species, sep='\t')
-        homologs.index = homologs[args.species]
-        adata = adata[:, adata.var_names.isin(homologs[args.species])]
+    if not config.species is None:
+        print(f'------Transforming the {config.species} to HUMAN_GENE_SYM...')
+        homologs = pd.read_csv(config.gs_species, sep='\t')
+        homologs.index = homologs[config.species]
+        adata = adata[:, adata.var_names.isin(homologs[config.species])]
         print(f'{adata.shape[1]} genes left after homologs transformation.')
         adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM']
     # Process the data
-    if args.type == 'count':
-        adata.X = adata.layers[args.type]
+    if config.type == 'count':
+        adata.X = adata.layers[config.type]
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
     else:
-        adata.X = adata.layers[args.type]
+        adata.X = adata.layers[config.type]
 
         # Remove cells that do not express any genes after transformation, and genes that are not expressed in any cells.
     print(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')
     adata = adata[adata.X.sum(axis=1) > 0, adata.X.sum(axis=0) > 0]
     print(f'Number of cells, genes after transformation: {adata.shape[0]},{adata.shape[1]}')
     # Buid the spatial graph
-    spatial_net = _build_spatial_net(adata, args.annotation, args.num_neighbour_spatial)
+    spatial_net = _build_spatial_net(adata, config.annotation, config.num_neighbour_spatial)
     # Extract the latent representation
-    coor_latent = pd.DataFrame(adata.obsm[args.latent_representation])
+    coor_latent = pd.DataFrame(adata.obsm[config.latent_representation])
     coor_latent.index = adata.obs.index
     # Find marker genes
     mk_score = []
     cell_list = adata.obs.index.tolist()
-    if args.method == 'rank':
+    if config.method == 'rank':
         prefix = 'rank.feather'
 
         # Load the geometrical mean across slices
-        if not args.gM_slices is None:
+        if not config.gM_slices is None:
             print('Geometrical mean across multiple slices are provided.')
-            gM = pd.read_parquet(args.gM_slices)
+            gM = pd.read_parquet(config.gM_slices)
             # Select the common gene
             common_gene = np.intersect1d(adata.var_names, gM.index)
             gM = gM.loc[common_gene]
@@ -305,12 +311,12 @@ def run_latent_to_gene(args: LatentToGeneConfig):
         #                                                     max_workers=num_cpus,
         #                                                     chunksize=len(cell_list)//num_cpus//10,
         #                                                     ))
-    elif args.method == 'wilcox':
+    elif config.method == 'wilcox':
         prefix = 'wilcox.feather'
 
         with Pool(num_cpus) as p:
             with tqdm(total=len(cell_list), desc="Finding markers (Wilcoxon-based approach) | cells") as progress_bar:
-                for mk_cell in p.imap(_compute_dge, [(cell_tg, args.fold, args.pst) for cell_tg in cell_list]):
+                for mk_cell in p.imap(_compute_dge, [(cell_tg, config.fold, config.pst) for cell_tg in cell_list]):
                     mk_score.append(mk_cell ** 2)
                     progress_bar.update()
     # Normalize the marker scores
@@ -323,7 +329,7 @@ def run_latent_to_gene(args: LatentToGeneConfig):
     print(mk_score_normalized.shape)
     # Save the marker scores
     print(f'------Saving marker scores ...')
-    output_file_path = Path(args.output_feather_path)
+    output_file_path = Path(config.output_feather_path)
     output_file_path.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
     mk_score_normalized = mk_score_normalized.reset_index()
     mk_score_normalized.rename(columns={mk_score_normalized.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
@@ -354,9 +360,10 @@ if __name__ == '__main__':
     else:
         args = parser.parse_args()
     logger.info(f'Latent to gene for {args.sample_name}...')
-    config=LatentToGeneConfig(**vars(args))
+    config = LatentToGeneConfig(**vars(args))
     pprint.pprint(config)
     start_time = time.time()
     run_latent_to_gene(config)
     end_time = time.time()
-    logger.info(f'Latent to gene for {config.sample_name} finished. Time spent: {(end_time - start_time) / 60:.2f} min.')
+    logger.info(
+        f'Latent to gene for {config.sample_name} finished. Time spent: {(end_time - start_time) / 60:.2f} min.')
