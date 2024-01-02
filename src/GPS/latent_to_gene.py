@@ -11,13 +11,15 @@ from typing import get_type_hints
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from tqdm import tqdm
 from math import floor
 from scipy.sparse import issparse, vstack
 from scipy.stats import gmean
 from scipy.stats import rankdata
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
+from tqdm import tqdm
+
+from GPS.config import add_latent_to_gene_args, LatentToGeneConfig
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -25,7 +27,6 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
     '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
 logger.addHandler(handler)
-from GPS.config import add_latent_to_gene_args, LatentToGeneConfig
 
 def find_Neighbors(coor, num_neighbour):
     """

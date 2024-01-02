@@ -1,31 +1,38 @@
 import argparse
+import logging
 from dataclasses import dataclass
 from typing import Union
 
 from collections import OrderedDict, namedtuple
 from typing import Callable
+from GPS.__init__ import __version__
 import pyfiglet
 # Global registry to hold functions
 cli_function_registry = OrderedDict()
 subcommand = namedtuple('subcommand', ['name', 'func', 'add_args_function', 'description'])
-
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    '[{asctime}] {levelname:6s} {message}', style='{'))
+logger.addHandler(handler)
 
 # Decorator to register functions for cli parsing
 def register_cli(name: str, description: str, add_args_function: Callable) -> Callable:
     def decorator(func: Callable) -> Callable:
-        cli_function_registry[name] = subcommand(name=name, func=func, add_args_function=add_args_function,
-                                                 description=description)
         def wrapper(*args, **kwargs):
-            print(pyfiglet.figlet_format('GPS'))
-            print(pyfiglet.figlet_format('Genetics-informed pathogenic spatial mapping',
-                                         font='contessa'))
-
-            print(pyfiglet.figlet_format(name))
-
-            print(f'Running {name}...')
-            return func(*args, **kwargs)
+            name.replace('_', ' ')
+            GPS_main_logo = pyfiglet.figlet_format("GPS", font='doom',width= 80, justify='center',).rstrip()
+            print(GPS_main_logo,)
+            version_number = 'Version: '+ __version__
+            print(version_number.center(80))
+            print('=' * 80)
+            logger.info(f"Running {name}...")
+            func(*args, **kwargs)
+            logger.info(f"Finished running {name}.")
+        cli_function_registry[name] = subcommand(name=name, func=wrapper, add_args_function=add_args_function,
+                                             description=description)
         return wrapper
-
     return decorator
 
 
