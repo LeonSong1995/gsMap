@@ -69,8 +69,6 @@ def add_find_latent_representations_args(parser):
                         help="Weight of the label loss in the loss function. Default is 1.")
     parser.add_argument('--rec_w', default=1, type=float,
                         help="Weight of the reconstruction loss in the loss function. Default is 1.")
-    parser.add_argument('--input_pca', action='store_false', default=True,
-                        help="Perform PCA on input features. Use --no-input_pca to disable. Default is True.")
     parser.add_argument('--n_comps', default=300, type=int,
                         help="Number of principal components to keep if PCA is performed. Default is 300.")
     parser.add_argument('--weighted_adj', action='store_true',
@@ -182,8 +180,6 @@ def add_all_mode_args(parser):
                         help="Weight of the label loss in the loss function. Default is 1.")
     parser.add_argument('--rec_w', default=1, type=float,
                         help="Weight of the reconstruction loss in the loss function. Default is 1.")
-    parser.add_argument('--input_pca', action='store_false', default=True,
-                        help="Perform PCA on input features. Use --no-input_pca to disable. Default is True.")
     parser.add_argument('--n_comps', default=300, type=int,
                         help="Number of principal components to keep if PCA is performed. Default is 300.")
     parser.add_argument('--weighted_adj', action='store_true',
