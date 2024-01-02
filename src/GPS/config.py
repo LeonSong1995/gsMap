@@ -1,6 +1,7 @@
 import argparse
 import logging
 from dataclasses import dataclass
+from pprint import pprint
 from typing import Union
 
 from collections import OrderedDict, namedtuple
@@ -37,6 +38,13 @@ def register_cli(name: str, description: str, add_args_function: Callable) -> Ca
 
 
 def add_find_latent_representations_args(parser):
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
+    parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
+    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
+    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
+    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
+
+
     parser.add_argument('--epochs', default=300, type=int,
                         help="Number of training epochs for the GNN-VAE model. Default is 300.")
     parser.add_argument('--feat_hidden1', default=256, type=int,
@@ -61,25 +69,20 @@ def add_find_latent_representations_args(parser):
                         help="Weight of the label loss in the loss function. Default is 1.")
     parser.add_argument('--rec_w', default=1, type=float,
                         help="Weight of the reconstruction loss in the loss function. Default is 1.")
-    parser.add_argument('--input_pca', default=True, type=bool,
-                        help="Whether to perform PCA on input features. Default is True.")
+    parser.add_argument('--input_pca', action='store_false', default=True,
+                        help="Perform PCA on input features. Use --no-input_pca to disable. Default is True.")
     parser.add_argument('--n_comps', default=300, type=int,
                         help="Number of principal components to keep if PCA is performed. Default is 300.")
-    parser.add_argument('--weighted_adj', default=False, type=bool,
-                        help="Whether to use a weighted adjacency matrix in GCN. Default is False.")
+    parser.add_argument('--weighted_adj', action='store_true',
+                        help="Use a weighted adjacency matrix in GCN. Default is False.")
     parser.add_argument('--nheads', default=3, type=int,
                         help="Number of heads in the attention mechanism of the GNN. Default is 3.")
-    parser.add_argument('--var', default=False, type=bool)
+    parser.add_argument('--var', action='store_true',
+                        help="Enable var. Use --var to enable. Default is False.")
     parser.add_argument('--convergence_threshold', default=1e-4, type=float,
                         help="Threshold for convergence during training. Training stops if the loss change is below this threshold. Default is 1e-4.")
-    parser.add_argument('--hierarchically', default=False, type=bool,
-                        help="Whether to find latent representations hierarchically. Default is False.")
-
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
-    parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
-    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
+    parser.add_argument('--hierarchically', action='store_true',
+                        help="Find latent representations hierarchically. Use --hierarchically to enable. Default is False.")
 
 
 def chrom_choice(value):
@@ -96,7 +99,10 @@ def chrom_choice(value):
 def filter_args_for_dataclass(args_dict, data_class: dataclass):
     return {k: v for k, v in args_dict.items() if k in data_class.__dataclass_fields__}
 def get_dataclass_from_parser(parser, data_class: dataclass):
-    return data_class(**filter_args_for_dataclass(vars(parser), data_class))
+    remain_kwargs = filter_args_for_dataclass(vars(parser), data_class)
+    print(f'Using the following arguments for {data_class.__name__}:')
+    pprint(remain_kwargs)
+    return data_class(**remain_kwargs)
 
 def add_generate_ldscore_args(parser):
     parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
@@ -176,19 +182,20 @@ def add_all_mode_args(parser):
                         help="Weight of the label loss in the loss function. Default is 1.")
     parser.add_argument('--rec_w', default=1, type=float,
                         help="Weight of the reconstruction loss in the loss function. Default is 1.")
-    parser.add_argument('--input_pca', default=True, type=bool,
-                        help="Whether to perform PCA on input features. Default is True.")
+    parser.add_argument('--input_pca', action='store_false', default=True,
+                        help="Perform PCA on input features. Use --no-input_pca to disable. Default is True.")
     parser.add_argument('--n_comps', default=300, type=int,
                         help="Number of principal components to keep if PCA is performed. Default is 300.")
-    parser.add_argument('--weighted_adj', default=False, type=bool,
-                        help="Whether to use a weighted adjacency matrix in GCN. Default is False.")
+    parser.add_argument('--weighted_adj', action='store_true',
+                        help="Use a weighted adjacency matrix in GCN. Default is False.")
     parser.add_argument('--nheads', default=3, type=int,
                         help="Number of heads in the attention mechanism of the GNN. Default is 3.")
-    parser.add_argument('--var', default=False, type=bool)
+    parser.add_argument('--var', action='store_true',
+                        help="Enable var. Use --var to enable. Default is False.")
     parser.add_argument('--convergence_threshold', default=1e-4, type=float,
                         help="Threshold for convergence during training. Training stops if the loss change is below this threshold. Default is 1e-4.")
-    parser.add_argument('--hierarchically', default=False, type=bool,
-                        help="Whether to find latent representations hierarchically. Default is False.")
+    parser.add_argument('--hierarchically', action='store_true',
+                        help="Find latent representations hierarchically. Use --hierarchically to enable. Default is False.")
 
     # latent_to_gene
     # input
