@@ -124,30 +124,6 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--gM_slices', type=str, default=None, help='Path to gene model slices file, if applicable.')
 
 
-def add_latent_to_gene_args(parser):
-    parser.add_argument('--input_hdf5_path', type=str, required=True, help='Path to the input HDF5 file.')
-    parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
-    parser.add_argument('--output_feather_path', type=str, required=True,
-                        help='Path to save output gene marker score feather file.')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
-
-    parser.add_argument('--method', type=str, default='rank', choices=['rank', 'other_method'],
-                        help='Method to be used. Default is "rank".')
-    parser.add_argument('--latent_representation', type=str, default='latent_GVAE',
-                        choices=['latent_GVAE', 'latent_PCA'],
-                        help='Type of latent representation. Default is "latent_GVAE".')
-    parser.add_argument('--num_neighbour', type=int, default=21,
-                        help='Number of neighbours to consider. Default is 21.')
-    parser.add_argument('--num_neighbour_spatial', type=int, default=101,
-                        help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--num_processes', type=int, default=4, help='Number of processes to use. Default is 4.')
-    parser.add_argument('--fold', type=float, default=1.0, help='Fold change threshold. Default is 1.0.')
-    parser.add_argument('--pst', type=float, default=0.2, help='PST value. Default is 0.2.')
-    parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
-    parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None, help='Path to gene model slices file, if applicable.')
-
 
 def add_all_mode_args(parser):
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
@@ -336,7 +312,7 @@ class RunAllModeConfig:
     gls_config: GenerateLDScoreConfig
 
 
-@register_cli(name='run_all_mode',
+@register_cli(name='run_find_latent_representations',
               description='Run Find_latent_representations \nFind the latent representations of each spot by running GNN-VAE',
               add_args_function=add_find_latent_representations_args)
 def run_find_latent_representation_from_cli(args: argparse.ArgumentParser):
