@@ -1,25 +1,14 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 10 11:34:35 2023
-
-@author: songliyang
-"""
 import argparse
 import multiprocessing
 import os
-import sys
 from multiprocessing import Pool
 
 import numpy as np
 import pandas as pd
 from scipy.stats import norm
-from GPS.Regression_Read import _read_sumstats, _read_ref_ld, _read_M, _check_variance, _read_w_ld, _merge_and_log
 
-sys.path.append('/storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1')
-sys.path.append('/storage/yangjianLab/songliyang/SpatialData/ldsc/ldscore')
 import jackknife as jk
-
+from GPS.regression_read import _read_sumstats, _read_ref_ld, _read_M, _check_variance, _read_w_ld, _merge_and_log
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--h2', default=None, type=str)
@@ -34,24 +23,25 @@ parser.add_argument('--num_processes', default=2, type=int)
 parser.add_argument('--all_chunk', default=None, type=int)
 
 
-# Set regression weight 
+# Set regression weight
 class Regression_weight:
     """
     Weight the LDSC regression
     """
+
     def __init__(self, sumstats, ref_ld_cnames, w_ld_cname, M_annot, n_baseline, chisq_max=None):
-       
+
         self.sumstats = sumstats
         self.ref_ld_cnames = ref_ld_cnames
         self.w_ld_cname = w_ld_cname
         self.M_annot = M_annot
         self.n_baseline = n_baseline
         self.intercept = 1
-        
+
         self.n_snp = len(self.sumstats)
         self.n_annot = len(self.ref_ld_cnames)
         s = lambda x: np.array(x).reshape((self.n_snp, 1))
-        
+
         # Convert the data
         self.ref_ld = np.array(self.sumstats[self.ref_ld_cnames])
 
@@ -59,17 +49,17 @@ class Regression_weight:
         # self._check_ld_condnum()
         self._warn_length()
 
-        # Remove SNPs with high chisq 
+        # Remove SNPs with high chisq
         if chisq_max is None:
             self.chisq_max = max(0.001 * sumstats.N.max(), 80)
-        else:    
+        else:
             self.chisq_max = chisq_max
 
-        self.chisq = s(self.sumstats.Z**2)
+        self.chisq = s(self.sumstats.Z ** 2)
         ii = np.ravel(self.chisq < self.chisq_max)
         self.sumstats = self.sumstats.iloc[ii, :]
         print('Removed {M} SNPs with chi^2 > {C} ({N} SNPs remain)'.format(
-            C=self.chisq_max, N=np.sum(ii), M=self.n_snp-np.sum(ii)))
+            C=self.chisq_max, N=np.sum(ii), M=self.n_snp - np.sum(ii)))
         self.n_snp = np.sum(ii)
         self.ref_ld = np.array(self.sumstats[self.ref_ld_cnames])
         self.chisq = self.chisq[ii].reshape((self.n_snp, 1))
@@ -79,9 +69,9 @@ class Regression_weight:
         self.N = s(self.sumstats.N)
         self.n_snp, self.n_annot = self.ref_ld.shape
         self.M_tot = float(np.sum(self.M_annot))
-        
+
         self.initial_w = self.get_weight()
-        
+
     # Get the weight
     def get_weight(self):
         self.x_tot = np.sum(self.ref_ld, axis=1).reshape((self.n_snp, 1))
@@ -92,25 +82,23 @@ class Regression_weight:
 
         return initial_w
 
-
     def weight_yx(self):
-        basic_annotation = self.ref_ld[:,0:self.n_baseline]
-        cell_annotation = self.ref_ld[:,self.n_baseline:]
+        basic_annotation = self.ref_ld[:, 0:self.n_baseline]
+        cell_annotation = self.ref_ld[:, self.n_baseline:]
 
         Nbar = np.mean(self.N)
         basic_annotation = np.multiply(self.N, basic_annotation) / Nbar
         cell_annotation = np.multiply(self.N, cell_annotation) / Nbar
 
-        # Append intercept 
+        # Append intercept
         basic_annotation = self.append_intercept(basic_annotation)
 
-        # Apply weight 
-        basic_annotation = self.apply_weights(basic_annotation,self.initial_w)
-        cell_annotation = self.apply_weights(cell_annotation,self.initial_w)
-        y = self.apply_weights(self.chisq,self.initial_w)
+        # Apply weight
+        basic_annotation = self.apply_weights(basic_annotation, self.initial_w)
+        cell_annotation = self.apply_weights(cell_annotation, self.initial_w)
+        y = self.apply_weights(self.chisq, self.initial_w)
 
-        return y, basic_annotation, cell_annotation, Nbar 
-
+        return y, basic_annotation, cell_annotation, Nbar
 
     def _check_ld_condnum(self):
         '''Check condition number'''
@@ -126,27 +114,23 @@ class Regression_weight:
                     warn += "Remove collinear LD Scores. "
                     raise ValueError(warn.format(C=cond_num))
 
-
     def _warn_length(self):
         if len(self.sumstats) < 200000:
             print('WARNING: number of SNPs less than 200k; this is almost always bad.')
 
-
-    def aggregate(self,y, x, N, M, intercept=1):
+    def aggregate(self, y, x, N, M, intercept=1):
         num = M * (np.mean(y) - intercept)
         denom = np.mean(np.multiply(x, N))
         return num / denom
 
-
-    def append_intercept(self,x):
+    def append_intercept(self, x):
         n_row = x.shape[0]
         intercept = np.ones((n_row, 1))
         x_new = np.concatenate((x, intercept), axis=1)
 
         return x_new
 
-
-    def weights(self,ld, w_ld, N, M, hsq, intercept=1):
+    def weights(self, ld, w_ld, N, M, hsq, intercept=1):
         M = float(M)
         hsq = np.clip(hsq, 0.0, 1.0)
         ld = np.maximum(ld, 1.0)
@@ -157,28 +141,28 @@ class Regression_weight:
         w = np.multiply(het_w, oc_w)
         return w
 
-
-    def apply_weights(self,x, w):
+    def apply_weights(self, x, w):
         if np.any(w <= 0):
             raise ValueError('Weights must be > 0')
         (n, p) = x.shape
         if w.shape != (n, 1):
             raise ValueError(
                 'w has shape {S}. w must have shape (n, 1).'.format(S=w.shape))
-        #-
+        # -
         w = w / float(np.sum(w))
         x_new = np.multiply(x, w)
-        return x_new  
+        return x_new
+
+    # Fun for running LDSC
 
 
-#Fun for running LDSC
 def _coef(jknife, Nbar):
     '''Get coefficient estimates + cov from the jackknife.'''
     coef = jknife.est[0, 0:n_annot] / Nbar
     coef_cov = jknife.jknife_cov[0:n_annot, 0:n_annot] / Nbar ** 2
     coef_se = np.sqrt(np.diag(coef_cov))
     z = coef / coef_se
-    return coef, coef_cov, coef_se,z
+    return coef, coef_cov, coef_se, z
 
 
 def process_columns_cpu_worker(args):
@@ -194,7 +178,7 @@ def process_columns_cpu_worker(args):
     return [coef[0], coef_se[0], z[0]]
 
 
-def process_columns_cpu(n_blocks, Nbar, n_snp, chunk_index,num_processes = 2):
+def process_columns_cpu(n_blocks, Nbar, n_snp, chunk_index, num_processes=2):
     """LDSC for all spots"""
     chunk_size = spatial_annotation.shape[1]
     output = []
@@ -202,13 +186,13 @@ def process_columns_cpu(n_blocks, Nbar, n_snp, chunk_index,num_processes = 2):
     # Process cells in parallel
     print(f'Running LDSC for {chunk_size} cells in chunk-{chunk_index}.')
     with Pool(num_processes) as p:
-        #with tqdm(total=chunk_size, desc=f"Running ldsc of chunk-{chunk_index} ") as progress_bar:
-        for result in p.imap(process_columns_cpu_worker, 
-                                [(i, n_blocks, Nbar, n_snp) for i in range(chunk_size)]
-                                ):
-                #progress_bar.update()
+        # with tqdm(total=chunk_size, desc=f"Running ldsc of chunk-{chunk_index} ") as progress_bar:
+        for result in p.imap(process_columns_cpu_worker,
+                             [(i, n_blocks, Nbar, n_snp) for i in range(chunk_size)]
+                             ):
+            # progress_bar.update()
             output.append(result)
-                
+
     return output
 
 
@@ -221,9 +205,10 @@ if __name__ == '__main__':
         gwas_trait = "/storage/yangjianLab/songliyang/GWAS_trait/GWAS_Public_Use_MaxPower.csv"
         root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad"
 
-        name='Cortex_151507'
+        name = 'Cortex_151507'
         spe_name = name
-        ld_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{spe_name}/snp_annotation"
+        # ld_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{spe_name}/snp_annotation"
+        ld_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/{name}/generate_ldscore"
         out_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/ldsc_enrichment/{spe_name}"
         gwas_file = "ADULT1_ADULT2_ONSET_ASTHMA"
         # Prepare the arguments list using f-strings
@@ -242,7 +227,7 @@ if __name__ == '__main__':
 
     gwas_name = args.h2.split('/')[-1].split('.sumstats.gz')[0]
     data_name = args.data_name
-    num_cpus = min(multiprocessing.cpu_count(),args.num_processes)
+    num_cpus = min(multiprocessing.cpu_count(), args.num_processes)
 
     # Load the gwas summary statistics
     sumstats = _read_sumstats(fh=args.h2, alleles=False, dropna=False)
@@ -255,7 +240,7 @@ if __name__ == '__main__':
     ld_file_baseline = f'{args.ld_file}/baseline/baseline.'
     ref_ld_baseline = _read_ref_ld(ld_file_baseline)
     n_annot_baseline = len(ref_ld_baseline.columns) - 1
-    M_annot_baseline = _read_M(ld_file_baseline,n_annot_baseline,args.not_M_5_50)
+    M_annot_baseline = _read_M(ld_file_baseline, n_annot_baseline, args.not_M_5_50)
 
     # Detect chunk files
     all_file = os.listdir(args.ld_file)
@@ -267,11 +252,10 @@ if __name__ == '__main__':
         all_chunk = args.all_chunk
         print(f'\t')
         print(f'Input {all_chunk} chunked files')
-    
+
     # Process each chunk
     out_all = pd.DataFrame()
-    for chunk_index in range(1,all_chunk+1):
-
+    for chunk_index in range(1, all_chunk + 1):
         print(f'------Processing chunk-{chunk_index}')
         # Load the spatial ldscore annotations
         ld_file_spatial = f'{args.ld_file}/{data_name}_chunk{chunk_index}/{data_name}.'
@@ -279,10 +263,10 @@ if __name__ == '__main__':
         ref_ld_spatial_cnames = ref_ld_spatial.columns[1:]
 
         n_annot_spatial = len(ref_ld_spatial.columns) - 1
-        M_annot_spatial = _read_M(ld_file_spatial,n_annot_spatial,args.not_M_5_50)
+        M_annot_spatial = _read_M(ld_file_spatial, n_annot_spatial, args.not_M_5_50)
 
         # Merge the spatial annotations and baseline annotations
-        ref_ld = pd.concat([ref_ld_baseline.copy(),ref_ld_spatial.drop('SNP',axis=1)],axis=1)
+        ref_ld = pd.concat([ref_ld_baseline.copy(), ref_ld_spatial.drop('SNP', axis=1)], axis=1)
         n_annot = n_annot_baseline + n_annot_spatial
         M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
         ref_ld_cnames = ref_ld.columns[1:len(ref_ld.columns)]
@@ -293,20 +277,21 @@ if __name__ == '__main__':
         # Merge gwas summary statistics with annotations, and regression weights
         sumstats_chunk = _merge_and_log(ref_ld, sumstats, 'reference panel LD')
         sumstats_chunk = _merge_and_log(sumstats_chunk, w_ld, 'regression SNP LD')
-        
+
         # Weight gwas summary statistics
-        re = Regression_weight(sumstats_chunk,ref_ld_cnames, w_ld_cname, M_annot, n_annot_baseline)
+        re = Regression_weight(sumstats_chunk, ref_ld_cnames, w_ld_cname, M_annot, n_annot_baseline)
         y, baseline_annotation, spatial_annotation, Nbar = re.weight_yx()
 
         # Run LDSC
-        out_chunk  = process_columns_cpu(args.n_blocks, Nbar,re.n_snp,chunk_index,num_cpus)
+        out_chunk = process_columns_cpu(args.n_blocks, Nbar, re.n_snp, chunk_index, num_cpus)
         out_chunk = pd.DataFrame(out_chunk)
-        out_chunk.index = ref_ld_spatial_cnames; out_chunk.columns = ['beta','se','z']
+        out_chunk.index = ref_ld_spatial_cnames;
+        out_chunk.columns = ['beta', 'se', 'z']
         out_chunk['p'] = norm.sf(out_chunk['z'])
 
         # Concat results
-        out_all = pd.concat([out_all,out_chunk],axis=0)
-    
+        out_all = pd.concat([out_all, out_chunk], axis=0)
+
     # Save the results
     # print(f'------Saving the results...')
     # out_file = args.out_file

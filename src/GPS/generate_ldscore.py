@@ -6,11 +6,11 @@ import numpy as np
 import pandas as pd
 import pyranges as pr
 from tqdm import trange
-from typing import Union
 
+from GPS.config import add_generate_ldscore_args, GenerateLDScoreConfig
 # %%
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
-from GPS.config import add_generate_ldscore_args, GenerateLDScoreConfig
+
 
 # %%
 # load gtf
@@ -326,7 +326,6 @@ def calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy,
                                                  )
 
 
-from dataclasses import dataclass
 
 
 
