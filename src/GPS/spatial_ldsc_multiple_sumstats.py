@@ -1,4 +1,5 @@
 import argparse
+import gc
 import multiprocessing
 import os
 from multiprocessing import Pool
@@ -200,6 +201,98 @@ def process_columns_cpu(n_blocks, Nbar, n_snp, chunk_index, num_processes=2):
     return output
 
 
+class SpatialLDSCConfig:
+    h2: str
+    w_file: str
+    sample_name: str
+    ld_file: str
+    output_file: str
+    num_processes: int = 4
+    not_use_M_5_50: bool = False
+    n_blocks: int = 200
+    chisq_max: int = None
+    all_chunk: int = None
+
+
+def run_spatial_ldsc(config:SpatialLDSCConfig):
+    global data_name, name, all_chunk, n_annot, y, baseline_annotation, spatial_annotation, out_chunk
+    gwas_name = config.h2.split('/')[-1].split('.sumstats.gz')[0]
+    data_name = config.sample_name
+    num_cpus = min(multiprocessing.cpu_count(), config.num_processes)
+    # Load the gwas summary statistics
+    sumstats = _read_sumstats(fh=config.h2, alleles=False, dropna=False)
+    sumstats.set_index('SNP', inplace=True)
+    # Load the regression weights
+    w_ld = _read_w_ld(config.w_file)
+    w_ld_cname = w_ld.columns[1]
+    w_ld.set_index('SNP', inplace=True)
+    # Load the baseline annotations
+    ld_file_baseline = f'{config.ld_file}/baseline/baseline.'
+    ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
+    n_annot_baseline = len(ref_ld_baseline.columns)
+    M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, config.not_use_M_5_50)
+    # Detect chunk files
+    all_file = os.listdir(config.ld_file)
+    if config.all_chunk is None:
+        all_chunk = sum('chunk' in name for name in all_file)
+        print(f'\t')
+        print(f'Find {all_chunk} chunked files')
+    else:
+        all_chunk = config.all_chunk
+        print(f'\t')
+        print(f'Input {all_chunk} chunked files')
+    # Process each chunk
+    out_all = pd.DataFrame()
+    for chunk_index in range(1, all_chunk + 1):
+        print(f'------Processing chunk-{chunk_index}')
+        # Load the spatial ldscore annotations
+        ld_file_spatial = f'{config.ld_file}/{data_name}_chunk{chunk_index}/{data_name}.'
+        ref_ld_spatial = _read_ref_ld_v2(ld_file_spatial)
+        ref_ld_spatial_cnames = ref_ld_spatial.columns
+
+        n_annot_spatial = len(ref_ld_spatial.columns)
+        M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_use_M_5_50)
+
+        # Merge the spatial annotations and baseline annotations
+        ref_ld = pd.concat([ref_ld_baseline, ref_ld_spatial], axis=1)
+        n_annot = n_annot_baseline + n_annot_spatial
+        M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
+        ref_ld_cnames = ref_ld.columns
+
+        # # Check the variance of the design matrix
+        # M_annot, ref_ld, novar_cols = _check_variance_v2(M_annot, ref_ld)
+
+        # Merge gwas summary statistics with annotations, and regression weights
+        del ref_ld_spatial, M_annot_spatial
+        gc.collect()
+        sumstats_chunk = pd.concat([sumstats, ref_ld, w_ld], axis=1, join='inner')
+
+        # Weight gwas summary statistics
+        re = Regression_weight(sumstats_chunk, ref_ld_cnames, w_ld_cname, M_annot, n_annot_baseline)
+        y, baseline_annotation, spatial_annotation, Nbar = re.weight_yx()
+        del sumstats_chunk, ref_ld, w_ld, M_annot
+        gc.collect()
+
+        # Run LDSC
+        out_chunk = process_columns_cpu(config.n_blocks, Nbar, re.n_snp, chunk_index, num_cpus)
+        out_chunk = pd.DataFrame(out_chunk)
+        out_chunk.index = ref_ld_spatial_cnames
+        out_chunk.columns = ['beta', 'se', 'z']
+        out_chunk['p'] = norm.sf(out_chunk['z'])
+
+        # Concat results
+        out_all = pd.concat([out_all, out_chunk], axis=0)
+    # Save the results
+    print(f'------Saving the results...')
+    out_file = config.output_file
+    if not os.path.exists(out_file):
+        os.makedirs(out_file, mode=0o777, exist_ok=True)
+    out_file_name = f'{out_file}/{data_name}_{gwas_name}.gz'
+    out_all['spot'] = out_all.index
+    out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
+    out_all.to_csv(out_file_name, compression='gzip', index=False)
+
+
 # Main function of analysis
 if __name__ == '__main__':
 
@@ -227,82 +320,5 @@ if __name__ == '__main__':
         args = parser.parse_args(args_list)
     else:
         args = parser.parse_args()
-
-    gwas_name = args.h2.split('/')[-1].split('.sumstats.gz')[0]
-    data_name = args.data_name
-    num_cpus = min(multiprocessing.cpu_count(), args.num_processes)
-
-    # Load the gwas summary statistics
-    sumstats = _read_sumstats(fh=args.h2, alleles=False, dropna=False)
-    sumstats.set_index('SNP', inplace=True)
-    # Load the regression weights
-    w_ld = _read_w_ld(args.w_file)
-    w_ld_cname = w_ld.columns[1]
-    w_ld.set_index('SNP', inplace=True)
-
-    # Load the baseline annotations
-    ld_file_baseline = f'{args.ld_file}/baseline/baseline.'
-    ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
-    n_annot_baseline = len(ref_ld_baseline.columns)
-    M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, args.not_M_5_50)
-
-    # Detect chunk files
-    all_file = os.listdir(args.ld_file)
-    if args.all_chunk is None:
-        all_chunk = sum('chunk' in name for name in all_file)
-        print(f'\t')
-        print(f'Find {all_chunk} chunked files')
-    else:
-        all_chunk = args.all_chunk
-        print(f'\t')
-        print(f'Input {all_chunk} chunked files')
-
-    # Process each chunk
-    out_all = pd.DataFrame()
-    for chunk_index in range(1, all_chunk + 1):
-        print(f'------Processing chunk-{chunk_index}')
-        # Load the spatial ldscore annotations
-        ld_file_spatial = f'{args.ld_file}/{data_name}_chunk{chunk_index}/{data_name}.'
-        ref_ld_spatial = _read_ref_ld_v2(ld_file_spatial)
-        ref_ld_spatial.drop(columns='all_gene',errors='ignore', inplace=True)
-        ref_ld_spatial_cnames = ref_ld_spatial.columns
-
-        n_annot_spatial = len(ref_ld_spatial.columns)
-        M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, args.not_M_5_50)
-
-        # Merge the spatial annotations and baseline annotations
-        ref_ld = pd.concat([ref_ld_baseline, ref_ld_spatial], axis=1)
-        n_annot = n_annot_baseline + n_annot_spatial
-        M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
-        ref_ld_cnames = ref_ld.columns
-
-        # # Check the variance of the design matrix
-        # M_annot, ref_ld, novar_cols = _check_variance_v2(M_annot, ref_ld)
-
-        # Merge gwas summary statistics with annotations, and regression weights
-        sumstats_chunk = pd.concat([sumstats, ref_ld, w_ld], axis=1, join='inner')
-
-        # Weight gwas summary statistics
-        re = Regression_weight(sumstats_chunk, ref_ld_cnames, w_ld_cname, M_annot, n_annot_baseline)
-        y, baseline_annotation, spatial_annotation, Nbar = re.weight_yx()
-
-        # Run LDSC
-        out_chunk = process_columns_cpu(args.n_blocks, Nbar, re.n_snp, chunk_index, num_cpus)
-        out_chunk = pd.DataFrame(out_chunk)
-        out_chunk.index = ref_ld_spatial_cnames;
-        out_chunk.columns = ['beta', 'se', 'z']
-        out_chunk['p'] = norm.sf(out_chunk['z'])
-
-        # Concat results
-        out_all = pd.concat([out_all, out_chunk], axis=0)
-
-    # Save the results
-    # print(f'------Saving the results...')
-    # out_file = args.out_file
-    # if not os.path.exists(out_file):
-    #     os.makedirs(out_file, mode=0o777, exist_ok=True)
-    #
-    # out_file_name = f'{out_file}/{data_name}_{gwas_name}.gz'
-    # out_all['spot'] = out_all.index
-    # out_all = out_all[['spot','beta','se','z','p']]
-    # out_all.to_csv(out_file_name,compression='gzip',index=False)
+    config=SpatialLDSCConfig(**vars(args))
+    run_spatial_ldsc(config)
