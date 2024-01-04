@@ -1,10 +1,11 @@
 
 workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir'
 sample_name = "Cortex_151507"
-chrom = "all"
+# chrom = "all"
+chroms = range(1,23)
 rule test_run:
     input:
-        f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done'
+        [f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done' for chrom in chroms]
 
 rule find_latent_representations:
     input:
@@ -115,7 +116,6 @@ rule generate_ldscore:
         done = '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done'
     params:
         ld_score_save_dir ='{sample_name}/generate_ldscore',
-        chrom = "all",
         gtf_file = "/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf",
         bfile_root = "/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC",
         keep_snp_root = "/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm",
@@ -125,6 +125,8 @@ rule generate_ldscore:
         ld_unit = "CM"
     shell:
         """
-        # python generate_ldscore.py --sample_name {wildcards.sample_name} --chrom {params.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
-        GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom {params.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
+        # python generate_ldscore.py --sample_name {wildcards.sample_name} --chrom {wildcards.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
+        GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom {wildcards.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
+        
+        touch {output.done}
         """

@@ -100,7 +100,6 @@ def load_marker_score(mk_score_file):
     Load marker scores of each cell.
     """
     mk_score = pd.read_feather(mk_score_file).set_index('HUMAN_GENE_SYM').rename_axis('gene_name')
-    mk_score.insert(0, 'all_gene', 1)
     mk_score = mk_score.astype(np.float32, copy=False)
     return mk_score
 
@@ -278,7 +277,7 @@ def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix, 
     :param sample_name:
     """
     # Calculate the LD score
-    chunk_index = 0
+    chunk_index = 1
     for i in trange(0, mk_score_common.shape[1], spots_per_chunk, desc=f'Calculating LD score by chunk for chr{chrom}'):
         mk_score_chunk = mk_score_common.iloc[:, i:i + spots_per_chunk]
 

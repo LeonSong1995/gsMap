@@ -1,3 +1,5 @@
+import numpy as np
+
 from GPS.Build_LD_Score_old import *
 
 
@@ -118,6 +120,32 @@ def _read_ref_ld(ld_file):
     return ref_ld
 
 
+def _read_ref_ld_v2(ld_file):
+    suffix = '.l2.ldscore'
+    file = ld_file
+    first_fh = f'{file}1{suffix}'
+    s, compression = which_compression(first_fh)
+    print(f'Reading ld score annotations from {file}[1-22]{suffix}.{compression}')
+    ref_ld = pd.concat(
+        [pd.read_feather(f'{file}{chr}{suffix}{s}') for chr in range(1, 23)], axis=0
+    )
+    ref_ld.set_index('SNP', inplace=True)
+    # to float 32
+    ref_ld = ref_ld.astype('float32')
+    return ref_ld
+
+def _read_M_v2(ld_file, n_annot, not_M_5_50):
+    suffix = '.l2.M'
+    if not not_M_5_50:
+        suffix += '_5_50'
+    M_annot= np.array(
+        [
+            np.loadtxt(f'{ld_file}{chr}{suffix}', )
+         for chr in range(1, 23)]
+
+    )
+    assert M_annot.shape == (22, n_annot)
+    return M_annot.sum(axis=0).reshape((1, n_annot))
 # Fun for reading M annotations 
 def _read_M(ld_file, n_annot, not_M_5_50):
     '''
@@ -165,6 +193,16 @@ def _check_variance(M_annot, ref_ld):
         ref_ld = ref_ld.iloc[:, ii_snp]
         M_annot = M_annot[:, ii_m]
     # -
+    return M_annot, ref_ld, ii
+def _check_variance_v2(M_annot, ref_ld):
+    ii = ref_ld.var() == 0
+    if ii.all():
+        raise ValueError('All LD Scores have zero variance.')
+    else:
+        ii_snp= ii_m = np.array(~ii)
+        print(f'Removing {sum(ii)} partitioned LD Scores with zero variance.')
+        ref_ld = ref_ld.iloc[:, ii_snp]
+        M_annot = M_annot[:, ii_m]
     return M_annot, ref_ld, ii
 
 

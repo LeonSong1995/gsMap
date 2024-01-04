@@ -7,8 +7,12 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-import jackknife as jk
-from GPS.regression_read import _read_sumstats, _read_ref_ld, _read_M, _check_variance, _read_w_ld, _merge_and_log
+import GPS.jackknife as jk
+from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld, _read_M, _merge_and_log, _check_variance, \
+    _read_ref_ld_v2, _read_M_v2, _check_variance_v2
+
+# %load_ext autoreload
+# %autoreload 2
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--h2', default=None, type=str)
@@ -221,7 +225,6 @@ if __name__ == '__main__':
             "--out_file", out_pth
         ]
         args = parser.parse_args(args_list)
-
     else:
         args = parser.parse_args()
 
@@ -231,16 +234,17 @@ if __name__ == '__main__':
 
     # Load the gwas summary statistics
     sumstats = _read_sumstats(fh=args.h2, alleles=False, dropna=False)
-
+    sumstats.set_index('SNP', inplace=True)
     # Load the regression weights
     w_ld = _read_w_ld(args.w_file)
     w_ld_cname = w_ld.columns[1]
+    w_ld.set_index('SNP', inplace=True)
 
     # Load the baseline annotations
     ld_file_baseline = f'{args.ld_file}/baseline/baseline.'
-    ref_ld_baseline = _read_ref_ld(ld_file_baseline)
-    n_annot_baseline = len(ref_ld_baseline.columns) - 1
-    M_annot_baseline = _read_M(ld_file_baseline, n_annot_baseline, args.not_M_5_50)
+    ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
+    n_annot_baseline = len(ref_ld_baseline.columns)
+    M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, args.not_M_5_50)
 
     # Detect chunk files
     all_file = os.listdir(args.ld_file)
@@ -259,24 +263,24 @@ if __name__ == '__main__':
         print(f'------Processing chunk-{chunk_index}')
         # Load the spatial ldscore annotations
         ld_file_spatial = f'{args.ld_file}/{data_name}_chunk{chunk_index}/{data_name}.'
-        ref_ld_spatial = _read_ref_ld(ld_file_spatial)
-        ref_ld_spatial_cnames = ref_ld_spatial.columns[1:]
+        ref_ld_spatial = _read_ref_ld_v2(ld_file_spatial)
+        ref_ld_spatial.drop(columns='all_gene',errors='ignore', inplace=True)
+        ref_ld_spatial_cnames = ref_ld_spatial.columns
 
-        n_annot_spatial = len(ref_ld_spatial.columns) - 1
-        M_annot_spatial = _read_M(ld_file_spatial, n_annot_spatial, args.not_M_5_50)
+        n_annot_spatial = len(ref_ld_spatial.columns)
+        M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, args.not_M_5_50)
 
         # Merge the spatial annotations and baseline annotations
-        ref_ld = pd.concat([ref_ld_baseline.copy(), ref_ld_spatial.drop('SNP', axis=1)], axis=1)
+        ref_ld = pd.concat([ref_ld_baseline, ref_ld_spatial], axis=1)
         n_annot = n_annot_baseline + n_annot_spatial
         M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
-        ref_ld_cnames = ref_ld.columns[1:len(ref_ld.columns)]
+        ref_ld_cnames = ref_ld.columns
 
-        # Check the variance of the design matrix
-        M_annot, ref_ld, novar_cols = _check_variance(M_annot, ref_ld)
+        # # Check the variance of the design matrix
+        # M_annot, ref_ld, novar_cols = _check_variance_v2(M_annot, ref_ld)
 
         # Merge gwas summary statistics with annotations, and regression weights
-        sumstats_chunk = _merge_and_log(ref_ld, sumstats, 'reference panel LD')
-        sumstats_chunk = _merge_and_log(sumstats_chunk, w_ld, 'regression SNP LD')
+        sumstats_chunk = pd.concat([sumstats, ref_ld, w_ld], axis=1, join='inner')
 
         # Weight gwas summary statistics
         re = Regression_weight(sumstats_chunk, ref_ld_cnames, w_ld_cname, M_annot, n_annot_baseline)

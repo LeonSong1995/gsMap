@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import norm
 
-import jackknife as jk
+import GPS.jackknife as jk
 from GPS.regression_read import _read_sumstats, _read_ref_ld, _read_M, _check_variance, _read_w_ld, _merge_and_log
 
 parser = argparse.ArgumentParser()
@@ -212,8 +212,8 @@ if __name__ == '__main__':
 
         name='Cortex_151507'
         spe_name = name
-        # ld_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{spe_name}/snp_annotation"
-        ld_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/{name}/generate_ldscore"
+        ld_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{spe_name}/snp_annotation"
+        # ld_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/{name}/generate_ldscore"
         out_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/ldsc_enrichment/{spe_name}"
         gwas_file = "ADULT1_ADULT2_ONSET_ASTHMA"
         # Prepare the arguments list using f-strings
