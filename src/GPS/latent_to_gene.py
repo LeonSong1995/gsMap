@@ -18,6 +18,7 @@ from scipy.stats import rankdata
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
+from tqdm.contrib.concurrent import process_map
 
 from GPS.config import add_latent_to_gene_args, LatentToGeneConfig
 
@@ -175,7 +176,7 @@ def generate_parser_from_dataclass(dataclass_type):
 
 
 def find_Neighbors_Regional(cell):
-    cell_use = spatial_net.loc[spatial_net.Cell1 == cell, 'Cell2'].to_list()
+    cell_use = spatial_net.loc[cell, 'Cell2'].to_list()
     similarity = cosine_similarity(coor_latent.loc[cell].values.reshape(1, -1),
                                    coor_latent.loc[cell_use].values).tolist()[0]
     if not args.annotation is None:
@@ -212,7 +213,7 @@ def _compute_dge(args):
     return scores_df
 
 
-def _compute_regional_ranks(cell_tg, ):
+def _compute_regional_mkscore(cell_tg, ):
     """
     compute gmean ranks of a region
     """
@@ -233,7 +234,8 @@ def _compute_regional_ranks(cell_tg, ):
     gene_ranks_region = pd.DataFrame(gene_ranks_region * frac_region)
     gene_ranks_region.columns = [cell_tg]
 
-    return gene_ranks_region
+    mkscore = np.exp(gene_ranks_region ** 2) - 1
+    return mkscore
 
 
 def run_latent_to_gene(config: LatentToGeneConfig):
@@ -268,57 +270,43 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     print(f'Number of cells, genes after transformation: {adata.shape[0]},{adata.shape[1]}')
     # Buid the spatial graph
     spatial_net = _build_spatial_net(adata, config.annotation, config.num_neighbour_spatial)
+    spatial_net.set_index('Cell1', inplace=True)
     # Extract the latent representation
     coor_latent = pd.DataFrame(adata.obsm[config.latent_representation])
     coor_latent.index = adata.obs.index
     # Find marker genes
     mk_score = []
     cell_list = adata.obs.index.tolist()
-    if config.method == 'rank':
-        prefix = 'rank.feather'
 
-        # Load the geometrical mean across slices
-        if not config.gM_slices is None:
-            print('Geometrical mean across multiple slices are provided.')
-            gM = pd.read_parquet(config.gM_slices)
-            # Select the common gene
-            common_gene = np.intersect1d(adata.var_names, gM.index)
-            gM = gM.loc[common_gene]
-            gM = gM['G_Mean'].to_list()
-            print('------Ranking the spatial data...')
-            adata = adata[:, common_gene]
-            ranks = np.apply_along_axis(rankdata, 1, adata.X.toarray())
-        else:
-            print('------Ranking the spatial data...')
-            ranks = np.apply_along_axis(rankdata, 1, adata.X.toarray())
-            gM = gmean(ranks, axis=0)
+    # Load the geometrical mean across slices
+    if not config.gM_slices is None:
+        print('Geometrical mean across multiple slices are provided.')
+        gM = pd.read_parquet(config.gM_slices)
+        # Select the common gene
+        common_gene = np.intersect1d(adata.var_names, gM.index)
+        gM = gM.loc[common_gene]
+        gM = gM['G_Mean'].to_list()
+        print('------Ranking the spatial data...')
+        adata = adata[:, common_gene]
+        ranks = np.apply_along_axis(rankdata, 1, adata.X.toarray())
+    else:
+        print('------Ranking the spatial data...')
+        ranks = np.apply_along_axis(rankdata, 1, adata.X.toarray())
+        gM = gmean(ranks, axis=0)
 
-        # Compute the fraction of each gene across cells
-        frac_whole = np.array((adata.X > 0).sum(axis=0))[0] / (adata.shape[0])
+    # Compute the fraction of each gene across cells
+    frac_whole = np.array((adata.X > 0).sum(axis=0))[0] / (adata.shape[0])
 
-        # Normalize the geometrical mean
-        ranks = ranks / gM
-        ranks = pd.DataFrame(ranks, index=adata.obs_names)
-        ranks.columns = adata.var.index
+    # Normalize the geometrical mean
+    ranks = ranks / gM
+    ranks = pd.DataFrame(ranks, index=adata.obs_names)
+    ranks.columns = adata.var.index
 
-        with Pool(num_cpus) as p:
-            with tqdm(total=len(cell_list), desc="Finding markers (Rank-based approach) | cells") as progress_bar:
-                for mk_cell in p.imap(_compute_regional_ranks, [cell_tg for cell_tg in cell_list]):
-                    mk_score.append(np.exp(mk_cell ** 2) - 1)
-                    progress_bar.update()
-        # use tqdm.progress_map instead of Pool.imap
-        # mk_score = list(tqdm.contrib.concurrent.process_map(_compute_regional_ranks, [cell_tg for cell_tg in cell_list],
-        #                                                     max_workers=num_cpus,
-        #                                                     chunksize=len(cell_list)//num_cpus//10,
-        #                                                     ))
-    elif config.method == 'wilcox':
-        prefix = 'wilcox.feather'
 
-        with Pool(num_cpus) as p:
-            with tqdm(total=len(cell_list), desc="Finding markers (Wilcoxon-based approach) | cells") as progress_bar:
-                for mk_cell in p.imap(_compute_dge, [(cell_tg, config.fold, config.pst) for cell_tg in cell_list]):
-                    mk_score.append(mk_cell ** 2)
-                    progress_bar.update()
+    mk_score = list(process_map(_compute_regional_mkscore, [cell_tg for cell_tg in cell_list],
+                                max_workers=num_cpus,
+                                chunksize=10,
+                                desc="Finding markers (Rank-based approach) | cells"))
     # Normalize the marker scores
     mk_score = pd.concat(mk_score, axis=1)
     mk_score.index = adata.var_names
@@ -345,7 +333,7 @@ if __name__ == '__main__':
         test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
 
         args = parser.parse_args([
-            '--input_hdf5_path', f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
+            '--input_hdf5_with_latent_path', f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
             '--sample_name', f'{name}',
             '--output_feather_path', f'{test_dir}/{name}/gene_markers/{name}_rank.feather',
             '--method', 'rank',

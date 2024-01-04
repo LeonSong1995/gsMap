@@ -5,25 +5,18 @@ Created on Mon Apr 10 11:34:35 2023
 
 @author: songliyang
 """
-import pandas as pd
-import numpy as np
-from sklearn.preprocessing import normalize
-import sklearn
-import sklearn.neighbors
 import argparse
-import os
-import time, sys, traceback
-import glob
-import bitarray as ba
-from subprocess import call
-from itertools import product
-from multiprocessing import Pool
 import multiprocessing
-from tqdm import tqdm
+import os
+import sys
+from multiprocessing import Pool
+
+import numpy as np
+import pandas as pd
 from scipy.stats import norm
+from GPS.Regression_Read import _read_sumstats, _read_ref_ld, _read_M, _check_variance, _read_w_ld, _merge_and_log
 
 sys.path.append('/storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1')
-from Regression_Read import _read_sumstats, _read_ref_ld, _read_M, _check_variance, _read_w_ld, _merge_and_log
 sys.path.append('/storage/yangjianLab/songliyang/SpatialData/ldsc/ldscore')
 import jackknife as jk
 
@@ -39,29 +32,6 @@ parser.add_argument('--chisq_max', default=None, type=int)
 parser.add_argument('--out_file', default=None, type=str)
 parser.add_argument('--num_processes', default=2, type=int)
 parser.add_argument('--all_chunk', default=None, type=int)
-
-
-# Define the args
-# class Params:
-#     def __init__(self):
-#         self.h2="/storage/yangjianLab/songliyang/GWAS_trait/LDSC/SCZ_Cell_2018.sumstats.gz"
-#         # self.w_ld=None
-#         self.w_file="/storage/yangjianLab/sharedata/LDSC_resource/eur_w_ld_chr/"
-#         self.not_M_5_50=False
-#         # self.M=None
-#         # self.ref_ld=None
-#         self.ld_file='/storage/yangjianLab/songliyang/SpatialData/Data/HumanBrain/Nature_Neuroscience/snp_annotation/151507'
-#         # self.invert_anyway=False
-#         self.n_blocks=200
-#         self.chisq_max=None
-#         self.out_file='/storage/yangjianLab/songliyang/SpatialData/Data/HumanBrain/Nature_Neuroscience/ldsc_enrichment/151507'
-#         self.num_processes = 4
-#         self.all_chunk = 5
-#         # self.two_step=None
-#         # self.intercept_h2=None
-#         # self.frqfile_chr="/storage/yangjianLab/sharedata/LDSC_resource/1000G_Phase3_frq/1000G.EUR.QC."
-                
-# args = Params() 
 
 
 # Set regression weight 
@@ -96,14 +66,13 @@ class Regression_weight:
             self.chisq_max = chisq_max
 
         self.chisq = s(self.sumstats.Z**2)
-        if chisq_max is not None:
-            ii = np.ravel(self.chisq < self.chisq_max)
-            self.sumstats = self.sumstats.iloc[ii, :]
-            print('Removed {M} SNPs with chi^2 > {C} ({N} SNPs remain)'.format(
-                C=self.chisq_max, N=np.sum(ii), M=self.n_snp-np.sum(ii)))
-            self.n_snp = np.sum(ii)
-            self.ref_ld = np.array(self.sumstats[self.ref_ld_cnames])
-            self.chisq = self.chisq[ii].reshape((self.n_snp, 1))
+        ii = np.ravel(self.chisq < self.chisq_max)
+        self.sumstats = self.sumstats.iloc[ii, :]
+        print('Removed {M} SNPs with chi^2 > {C} ({N} SNPs remain)'.format(
+            C=self.chisq_max, N=np.sum(ii), M=self.n_snp-np.sum(ii)))
+        self.n_snp = np.sum(ii)
+        self.ref_ld = np.array(self.sumstats[self.ref_ld_cnames])
+        self.chisq = self.chisq[ii].reshape((self.n_snp, 1))
 
         # Update Inpute data
         self.w = s(self.sumstats[self.w_ld_cname])
@@ -339,12 +308,12 @@ if __name__ == '__main__':
         out_all = pd.concat([out_all,out_chunk],axis=0)
     
     # Save the results
-    print(f'------Saving the results...')
-    out_file = args.out_file
-    if not os.path.exists(out_file):
-        os.makedirs(out_file, mode=0o777, exist_ok=True)
-
-    out_file_name = f'{out_file}/{data_name}_{gwas_name}.gz'
-    out_all['spot'] = out_all.index
-    out_all = out_all[['spot','beta','se','z','p']]
-    out_all.to_csv(out_file_name,compression='gzip',index=False) 
+    # print(f'------Saving the results...')
+    # out_file = args.out_file
+    # if not os.path.exists(out_file):
+    #     os.makedirs(out_file, mode=0o777, exist_ok=True)
+    #
+    # out_file_name = f'{out_file}/{data_name}_{gwas_name}.gz'
+    # out_all['spot'] = out_all.index
+    # out_all = out_all[['spot','beta','se','z','p']]
+    # out_all.to_csv(out_file_name,compression='gzip',index=False)

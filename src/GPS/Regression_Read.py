@@ -12,7 +12,7 @@ import os
 
 import sys
 sys.path.append('/storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1')
-from Build_LD_Score import *
+from GPS.Build_LD_Score_old import *
 
 
 # Fun for reading gwas data

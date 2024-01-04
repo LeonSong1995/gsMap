@@ -142,7 +142,7 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--pst', type=float, default=0.2, help='PST value. Default is 0.2.')
     parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
     parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None, help='Path to gene model slices file, if applicable.')
+    parser.add_argument('--gM_slices', type=str, default=None, )
 
 
 
