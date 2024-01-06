@@ -149,7 +149,34 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
     parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
     parser.add_argument('--gM_slices', type=str, default=None, )
+def add_spatial_ldsc_args(parser):
+    # Group for GWAS input data
+    parser.add_argument('--h2', required=True, help="Path to GWAS summary statistics file.")
+    parser.add_argument('--w_file', required=True, help="Path to regression weight file.")
+    parser.add_argument('--sample_name', required=True, help="Name of the spatial transcriptomic dataset.")
+    parser.add_argument('--ldscore_input_dir', required=True, help="Input directory for LD Score files.")
+    parser.add_argument('--ldsc_save_dir', required=True, help="Directory to save Spatial LDSC results.")
+    parser.add_argument('--trait_name', required=True, help="Name of the trait.")
+    parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
+    parser.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
+    parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
+    parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
+    parser.add_argument('--all_chunk', type=int, help="Number of chunks for processing spatial data.")
 
+    return parser
+
+def add_Cauchy_combination_args(parser):
+    # Required arguments
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
+    parser.add_argument('--input_ldsc_dir', required=True, type=str, help='Directory containing LDSC results')
+    parser.add_argument('--output_cauchy_dir', required=True, type=str, help='Output directory for Cauchy combination results')
+    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample')
+    parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
+    parser.add_argument('--annotation', required=True, type=str, help='Annotation layer name')
+
+    # Optional arguments
+    parser.add_argument('--meta', default=None, type=str, )
+    parser.add_argument('--slide', default=None, type=str, )
 
 def add_all_mode_args(parser):
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
@@ -250,20 +277,14 @@ def add_all_mode_args(parser):
     parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
     parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
 
-def add_spatial_ldsc_args(parser):
-    # Group for GWAS input data
-    parser.add_argument('--h2', required=True, help="Path to GWAS summary statistics file.")
-    parser.add_argument('--w_file', required=True, help="Path to regression weight file.")
-    parser.add_argument('--sample_name', required=True, help="Name of the spatial transcriptomic dataset.")
-    parser.add_argument('--ldscore_input_dir', required=True, help="Input directory for LD Score files.")
-    parser.add_argument('--ldsc_save_dir', required=True, help="Directory to save Spatial LDSC results.")
-    parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
-    parser.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
-    parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
-    parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
-    parser.add_argument('--all_chunk', type=int, help="Number of chunks for processing spatial data.")
+    # cauchy combination args:
+    parser.add_argument('--output_cauchy_path', required=True, type=str, help='Output path for the Cauchy combination results')
 
-    return parser
+    # Optional arguments
+    parser.add_argument('--meta', default=None, type=str, )
+    parser.add_argument('--slide', default=None, type=str, )
+
+
 
 
 def get_runall_mode_config(args: argparse.ArgumentParser):
@@ -272,12 +293,15 @@ def get_runall_mode_config(args: argparse.ArgumentParser):
     args.output_feather_path = f'{args.save_dir}/{args.sample_name}/latent_to_gene/{args.sample_name}_gene_marker_score.feather'
     args.ldscore_save_dir = f'{args.save_dir}/{args.sample_name}/generate_ldscore'
     args.ldsc_save_dir = f'{args.save_dir}/{args.sample_name}/spatial_ldsc'
+    args.output_cauchy_dir = f'{args.save_dir}/{args.sample_name}/cauchy_combination/'
+
     # input
     args.input_hdf5_with_latent_path = args.output_hdf5_path
     args.mkscore_feather_file = args.output_feather_path
     args.ldscore_input_dir = args.ldscore_save_dir
     args.chrom = 'all'
-
+    args.input_ldsc_dir = args.ldsc_save_dir
+    args.input_spatial_ldsc= f'{args.save_dir}/{args.sample_name}/spatial_ldsc/{args.sample_name}_{args.trait_name}.gz'
     # find_latent_representations
     flr_config = get_dataclass_from_parser(args, FindLatentRepresentationsConfig)
     # latent_to_gene
@@ -359,12 +383,23 @@ class SpatialLDSCConfig:
     sample_name: str
     ldscore_input_dir: str
     ldsc_save_dir: str
+    trait_name: str
     num_processes: int = 4
     not_M_5_50: bool = False
     n_blocks: int = 200
     chisq_max: int = None
     all_chunk: int = None
 
+@dataclass
+class CauchyCombinationConfig:
+    input_hdf5_path: str
+    input_ldsc_dir: str
+    output_cauchy_dir: str
+    sample_name: str
+    trait_name: str
+    annotation: str
+    meta: str = None
+    slide: str = None
 
 @dataclass
 class RunAllModeConfig:
@@ -372,6 +407,7 @@ class RunAllModeConfig:
     ltg_config: LatentToGeneConfig
     gls_config: GenerateLDScoreConfig
     ldsc_config: SpatialLDSCConfig
+
 
 
 @register_cli(name='run_find_latent_representations',

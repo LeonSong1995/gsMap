@@ -1,29 +1,12 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Apr 10 11:34:35 2023
-
-@author: songliyang
-"""
-
-import pandas as pd
-import numpy as np
-import scipy as sp
-import scanpy as sc
 import argparse
+from pathlib import Path
 
-parser = argparse.ArgumentParser()
-parser.add_argument('--ldsc_path', default=None, type=str)
-parser.add_argument('--ldsc_name', default=None, type=str)
+import numpy as np
+import pandas as pd
+import scanpy as sc
+import scipy as sp
 
-parser.add_argument('--spe_path', default=None, type=str)
-parser.add_argument('--spe_name', default=None, type=str)
-
-parser.add_argument('--meta', default=None, type=str)
-parser.add_argument('--slide', default=None, type=str)
-
-parser.add_argument('--annotation', default=None, type=str)
-
+from GPS.config import CauchyCombinationConfig, add_Cauchy_combination_args
 
 # The fun of cauchy combination
 def acat_test(pvalues, weights=None):
@@ -82,33 +65,30 @@ def acat_test(pvalues, weights=None):
     return pval
 
 
-if __name__ == '__main__':
-
-    args = parser.parse_args()
-
+def run_Cauchy_combiination(config:CauchyCombinationConfig):
     # Load the ldsc results
-    print(f'------Loading LDSC results of {args.ldsc_name}...')
-    ldsc = pd.read_csv(f'{args.ldsc_path}/{args.ldsc_name}')
+    print(f'------Loading LDSC results of {config.input_ldsc_dir}...')
+    ldsc_input_file= Path(config.input_ldsc_dir)/f'{config.sample_name}_{config.trait_name}.csv.gz'
+    ldsc = pd.read_csv(ldsc_input_file, compression='gzip')
     ldsc.spot = ldsc.spot.astype(str).replace('\.0', '', regex=True)
     ldsc.index = ldsc.spot
-
-    if args.meta is None:
+    if config.meta is None:
         # Load the spatial data
-        print(f'------Loading ST data of {args.spe_name}...')
-        spe = sc.read_h5ad(f'{args.spe_path}/{args.spe_name}')
+        print(f'------Loading ST data of {config.input_hdf5_path}...')
+        spe = sc.read_h5ad(f'{config.input_hdf5_path}')
 
         common_cell = np.intersect1d(ldsc.index, spe.obs_names)
         spe = spe[common_cell,]
         ldsc = ldsc.loc[common_cell]
 
         # Add the annotation
-        ldsc['annotation'] = spe.obs.loc[ldsc.spot][args.annotation].to_list()
+        ldsc['annotation'] = spe.obs.loc[ldsc.spot][config.annotation].to_list()
 
-    elif args.meta is not None:
+    elif config.meta is not None:
         # Or Load the additional annotation (just for the macaque data at this stage: 2023Nov25)
         print(f'------Loading additional annotation...')
-        meta = pd.read_csv(args.meta, index_col=0)
-        meta = meta.loc[meta.slide == args.slide]
+        meta = pd.read_csv(config.meta, index_col=0)
+        meta = meta.loc[meta.slide == config.slide]
         meta.index = meta.cell_id.astype(str).replace('\.0', '', regex=True)
 
         common_cell = np.intersect1d(ldsc.index, meta.index)
@@ -116,8 +96,7 @@ if __name__ == '__main__':
         ldsc = ldsc.loc[common_cell]
 
         # Add the annotation
-        ldsc['annotation'] = meta.loc[ldsc.spot][args.annotation].to_list()
-
+        ldsc['annotation'] = meta.loc[ldsc.spot][config.annotation].to_list()
     # Perform the Cauchy combination based on the given annotations
     p_cauchy = []
     p_median = []
@@ -128,13 +107,40 @@ if __name__ == '__main__':
 
         p_cauchy.append(p_cauchy_temp)
         p_median.append(p_median_temp)
-
     #     p_tissue = pd.DataFrame(p_cauchy,p_median,np.unique(ldsc.annotation))
     data = {'p_cauchy': p_cauchy, 'p_median': p_median, 'annotation': np.unique(ldsc.annotation)}
     p_tissue = pd.DataFrame(data)
     p_tissue.columns = ['p_cauchy', 'p_median', 'annotation']
-
     # Save the results
-    name = args.ldsc_name.split('.gz')[0]
-    p_tissue.to_csv(f'{args.ldsc_path}/{name}.{args.annotation}.Cauchy.gz', compression='gzip', index=False)
+    output_dir = Path(config.output_cauchy_dir)
+    output_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
+    output_file = output_dir / f'{config.sample_name}_{config.trait_name}.Cauchy.csv.gz'
+    p_tissue.to_csv(
+        output_file,
+        compression='gzip',
+        index=False,
+    )
 
+
+if __name__ == '__main__':
+    TEST = True
+    if TEST:
+        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
+        name = 'Cortex_151507'
+
+        config = CauchyCombinationConfig(
+            input_hdf5_path= f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
+            input_ldsc_dir=
+            f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/ldsc/',
+            sample_name=name,
+            annotation='layer_guess',
+            output_cauchy_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/cauchy/',
+            trait_name='adult1_adult2_onset_asthma',
+        )
+    else:
+
+        parser = argparse.ArgumentParser(description="Run Cauchy Combination Analysis")
+        add_Cauchy_combination_args(parser)
+        args = parser.parse_args()
+        config = CauchyCombinationConfig(**vars(args))
+    run_Cauchy_combiination(config)

@@ -195,7 +195,8 @@ def process_columns_cpu(n_blocks, Nbar, n_snp, chunk_index, num_processes=2):
 
 def run_spatial_ldsc(config: SpatialLDSCConfig):
     global data_name, name, all_chunk, n_annot, y, baseline_annotation, spatial_annotation, out_chunk
-    gwas_name = config.h2.split('/')[-1].split('.sumstats.gz')[0]
+    trait_name = config.trait_name
+    print(f'------Running Spatial LDSC for {trait_name}...')
     data_name = config.sample_name
     num_cpus = min(multiprocessing.cpu_count(), config.num_processes)
     # Load the gwas summary statistics
@@ -263,7 +264,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     print(f'------Saving the results...')
     out_dir = Path(config.ldsc_save_dir)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
-    out_file_name = out_dir / f'{data_name}_{gwas_name}.gz'
+    out_file_name = out_dir / f'{data_name}_{trait_name}.csv.gz'
     out_all['spot'] = out_all.index
     out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
     out_all.to_csv(out_file_name, compression='gzip', index=False)
@@ -294,7 +295,8 @@ if __name__ == '__main__':
             "--sample_name", spe_name,
             "--num_processes", '4',
             "--ldscore_input_dir", ld_pth,
-            "--ldsc_save_dir", out_pth
+            "--ldsc_save_dir", out_pth,
+            '--trait_name','adult1_adult2_onset_asthma'
         ]
         args = parser.parse_args(args_list)
     else:
