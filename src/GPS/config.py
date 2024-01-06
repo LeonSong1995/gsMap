@@ -276,15 +276,15 @@ def add_all_mode_args(parser):
     parser.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
     parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
     parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
+    parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
 
     # cauchy combination args:
-    parser.add_argument('--output_cauchy_path', required=True, type=str, help='Output path for the Cauchy combination results')
+    # Required arguments
+    parser.add_argument('--output_cauchy_dir', required=True, type=str, help='Output directory for Cauchy combination results')
 
     # Optional arguments
     parser.add_argument('--meta', default=None, type=str, )
     parser.add_argument('--slide', default=None, type=str, )
-
-
 
 
 def get_runall_mode_config(args: argparse.ArgumentParser):
@@ -310,8 +310,10 @@ def get_runall_mode_config(args: argparse.ArgumentParser):
     gls_config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
     # spatial ldsc
     ldsc_config = get_dataclass_from_parser(args, SpatialLDSCConfig)
+    # cauchy combination
+    cauchy_config = get_dataclass_from_parser(args, CauchyCombinationConfig)
     return RunAllModeConfig(flr_config=flr_config, ltg_config=ltg_config, gls_config=gls_config,
-                            ldsc_config=ldsc_config)
+                            ldsc_config=ldsc_config, cauchy_config=cauchy_config)
 @dataclass
 class FindLatentRepresentationsConfig:
     input_hdf5_path: str
@@ -407,6 +409,7 @@ class RunAllModeConfig:
     ltg_config: LatentToGeneConfig
     gls_config: GenerateLDScoreConfig
     ldsc_config: SpatialLDSCConfig
+    cauchy_config: CauchyCombinationConfig
 
 
 
@@ -436,26 +439,35 @@ def run_generate_ldscore_from_cli(args: argparse.ArgumentParser):
     config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
     run_generate_ldscore(config)
 
-
-@register_cli(name='run_all_mode',
-              description='Run GPS Pipeline \nGSP Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order',
-              add_args_function=add_all_mode_args)
 @register_cli(name='run_spatial_ldsc',
-              description='Run Spatial_ldsc',
+              description='Run Spatial_ldsc \nRun spatial LDSC for each spot',
               add_args_function=add_spatial_ldsc_args)
 def run_spatial_ldsc_from_cli(args: argparse.ArgumentParser):
     from GPS.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
     config = get_dataclass_from_parser(args, SpatialLDSCConfig)
     run_spatial_ldsc(config)
 
+@register_cli(name='run_Cauchy_combiination',
+                description='Run Cauchy_combiination for each annotation',
+                add_args_function=add_Cauchy_combination_args)
+def run_Cauchy_combiination_from_cli(args: argparse.ArgumentParser):
+    from GPS.cauchy_combination_test import run_Cauchy_combiination
+    config=get_dataclass_from_parser(args, CauchyCombinationConfig)
+    run_Cauchy_combiination(config)
 
+
+@register_cli(name='run_all_mode',
+              description='Run GPS Pipeline \nGSP Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order',
+              add_args_function=add_all_mode_args)
 def run_all_mode_from_cli(args: argparse.ArgumentParser):
     from GPS.find_latent_representation import run_find_latent_representation
     from GPS.latent_to_gene import run_latent_to_gene
     from GPS.generate_ldscore import run_generate_ldscore
     from GPS.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
+    from GPS.cauchy_combination_test import run_Cauchy_combiination
     config = get_runall_mode_config(args)
     run_find_latent_representation(config.flr_config)
     run_latent_to_gene(config.ltg_config)
     run_generate_ldscore(config.gls_config)
     run_spatial_ldsc(config.ldsc_config)
+    run_Cauchy_combiination(config.cauchy_config)
