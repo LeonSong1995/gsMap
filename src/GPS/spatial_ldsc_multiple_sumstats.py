@@ -2,7 +2,9 @@ import argparse
 import gc
 import multiprocessing
 import os
+from dataclasses import dataclass
 from multiprocessing import Pool
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -14,18 +16,6 @@ from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld, _read_
 
 # %load_ext autoreload
 # %autoreload 2
-
-parser = argparse.ArgumentParser()
-parser.add_argument('--h2', default=None, type=str)
-parser.add_argument('--w_file', default=None, type=str)
-parser.add_argument('--data_name', default=None, type=str)
-parser.add_argument('--not_M_5_50', default=False, type=bool)
-parser.add_argument('--ld_file', default=None, type=str)
-parser.add_argument('--n_blocks', default=200, type=int)
-parser.add_argument('--chisq_max', default=None, type=int)
-parser.add_argument('--out_file', default=None, type=str)
-parser.add_argument('--num_processes', default=2, type=int)
-parser.add_argument('--all_chunk', default=None, type=int)
 
 
 # Set regression weight
@@ -200,19 +190,41 @@ def process_columns_cpu(n_blocks, Nbar, n_snp, chunk_index, num_processes=2):
 
     return output
 
-
+@dataclass
 class SpatialLDSCConfig:
     h2: str
     w_file: str
     sample_name: str
     ld_file: str
-    output_file: str
+    output_dir: str
     num_processes: int = 4
-    not_use_M_5_50: bool = False
+    not_M_5_50: bool = False
     n_blocks: int = 200
     chisq_max: int = None
     all_chunk: int = None
 
+def add_spatial_ldsc_args(parser):
+
+    # Group for GWAS input data
+    gwas_group = parser.add_argument_group('GWAS Input')
+    gwas_group.add_argument('--h2', type=str, help="Path to GWAS summary statistics file.")
+    gwas_group.add_argument('--w_file', type=str, help="Path to regression weight file.")
+
+    # Group for spatial transcriptomic data
+    spatial_group = parser.add_argument_group('Spatial Transcriptomic Input')
+    spatial_group.add_argument('--sample_name', type=str, help="Name of the spatial transcriptomic dataset.")
+    spatial_group.add_argument('--ld_file', type=str, help="Path to LD Score file for spatial data.")
+    spatial_group.add_argument('--output_dir', type=str, help="Output directory for results.")
+
+    # Group for processing parameters
+    processing_group = parser.add_argument_group('Processing Parameters')
+    processing_group.add_argument('--num_processes', default=4, type=int, help="Number of processes for parallel computing.")
+    processing_group.add_argument('--n_blocks', default=200, type=int, help="Number of blocks for jackknife resampling.")
+    processing_group.add_argument('--chisq_max', default=None, type=int, help="Maximum chi-square value for filtering SNPs.")
+    processing_group.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
+    processing_group.add_argument('--all_chunk', default=None, type=int, help="Number of chunks for processing spatial data.")
+
+    return parser
 
 def run_spatial_ldsc(config:SpatialLDSCConfig):
     global data_name, name, all_chunk, n_annot, y, baseline_annotation, spatial_annotation, out_chunk
@@ -230,7 +242,7 @@ def run_spatial_ldsc(config:SpatialLDSCConfig):
     ld_file_baseline = f'{config.ld_file}/baseline/baseline.'
     ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
     n_annot_baseline = len(ref_ld_baseline.columns)
-    M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, config.not_use_M_5_50)
+    M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, config.not_M_5_50)
     # Detect chunk files
     all_file = os.listdir(config.ld_file)
     if config.all_chunk is None:
@@ -251,7 +263,7 @@ def run_spatial_ldsc(config:SpatialLDSCConfig):
         ref_ld_spatial_cnames = ref_ld_spatial.columns
 
         n_annot_spatial = len(ref_ld_spatial.columns)
-        M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_use_M_5_50)
+        M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_M_5_50)
 
         # Merge the spatial annotations and baseline annotations
         ref_ld = pd.concat([ref_ld_baseline, ref_ld_spatial], axis=1)
@@ -260,7 +272,7 @@ def run_spatial_ldsc(config:SpatialLDSCConfig):
         ref_ld_cnames = ref_ld.columns
 
         # # Check the variance of the design matrix
-        # M_annot, ref_ld, novar_cols = _check_variance_v2(M_annot, ref_ld)
+        M_annot, ref_ld, novar_cols = _check_variance_v2(M_annot, ref_ld)
 
         # Merge gwas summary statistics with annotations, and regression weights
         del ref_ld_spatial, M_annot_spatial
@@ -284,18 +296,20 @@ def run_spatial_ldsc(config:SpatialLDSCConfig):
         out_all = pd.concat([out_all, out_chunk], axis=0)
     # Save the results
     print(f'------Saving the results...')
-    out_file = config.output_file
-    if not os.path.exists(out_file):
-        os.makedirs(out_file, mode=0o777, exist_ok=True)
-    out_file_name = f'{out_file}/{data_name}_{gwas_name}.gz'
-    out_all['spot'] = out_all.index
+    out_dir = Path(config.output_dir)
+    out_dir.mkdir(parents=True, exist_ok=True,mode=0o777)
+    out_file_name = out_dir/f'{data_name}_{gwas_name}.gz'
+    out_all.reset_index(inplace=True)
     out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
     out_all.to_csv(out_file_name, compression='gzip', index=False)
 
 
 # Main function of analysis
 if __name__ == '__main__':
-
+    parser = argparse.ArgumentParser(
+        description="Run Spatial LD Score Regression (LDSC) analysis for GWAS and spatial transcriptomic data."
+    )
+    parser = add_spatial_ldsc_args(parser)
     TEST = True
     if TEST:
         gwas_root = "/storage/yangjianLab/songliyang/GWAS_trait/LDSC"
@@ -306,16 +320,16 @@ if __name__ == '__main__':
         spe_name = name
         # ld_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{spe_name}/snp_annotation"
         ld_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/{name}/generate_ldscore"
-        out_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/ldsc_enrichment/{spe_name}"
+        out_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/{name}/ldsc"
         gwas_file = "ADULT1_ADULT2_ONSET_ASTHMA"
         # Prepare the arguments list using f-strings
         args_list = [
             "--h2", f"{gwas_root}/{gwas_file}.sumstats.gz",
             "--w_file", "/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.",
-            "--data_name", spe_name,
-            "--num_processes", "3",
+            "--sample_name", spe_name,
+            "--num_processes", '4',
             "--ld_file", ld_pth,
-            "--out_file", out_pth
+            "--output_dir", out_pth
         ]
         args = parser.parse_args(args_list)
     else:
