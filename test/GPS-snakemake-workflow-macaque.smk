@@ -1,14 +1,19 @@
 workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque'
 sample_name = "Cortex_151507"
 chrom = "all"
-
+trait_names=[
+    'ADULT1_ADULT2_ONSET_ASTHMA'
+]
 root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/processed/h5ad"
 sample_names = [file.strip().split('.')[0]
                 for file in open(f'{root}/representative_slices2').readlines()]
 annotation = "SubClass"
 data_type = "SCT"
 sample_names = ['T121_macaque1']
-
+rule all:
+    input:
+        expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz', trait_name=trait_names, sample_name=sample_names)
+#
 rule test_run:
     input:
         [f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done' for sample_name in
@@ -136,3 +141,70 @@ rule generate_ldscore:
 GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom {params.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
 touch {output.done}
 """
+rule generate_ldscore_run_all:
+    input:
+        mkscore_feather_file = rules.latent_to_gene.output.feather_path
+    output:
+        done = '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chrall.done'
+    params:
+        ld_score_save_dir ='{sample_name}/generate_ldscore',
+        gtf_file = "/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf",
+        bfile_root = "/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC",
+        keep_snp_root = "/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm",
+        window_size = 50000,
+        spots_per_chunk = 10000,
+        ld_wind = 1,
+        ld_unit = "CM"
+    shell:
+        """
+        GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom all --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
+        touch {output.done}
+        """
+def get_h2_file(wildcards):
+    gwas_root = "/storage/yangjianLab/songliyang/GWAS_trait/LDSC"
+    return f"{gwas_root}/{wildcards.trait_name}.sumstats.gz",
+
+
+
+rule spatial_ldsc:
+    input:
+        h2_file = get_h2_file,
+        ldscore_input_dir=rules.generate_ldscore.params.ld_score_save_dir,
+        generate_ldscore_done = rules.generate_ldscore_run_all.output.done
+    output:
+        done = '{sample_name}/spatial_ldsc/{sample_name}_{trait_name}.csv.gz'
+    params:
+        ldsc_save_dir = '{sample_name}/spatial_ldsc',
+        num_processes = 4,
+        w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights."
+    shell:
+        """
+        GPS run_spatial_ldsc --h2 {input.h2_file} --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {params.num_processes} --ldscore_input_dir {input.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --trait_name {wildcards.trait_name}
+        """
+
+#
+# class CauchyCombinationConfig:
+#     input_hdf5_path: str
+#     input_ldsc_dir: str
+#     output_cauchy_dir: str
+#     sample_name: str
+#     trait_name: str
+#     annotation: str
+#     meta: str = None
+#     slide: str = None
+
+rule cauchy_combination:
+    output:
+        done = '{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz'
+    input:
+        hdf5_path = rules.find_latent_representations.output.hdf5_output,
+        ldsc_done = rules.spatial_ldsc.output.done
+    params:
+        cauchy_save_dir = '{sample_name}/cauchy_combination',
+        annotation = "layer_guess",
+        ldsc_dir= rules.spatial_ldsc.params.ldsc_save_dir
+
+    shell:
+        """
+        GPS run_cauchy_combination --input_hdf5_path {input.hdf5_path} --input_ldsc_dir {params.ldsc_dir} --sample_name {wildcards.sample_name} --cauchy_save_dir {params.cauchy_save_dir} --trait_name {wildcards.trait_name} --annotation {params.annotation}
+        """

@@ -110,7 +110,6 @@ rule latent_to_gene:
         """
         shell(
             f'{command}'
-            'touch({output.done})'
         )
 
 
@@ -153,9 +152,7 @@ rule generate_ldscore_run_all:
         ld_unit = "CM"
     shell:
         """
-        # python generate_ldscore.py --sample_name {wildcards.sample_name} --chrom {wildcards.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
         GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom all --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
-        
         touch {output.done}
         """
 def get_h2_file(wildcards):
@@ -200,7 +197,7 @@ rule cauchy_combination:
     params:
         cauchy_save_dir = '{sample_name}/cauchy_combination',
         annotation = "layer_guess",
-        ldsc_dir= rules.spatial_ldsc.params.ldsc_save_dir,
+        ldsc_dir= rules.spatial_ldsc.params.ldsc_save_dir
 
     shell:
         """

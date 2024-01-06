@@ -447,7 +447,7 @@ def run_spatial_ldsc_from_cli(args: argparse.ArgumentParser):
     config = get_dataclass_from_parser(args, SpatialLDSCConfig)
     run_spatial_ldsc(config)
 
-@register_cli(name='run_cauchy_combiination',
+@register_cli(name='run_cauchy_combination',
                 description='Run Cauchy_combiination for each annotation',
                 add_args_function=add_Cauchy_combination_args)
 def run_Cauchy_combiination_from_cli(args: argparse.ArgumentParser):
