@@ -1,5 +1,3 @@
-import logging
-
 from GPS import (__version__)
 from GPS.config import *
 

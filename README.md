@@ -1,127 +1,71 @@
-# GPS
+# README for GPS: Genetics-informed Pathogenic Spatial Mapping Program
 
-# How to use:
-## STEP-1: Find the latent representations 
+## Overview
+
+GPS (Genetics-informed Pathogenic Spatial Mapping) is Python command-line tool designed for ....
+
+## Features
+
+....
+
+## Installation
+
+install use pip:
+
 ```bash
-root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
-
-ls ${root} | while read file
-do
-   name=($(echo ${file} | cut -d'.' -f 1)) 
-
-   command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Find_Latent_Representations.py \
-   --spe_path ${root} \
-   --spe_name ${file} \
-   --annotation layer_guess \
-   --type count \
-   --spe_out /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/h5ad"
-
-    qsubshcom_gpu "$command" 1 50G GAT_${name} 2:00:00 "--qos gpu-huge -queue=v100,a40-tmp,a40-quad"
-done
+pip install GPS-mapping
 ```
 
-## STEP-2: Find marker genes
+install from source:
+
 ```bash
-root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
-ls ${root} | grep h5ad | while read file
-do
-	name=($(echo ${file} | cut -d'.' -f 1))
-
-	command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Latent_to_Gene_V2.py \
-	--latent_representation latent_GVAE \
-	--spe_path /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/h5ad \
-	--spe_name ${name}_add_latent.h5ad \
-	--num_processes 4 \
-	--type count \
-	--annotation layer_guess \
-	--num_neighbour 51 \
-	--spe_out /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/gene_markers"
-
-	qsubshcom "$command" 4 50G mkS_${name} 24:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
-done
+git clone
+cd GPS-mapping
+pip install -e .
 ```
 
+## Usage
 
-## STEP-3: markers to SNP annotations
+To use GPS, navigate to the command line and enter `GPS` followed by the subcommand that corresponds to the desired operation. Each subcommand may require specific arguments to run.
+
+### Basic Command Structure
+
 ```bash
-root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
-ls ${root} | grep h5ad | while read file
-do
-	name=($(echo ${file} | cut -d'.' -f 1))
-
-	command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Make_Annotations_V2.py \
-	--mk_score_file /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/gene_markers/${name}_rank.feather \
-	--gtf_file /storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf \
-	--bfile_root /storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC \
-	--annot_root /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${name}/snp_annotation \
-	--keep_snp /storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm \
-	--annot_name ${name} \
-	--const_max_size 500 \
-	--chr {TASK_ID} \
-	--ld_wind_cm 1"
-
-	qsubshcom "$command" 5 60G annS_${name} 24:00:00 "-array=1-22 --qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
-done
-```
-## STEP-4: LDSC analysis
-```bash
-gwas_root=/storage/yangjianLab/songliyang/GWAS_trait/LDSC
-gwas_trait=/storage/yangjianLab/songliyang/GWAS_trait/GWAS_Public_Use_MaxPower.csv 
-root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
-
-ls ${root} | grep h5ad | while read file
-do
-
-  spe_name=($(echo ${file} | awk -F "." '{print $1}')) 
-  ld_pth=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${spe_name}/snp_annotation
-  out_pth=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/ldsc_enrichment/${spe_name}
-
-
-  awk -F"," 'NR>1 {print $1}' ${gwas_trait} | awk -F ".txt" '{print $1}' | while read gwas_file
-  do
-
-  out_file=${out_pth}/${spe_name}_${gwas_file}.gz
-  command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Spatial_LDSC.py \
-  --h2 ${gwas_root}/${gwas_file}.sumstats.gz \
-  --w_file /storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights. \
-  --data_name ${spe_name} \
-  --num_processes 3 \
-  --ld_file ${ld_pth} \
-  --out_file ${out_pth}"
-
-  qsubshcom "$command" 3 100G h2_${spe_name}_${gwas_file} 24:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
-  
-  done
-done
-```
-## STEP-5: Do Cauchy combination test for pre-defined annotation
-```bash
-root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad
-ldsc_root=/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/ldsc_enrichment/
-
-ls ${root} | grep h5ad | while read file 
-do
-  spe_name=($(echo ${file} | awk -F "." '{print $1}')) 
-
-  ls ${ldsc_root}/${spe_name} | grep '.gz' | grep -v 'Cauchy' | while read trait
-  do
-  
-  command="python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Cauchy_combination.py \
-  --ldsc_path ${ldsc_root}/${spe_name} \
-  --ldsc_name ${trait} \
-  --spe_path  /storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/${spe_name}/h5ad/ \
-  --spe_name ${spe_name}_add_latent.h5ad \
-  --annotation layer_guess"
-  
-  qsubshcom "$command" 1 20G cahchy_${trait} 2:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
-  # $command
-
-  done
-done
+GPS subcommand [arguments...]
 ```
 
+- `subcommand`: The specific operation you wish to perform.
+- `arguments`: The arguments and options required for the subcommand.
 
+### Available Subcommands
 
+(Provide a list and brief description of each available subcommand. For example:)
 
+- `run_find_latent_representations`: Finds latent representations using a GNN-VAE model.
+- `run_latent_to_gene`: Maps latent representations to gene markers.
+- `run_generate_ldscore`: Generates LD scores for genomic spots.
+- `run_spatial_ldsc`: Conducts spatial LDSC analysis.
+- `run_cauchy_combination`: Performs Cauchy combination tests for annotations.
+- `run_all_mode`: Executes a comprehensive pipeline covering multiple analysis steps.
 
+### Examples
 
+To run a specific functionality, you need to provide the appropriate subcommand and arguments. For example:
+
+```bash
+GPS run_find_latent_representations --input_hdf5_path <path> --output_hdf5_path <path> --sample_name <name>
+```
+
+This command initiates the process of finding latent representations based on the given HDF5 input and output paths and sample name.
+
+## Contributing
+
+Contributions to the development and enhancement of GPS are welcome. Please adhere to the existing coding conventions and document your changes well.
+
+## License
+
+(Specify the licensing details for your program.)
+
+---
+
+This README offers an introductory guide to the GPS program. It outlines its primary functionalities and how to utilize them effectively. Additional details or modifications can be added to fit the specific needs and updates of the program.
