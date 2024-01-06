@@ -143,7 +143,6 @@ def add_latent_to_gene_args(parser):
                         help='Number of neighbours to consider. Default is 21.')
     parser.add_argument('--num_neighbour_spatial', type=int, default=101,
                         help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--num_processes', type=int, default=4, help='Number of processes to use. Default is 4.')
     parser.add_argument('--fold', type=float, default=1.0, help='Fold change threshold. Default is 1.0.')
     parser.add_argument('--pst', type=float, default=0.2, help='PST value. Default is 0.2.')
     parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
@@ -353,7 +352,6 @@ class LatentToGeneConfig:
     latent_representation: str = 'latent_GVAE'
     num_neighbour: int = 21
     num_neighbour_spatial: int = 101
-    num_processes: int = 4
     fold: float = 1.0
     pst: float = 0.2
     species: str = None

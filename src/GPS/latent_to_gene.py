@@ -1,24 +1,18 @@
 import argparse
-import dataclasses
 import logging
 import multiprocessing
 import pprint
 import time
-from multiprocessing import Pool
 from pathlib import Path
-from typing import get_type_hints
 
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from math import floor
-from scipy.sparse import issparse, vstack
 from scipy.stats import gmean
 from scipy.stats import rankdata
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
-from tqdm.contrib.concurrent import process_map
 
 from GPS.config import add_latent_to_gene_args, LatentToGeneConfig
 
@@ -85,100 +79,10 @@ def _build_spatial_net(adata, annotation, num_neighbour):
     return spatial_net
 
 
-def _ranks(X, mask=None, mask_rest=None):
-    """
-    calculate Wilcoxon rank
-    """
-    CONST_MAX_SIZE = 10000000
-    n_genes = X.shape[1]
-
-    if issparse(X):
-        merge = lambda tpl: vstack(tpl).toarray()
-        adapt = lambda X: X.toarray()
-    else:
-        merge = np.vstack
-        adapt = lambda X: X
-
-    masked = mask is not None and mask_rest is not None
-    if masked:
-        n_cells = np.count_nonzero(mask) + np.count_nonzero(mask_rest)
-        get_chunk = lambda X, left, right: merge(
-            (X[mask, left:right], X[mask_rest, left:right])
-        )
-    else:
-        n_cells = X.shape[0]
-        get_chunk = lambda X, left, right: adapt(X[:, left:right])
-
-    max_chunk = floor(CONST_MAX_SIZE / n_cells)
-
-    for left in range(0, n_genes, max_chunk):
-        right = min(left + max_chunk, n_genes)
-        df = pd.DataFrame(data=get_chunk(X, left, right))
-        ranks = df.rank()
-        yield ranks, left, right
-
-
-def compute_z_score(adata, cell_select, fold, pst):
-    """
-    calculate z score of the Wilcoxon test
-    """
-
-    mask = adata.obs_names.isin(cell_select)
-    mask_rest = ~mask
-
-    rest_avg_exp = adata.X[mask_rest].mean(axis=0).A1
-    target_avg_exp = adata.X[mask].mean(axis=0).A1
-
-    mask_gene_expression_fraction = (adata.X[mask].toarray() > 0).sum(axis=0) / mask.sum()
-    select = (target_avg_exp > fold * (rest_avg_exp + 1e-8)) & (mask_gene_expression_fraction >= pst)
-
-    n_active = np.count_nonzero(mask)
-    m_active = np.count_nonzero(mask_rest)
-
-    X = adata.X[:, select]
-    n_genes = X.shape[1]
-    scores = np.zeros(n_genes)
-    gene_indices = adata[:, select].var.index.tolist()
-
-    T = 1
-
-    if issparse(X):
-        X.eliminate_zeros()
-
-    std_dev = np.sqrt(T * n_active * m_active * (n_active + m_active + 1) / 12.0)
-    mean_rank = n_active * ((n_active + m_active + 1) / 2.0)
-
-    for ranks, left, right in _ranks(X, mask, mask_rest):
-        ranks_sum = np.sum(ranks.iloc[0:n_active, :])
-        scores[left:right] = (ranks_sum - mean_rank) / std_dev
-
-    scores[np.isnan(scores)] = 0
-
-    df = pd.DataFrame({'scores': scores}, index=gene_indices)
-
-    return df
-
-
-def generate_parser_from_dataclass(dataclass_type):
-    parser = argparse.ArgumentParser(description='Arguments for LatentToGeneConfig')
-    type_hints = get_type_hints(dataclass_type)
-
-    for field in dataclasses.fields(dataclass_type):
-        # Determine the argument type, default value, and help string
-        arg_type = type_hints[field.name]
-        default = field.default if field.default != dataclasses.MISSING else None
-        help_string = f"{field.name} (default: {default})"
-
-        # Add argument to the parser
-        parser.add_argument(f'--{field.name}', type=arg_type, default=default, help=help_string)
-
-    return parser
-
-
 def find_Neighbors_Regional(cell):
-    cell_use = spatial_net.loc[cell, 'Cell2'].to_list()
+    cell_use = spatial_net_dict[cell]
     similarity = cosine_similarity(coor_latent.loc[cell].values.reshape(1, -1),
-                                   coor_latent.loc[cell_use].values).tolist()[0]
+                                   coor_latent.loc[cell_use].values).reshape(-1)
     if not args.annotation is None:
         annotation = adata.obs[args.annotation]
         df = pd.DataFrame({'Cell2': cell_use, 'Similarity': similarity, 'Annotation': annotation[cell_use]})
@@ -190,27 +94,6 @@ def find_Neighbors_Regional(cell):
     cell_select = df.Cell2[0:args.num_neighbour].to_list()
 
     return cell_select
-
-
-def _compute_dge(args):
-    """
-    calculate z score for one spatial spot or cell
-    """
-    cell_tg, fold, pst = args
-    cell_select = find_Neighbors_Regional(cell_tg)
-
-    scores = np.zeros(adata.shape[1])
-    gene_indices = adata.var.index.tolist()
-    scores_df = pd.DataFrame({'scores': scores}, index=gene_indices)
-
-    scores_temp = compute_z_score(adata, cell_select, fold, pst)
-    scores_temp[scores_temp < 1] = 0
-
-    scores_df.loc[scores_temp.index, 'scores'] = scores_temp.scores
-
-    scores_df.columns = [cell_tg]
-
-    return scores_df
 
 
 def _compute_regional_mkscore(cell_tg, ):
@@ -239,7 +122,7 @@ def _compute_regional_mkscore(cell_tg, ):
 
 
 def run_latent_to_gene(config: LatentToGeneConfig):
-    global adata, coor_latent, spatial_net, ranks, frac_whole, args
+    global adata, coor_latent, spatial_net, ranks, frac_whole, args, spatial_net_dict
     args = config
     # Load and process the spatial data
     print('------Loading the spatial data...')
@@ -271,6 +154,9 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     # Buid the spatial graph
     spatial_net = _build_spatial_net(adata, config.annotation, config.num_neighbour_spatial)
     spatial_net.set_index('Cell1', inplace=True)
+    # convert the spatial graph to a dictionary cell1 to cells in the neighbourhood
+    spatial_net_dict = spatial_net.groupby(spatial_net.index).Cell2.apply(list).to_dict()
+
     # Extract the latent representation
     coor_latent = pd.DataFrame(adata.obsm[config.latent_representation])
     coor_latent.index = adata.obs.index
@@ -301,12 +187,11 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     ranks = ranks / gM
     ranks = pd.DataFrame(ranks, index=adata.obs_names)
     ranks.columns = adata.var.index
-
-
-    mk_score = list(process_map(_compute_regional_mkscore, [cell_tg for cell_tg in cell_list],
-                                max_workers=num_cpus,
-                                chunksize=10,
-                                desc="Finding markers (Rank-based approach) | cells"))
+    mk_score = [
+        _compute_regional_mkscore(cell_tg)
+        for cell_tg in tqdm(cell_list,
+                            desc="Finding markers (Rank-based approach) | cells")
+    ]
     # Normalize the marker scores
     mk_score = pd.concat(mk_score, axis=1)
     mk_score.index = adata.var_names
@@ -345,6 +230,24 @@ if __name__ == '__main__':
             '--num_neighbour', '51',
 
         ])
+
+        config = LatentToGeneConfig(
+            **{'annotation': 'SubClass',
+               'fold': 1.0,
+               'gM_slices': None,
+               'gs_species': '/storage/yangjianLab/songliyang/SpatialData/homologs/macaque_human_homologs.txt',
+               'input_hdf5_with_latent_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/find_latent_representations/T121_macaque1_add_latent.h5ad',
+               'latent_representation': 'latent_GVAE',
+               'method': 'rank',
+               'num_neighbour': 51,
+               'num_neighbour_spatial': 201,
+               'num_processes': 20,
+               'output_feather_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/latent_to_gene/T121_macaque1_gene_marker_score.feather',
+               'pst': 0.2,
+               'sample_name': 'T121_macaque1',
+               'species': 'MACAQUE_GENE_SYM',
+               'type': 'SCT'}
+        )
     else:
         args = parser.parse_args()
     logger.info(f'Latent to gene for {args.sample_name}...')
