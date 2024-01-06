@@ -8,6 +8,7 @@ from collections import OrderedDict, namedtuple
 from typing import Callable
 from GPS.__init__ import __version__
 import pyfiglet
+
 # Global registry to hold functions
 cli_function_registry = OrderedDict()
 subcommand = namedtuple('subcommand', ['name', 'func', 'add_args_function', 'description'])
@@ -18,22 +19,25 @@ handler.setFormatter(logging.Formatter(
     '[{asctime}] {levelname:6s} {message}', style='{'))
 logger.addHandler(handler)
 
+
 # Decorator to register functions for cli parsing
 def register_cli(name: str, description: str, add_args_function: Callable) -> Callable:
     def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):
             name.replace('_', ' ')
-            GPS_main_logo = pyfiglet.figlet_format("GPS", font='doom',width= 80, justify='center',).rstrip()
-            print(GPS_main_logo,)
-            version_number = 'Version: '+ __version__
+            GPS_main_logo = pyfiglet.figlet_format("GPS", font='doom', width=80, justify='center', ).rstrip()
+            print(GPS_main_logo, )
+            version_number = 'Version: ' + __version__
             print(version_number.center(80))
             print('=' * 80)
             logger.info(f"Running {name}...")
             func(*args, **kwargs)
             logger.info(f"Finished running {name}.")
+
         cli_function_registry[name] = subcommand(name=name, func=wrapper, add_args_function=add_args_function,
-                                             description=description)
+                                                 description=description)
         return wrapper
+
     return decorator
 
 
@@ -43,7 +47,6 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
     parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
-
 
     parser.add_argument('--epochs', default=300, type=int,
                         help="Number of training epochs for the GNN-VAE model. Default is 300.")
@@ -96,11 +99,14 @@ def chrom_choice(value):
 
 def filter_args_for_dataclass(args_dict, data_class: dataclass):
     return {k: v for k, v in args_dict.items() if k in data_class.__dataclass_fields__}
+
+
 def get_dataclass_from_parser(parser, data_class: dataclass):
     remain_kwargs = filter_args_for_dataclass(vars(parser), data_class)
     print(f'Using the following arguments for {data_class.__name__}:')
     pprint(remain_kwargs)
     return data_class(**remain_kwargs)
+
 
 def add_generate_ldscore_args(parser):
     parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
@@ -143,7 +149,6 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
     parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
     parser.add_argument('--gM_slices', type=str, default=None, )
-
 
 
 def add_all_mode_args(parser):
@@ -238,51 +243,39 @@ def add_all_mode_args(parser):
     parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
                         choices=['SNP', 'KB', 'CM'])
 
-@dataclass
-class SpatialLDSCConfig:
-    h2: str
-    w_file: str
-    sample_name: str
-    ld_file: str
-    output_dir: str
-    num_processes: int = 4
-    not_M_5_50: bool = False
-    n_blocks: int = 200
-    chisq_max: int = None
-    all_chunk: int = None
+    # spatial ldsc args:
+    parser.add_argument('--h2', required=True, help="Path to GWAS summary statistics file.")
+    parser.add_argument('--w_file', required=True, help="Path to regression weight file.")
+    parser.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
+    parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
+    parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
 
 def add_spatial_ldsc_args(parser):
-
     # Group for GWAS input data
-    gwas_group = parser.add_argument_group('GWAS Input')
-    gwas_group.add_argument('--h2', type=str, help="Path to GWAS summary statistics file.")
-    gwas_group.add_argument('--w_file', type=str, help="Path to regression weight file.")
-
-    # Group for spatial transcriptomic data
-    spatial_group = parser.add_argument_group('Spatial Transcriptomic Input')
-    spatial_group.add_argument('--sample_name', type=str, help="Name of the spatial transcriptomic dataset.")
-    spatial_group.add_argument('--ld_file', type=str, help="Path to LD Score file for spatial data.")
-    spatial_group.add_argument('--output_dir', type=str, help="Output directory for results.")
-
-    # Group for processing parameters
-    processing_group = parser.add_argument_group('Processing Parameters')
-    processing_group.add_argument('--num_processes', default=4, type=int, help="Number of processes for parallel computing.")
-    processing_group.add_argument('--n_blocks', default=200, type=int, help="Number of blocks for jackknife resampling.")
-    processing_group.add_argument('--chisq_max', default=None, type=int, help="Maximum chi-square value for filtering SNPs.")
-    processing_group.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
-    processing_group.add_argument('--all_chunk', default=None, type=int, help="Number of chunks for processing spatial data.")
+    parser.add_argument('--h2', required=True, help="Path to GWAS summary statistics file.")
+    parser.add_argument('--w_file', required=True, help="Path to regression weight file.")
+    parser.add_argument('--sample_name', required=True, help="Name of the spatial transcriptomic dataset.")
+    parser.add_argument('--ldscore_input_dir', required=True, help="Input directory for LD Score files.")
+    parser.add_argument('--ldsc_save_dir', required=True, help="Directory to save Spatial LDSC results.")
+    parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
+    parser.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
+    parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
+    parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
+    parser.add_argument('--all_chunk', type=int, help="Number of chunks for processing spatial data.")
 
     return parser
+
 
 def get_runall_mode_config(args: argparse.ArgumentParser):
     # output
     args.output_hdf5_path = f'{args.save_dir}/{args.sample_name}/find_latent_representations/{args.sample_name}_add_latent.h5ad'
     args.output_feather_path = f'{args.save_dir}/{args.sample_name}/latent_to_gene/{args.sample_name}_gene_marker_score.feather'
     args.ldscore_save_dir = f'{args.save_dir}/{args.sample_name}/generate_ldscore'
-
+    args.ldsc_save_dir = f'{args.save_dir}/{args.sample_name}/spatial_ldsc'
     # input
     args.input_hdf5_with_latent_path = args.output_hdf5_path
     args.mkscore_feather_file = args.output_feather_path
+    args.ldscore_input_dir = args.ldscore_save_dir
     args.chrom = 'all'
 
     # find_latent_representations
@@ -291,25 +284,10 @@ def get_runall_mode_config(args: argparse.ArgumentParser):
     ltg_config = get_dataclass_from_parser(args, LatentToGeneConfig)
     # generate_ldscore
     gls_config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
-
-    return RunAllModeConfig(flr_config=flr_config, ltg_config=ltg_config, gls_config=gls_config)
-
-
-@dataclass
-class GenerateLDScoreConfig:
-    sample_name: str
-    chrom: Union[int, str]
-    ldscore_save_dir: str
-    gtf_file: str
-    mkscore_feather_file: str
-    bfile_root: str
-    keep_snp_root: str
-    window_size: int = 50000
-    spots_per_chunk: int = 10_000
-    ld_wind: int = 1
-    ld_unit: str = 'CM'
-
-
+    # spatial ldsc
+    ldsc_config = get_dataclass_from_parser(args, SpatialLDSCConfig)
+    return RunAllModeConfig(flr_config=flr_config, ltg_config=ltg_config, gls_config=gls_config,
+                            ldsc_config=ldsc_config)
 @dataclass
 class FindLatentRepresentationsConfig:
     input_hdf5_path: str
@@ -360,10 +338,40 @@ class LatentToGeneConfig:
 
 
 @dataclass
+class GenerateLDScoreConfig:
+    sample_name: str
+    chrom: Union[int, str]
+    ldscore_save_dir: str
+    gtf_file: str
+    mkscore_feather_file: str
+    bfile_root: str
+    keep_snp_root: str
+    window_size: int = 50000
+    spots_per_chunk: int = 10_000
+    ld_wind: int = 1
+    ld_unit: str = 'CM'
+
+
+@dataclass
+class SpatialLDSCConfig:
+    h2: str
+    w_file: str
+    sample_name: str
+    ldscore_input_dir: str
+    ldsc_save_dir: str
+    num_processes: int = 4
+    not_M_5_50: bool = False
+    n_blocks: int = 200
+    chisq_max: int = None
+    all_chunk: int = None
+
+
+@dataclass
 class RunAllModeConfig:
     flr_config: FindLatentRepresentationsConfig
     ltg_config: LatentToGeneConfig
     gls_config: GenerateLDScoreConfig
+    ldsc_config: SpatialLDSCConfig
 
 
 @register_cli(name='run_find_latent_representations',
@@ -383,33 +391,35 @@ def run_latent_to_gene_from_cli(args: argparse.ArgumentParser):
     config = get_dataclass_from_parser(args, LatentToGeneConfig)
     run_latent_to_gene(config)
 
+
 @register_cli(name='run_generate_ldscore',
-                description='Run Generate_ldscore \nGenerate LD scores for each spot',
-                add_args_function=add_generate_ldscore_args)
+              description='Run Generate_ldscore \nGenerate LD scores for each spot',
+              add_args_function=add_generate_ldscore_args)
 def run_generate_ldscore_from_cli(args: argparse.ArgumentParser):
     from GPS.generate_ldscore import run_generate_ldscore
     config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
     run_generate_ldscore(config)
 
-@register_cli(name='run_all_mode',
-                description='Run GPS Pipeline \nGSP Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order',
-                add_args_function=add_all_mode_args)
 
+@register_cli(name='run_all_mode',
+              description='Run GPS Pipeline \nGSP Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order',
+              add_args_function=add_all_mode_args)
 @register_cli(name='run_spatial_ldsc',
-                description='Run Spatial_ldsc',
-                add_args_function=add_spatial_ldsc_args)
+              description='Run Spatial_ldsc',
+              add_args_function=add_spatial_ldsc_args)
 def run_spatial_ldsc_from_cli(args: argparse.ArgumentParser):
     from GPS.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
     config = get_dataclass_from_parser(args, SpatialLDSCConfig)
     run_spatial_ldsc(config)
 
 
-
 def run_all_mode_from_cli(args: argparse.ArgumentParser):
     from GPS.find_latent_representation import run_find_latent_representation
     from GPS.latent_to_gene import run_latent_to_gene
     from GPS.generate_ldscore import run_generate_ldscore
+    from GPS.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
     config = get_runall_mode_config(args)
     run_find_latent_representation(config.flr_config)
     run_latent_to_gene(config.ltg_config)
     run_generate_ldscore(config.gls_config)
+    run_spatial_ldsc(config.ldsc_config)

@@ -206,12 +206,12 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     w_ld_cname = w_ld.columns[1]
     w_ld.set_index('SNP', inplace=True)
     # Load the baseline annotations
-    ld_file_baseline = f'{config.ld_file}/baseline/baseline.'
+    ld_file_baseline = f'{config.ldscore_input_dir}/baseline/baseline.'
     ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
     n_annot_baseline = len(ref_ld_baseline.columns)
     M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, config.not_M_5_50)
     # Detect chunk files
-    all_file = os.listdir(config.ld_file)
+    all_file = os.listdir(config.ldscore_input_dir)
     if config.all_chunk is None:
         all_chunk = sum('chunk' in name for name in all_file)
         print(f'\t')
@@ -225,7 +225,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     for chunk_index in range(1, all_chunk + 1):
         print(f'------Processing chunk-{chunk_index}')
         # Load the spatial ldscore annotations
-        ld_file_spatial = f'{config.ld_file}/{data_name}_chunk{chunk_index}/{data_name}.'
+        ld_file_spatial = f'{config.ldscore_input_dir}/{data_name}_chunk{chunk_index}/{data_name}.'
         ref_ld_spatial = _read_ref_ld_v2(ld_file_spatial)
         ref_ld_spatial_cnames = ref_ld_spatial.columns
 
@@ -261,7 +261,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         out_all = pd.concat([out_all, out_chunk], axis=0)
     # Save the results
     print(f'------Saving the results...')
-    out_dir = Path(config.output_dir)
+    out_dir = Path(config.ldsc_save_dir)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
     out_file_name = out_dir / f'{data_name}_{gwas_name}.gz'
     out_all['spot'] = out_all.index
@@ -293,8 +293,8 @@ if __name__ == '__main__':
             "--w_file", "/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.",
             "--sample_name", spe_name,
             "--num_processes", '4',
-            "--ld_file", ld_pth,
-            "--output_dir", out_pth
+            "--ldscore_input_dir", ld_pth,
+            "--ldsc_save_dir", out_pth
         ]
         args = parser.parse_args(args_list)
     else:
