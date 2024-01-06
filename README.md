@@ -1,4 +1,4 @@
-# README for GPS: Genetics-informed Pathogenic Spatial Mapping Program
+# GPS: Genetics-informed Pathogenic Spatial Mapping Program
 
 ## Overview
 
@@ -46,7 +46,7 @@ GPS subcommand [arguments...]
 - `run_generate_ldscore`: Generates LD scores for genomic spots.
 - `run_spatial_ldsc`: Conducts spatial LDSC analysis.
 - `run_cauchy_combination`: Performs Cauchy combination tests for annotations.
-- `run_all_mode`: Executes a comprehensive pipeline covering multiple analysis steps.
+- `run_all_mode`: Executes a comprehensive pipeline covering all steps.
 
 ### Examples
 
@@ -60,12 +60,10 @@ This command initiates the process of finding latent representations based on th
 
 ## Contributing
 
-Contributions to the development and enhancement of GPS are welcome. Please adhere to the existing coding conventions and document your changes well.
+...
 
 ## License
 
-(Specify the licensing details for your program.)
+....
 
 ---
-
-This README offers an introductory guide to the GPS program. It outlines its primary functionalities and how to utilize them effectively. Additional details or modifications can be added to fit the specific needs and updates of the program.
