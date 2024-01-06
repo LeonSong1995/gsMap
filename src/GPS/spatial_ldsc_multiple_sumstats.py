@@ -13,6 +13,8 @@ from scipy.stats import norm
 import GPS.jackknife as jk
 from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld, _read_M, _merge_and_log, _check_variance, \
     _read_ref_ld_v2, _read_M_v2, _check_variance_v2
+from GPS.config import add_spatial_ldsc_args, SpatialLDSCConfig
+
 
 # %load_ext autoreload
 # %autoreload 2
@@ -190,43 +192,8 @@ def process_columns_cpu(n_blocks, Nbar, n_snp, chunk_index, num_processes=2):
 
     return output
 
-@dataclass
-class SpatialLDSCConfig:
-    h2: str
-    w_file: str
-    sample_name: str
-    ld_file: str
-    output_dir: str
-    num_processes: int = 4
-    not_M_5_50: bool = False
-    n_blocks: int = 200
-    chisq_max: int = None
-    all_chunk: int = None
 
-def add_spatial_ldsc_args(parser):
-
-    # Group for GWAS input data
-    gwas_group = parser.add_argument_group('GWAS Input')
-    gwas_group.add_argument('--h2', type=str, help="Path to GWAS summary statistics file.")
-    gwas_group.add_argument('--w_file', type=str, help="Path to regression weight file.")
-
-    # Group for spatial transcriptomic data
-    spatial_group = parser.add_argument_group('Spatial Transcriptomic Input')
-    spatial_group.add_argument('--sample_name', type=str, help="Name of the spatial transcriptomic dataset.")
-    spatial_group.add_argument('--ld_file', type=str, help="Path to LD Score file for spatial data.")
-    spatial_group.add_argument('--output_dir', type=str, help="Output directory for results.")
-
-    # Group for processing parameters
-    processing_group = parser.add_argument_group('Processing Parameters')
-    processing_group.add_argument('--num_processes', default=4, type=int, help="Number of processes for parallel computing.")
-    processing_group.add_argument('--n_blocks', default=200, type=int, help="Number of blocks for jackknife resampling.")
-    processing_group.add_argument('--chisq_max', default=None, type=int, help="Maximum chi-square value for filtering SNPs.")
-    processing_group.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
-    processing_group.add_argument('--all_chunk', default=None, type=int, help="Number of chunks for processing spatial data.")
-
-    return parser
-
-def run_spatial_ldsc(config:SpatialLDSCConfig):
+def run_spatial_ldsc(config: SpatialLDSCConfig):
     global data_name, name, all_chunk, n_annot, y, baseline_annotation, spatial_annotation, out_chunk
     gwas_name = config.h2.split('/')[-1].split('.sumstats.gz')[0]
     data_name = config.sample_name
@@ -266,23 +233,21 @@ def run_spatial_ldsc(config:SpatialLDSCConfig):
         M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_M_5_50)
 
         # Merge the spatial annotations and baseline annotations
-        ref_ld = pd.concat([ref_ld_baseline, ref_ld_spatial], axis=1)
+        # ref_ld = pd.concat([ref_ld_baseline, ref_ld_spatial], axis=1)
         n_annot = n_annot_baseline + n_annot_spatial
         M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
-        ref_ld_cnames = ref_ld.columns
+        ref_ld_cnames = ref_ld_baseline.columns.to_list() + ref_ld_spatial.columns.to_list()
 
         # # Check the variance of the design matrix
-        M_annot, ref_ld, novar_cols = _check_variance_v2(M_annot, ref_ld)
+        M_annot, ref_ld_spatial = _check_variance_v2(M_annot, ref_ld_spatial)
 
         # Merge gwas summary statistics with annotations, and regression weights
-        del ref_ld_spatial, M_annot_spatial
-        gc.collect()
-        sumstats_chunk = pd.concat([sumstats, ref_ld, w_ld], axis=1, join='inner')
+        sumstats_chunk = pd.concat([sumstats, ref_ld_baseline, ref_ld_spatial, w_ld], axis=1, join='inner')
 
         # Weight gwas summary statistics
         re = Regression_weight(sumstats_chunk, ref_ld_cnames, w_ld_cname, M_annot, n_annot_baseline)
         y, baseline_annotation, spatial_annotation, Nbar = re.weight_yx()
-        del sumstats_chunk, ref_ld, w_ld, M_annot
+        del sumstats_chunk, w_ld, M_annot
         gc.collect()
 
         # Run LDSC
@@ -297,9 +262,9 @@ def run_spatial_ldsc(config:SpatialLDSCConfig):
     # Save the results
     print(f'------Saving the results...')
     out_dir = Path(config.output_dir)
-    out_dir.mkdir(parents=True, exist_ok=True,mode=0o777)
-    out_file_name = out_dir/f'{data_name}_{gwas_name}.gz'
-    out_all.reset_index(inplace=True)
+    out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
+    out_file_name = out_dir / f'{data_name}_{gwas_name}.gz'
+    out_all['spot'] = out_all.index
     out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
     out_all.to_csv(out_file_name, compression='gzip', index=False)
 
@@ -334,5 +299,5 @@ if __name__ == '__main__':
         args = parser.parse_args(args_list)
     else:
         args = parser.parse_args()
-    config=SpatialLDSCConfig(**vars(args))
+    config = SpatialLDSCConfig(**vars(args))
     run_spatial_ldsc(config)

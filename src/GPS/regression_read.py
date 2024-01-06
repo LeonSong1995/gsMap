@@ -198,12 +198,14 @@ def _check_variance_v2(M_annot, ref_ld):
     ii = ref_ld.var() == 0
     if ii.all():
         raise ValueError('All LD Scores have zero variance.')
+    elif not ii.any():
+        print('No partitioned LD Scores have zero variance.')
     else:
         ii_snp= ii_m = np.array(~ii)
         print(f'Removing {sum(ii)} partitioned LD Scores with zero variance.')
         ref_ld = ref_ld.iloc[:, ii_snp]
         M_annot = M_annot[:, ii_m]
-    return M_annot, ref_ld, ii
+    return M_annot, ref_ld
 
 
 # Fun for reading regression weights

@@ -1,6 +1,6 @@
 import argparse
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pprint import pprint
 from typing import Union
 
@@ -238,6 +238,41 @@ def add_all_mode_args(parser):
     parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
                         choices=['SNP', 'KB', 'CM'])
 
+@dataclass
+class SpatialLDSCConfig:
+    summary_stats_files: field(default_factory=list)
+    w_file: str
+    sample_name: str
+    ld_file: str
+    output_dir: str
+    num_processes: int = 4
+    not_M_5_50: bool = False
+    n_blocks: int = 200
+    chisq_max: int = None
+    all_chunk: int = None
+
+def add_spatial_ldsc_args(parser):
+
+    # Group for GWAS input data
+    gwas_group = parser.add_argument_group('GWAS Input')
+    gwas_group.add_argument('--h2', type=str, help="Path to GWAS summary statistics file.")
+    gwas_group.add_argument('--w_file', type=str, help="Path to regression weight file.")
+
+    # Group for spatial transcriptomic data
+    spatial_group = parser.add_argument_group('Spatial Transcriptomic Input')
+    spatial_group.add_argument('--sample_name', type=str, help="Name of the spatial transcriptomic dataset.")
+    spatial_group.add_argument('--ld_file', type=str, help="Path to LD Score file for spatial data.")
+    spatial_group.add_argument('--output_dir', type=str, help="Output directory for results.")
+
+    # Group for processing parameters
+    processing_group = parser.add_argument_group('Processing Parameters')
+    processing_group.add_argument('--num_processes', default=4, type=int, help="Number of processes for parallel computing.")
+    processing_group.add_argument('--n_blocks', default=200, type=int, help="Number of blocks for jackknife resampling.")
+    processing_group.add_argument('--chisq_max', default=None, type=int, help="Maximum chi-square value for filtering SNPs.")
+    processing_group.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
+    processing_group.add_argument('--all_chunk', default=None, type=int, help="Number of chunks for processing spatial data.")
+
+    return parser
 
 def get_runall_mode_config(args: argparse.ArgumentParser):
     # output
@@ -359,6 +394,17 @@ def run_generate_ldscore_from_cli(args: argparse.ArgumentParser):
 @register_cli(name='run_all_mode',
                 description='Run GPS Pipeline \nGSP Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order',
                 add_args_function=add_all_mode_args)
+
+@register_cli(name='run_spatial_ldsc',
+                description='Run Spatial_ldsc',
+                add_args_function=add_spatial_ldsc_args)
+def run_spatial_ldsc_from_cli(args: argparse.ArgumentParser):
+    from GPS.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
+    config = get_dataclass_from_parser(args, SpatialLDSCConfig)
+    run_spatial_ldsc(config)
+
+
+
 def run_all_mode_from_cli(args: argparse.ArgumentParser):
     from GPS.find_latent_representation import run_find_latent_representation
     from GPS.latent_to_gene import run_latent_to_gene
