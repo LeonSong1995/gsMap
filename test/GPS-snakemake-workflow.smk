@@ -164,11 +164,11 @@ def get_h2_file(wildcards):
 rule spatial_ldsc:
     input:
         h2_file = get_h2_file,
-        ldscore_input_dir=rules.generate_ldscore.params.ld_score_save_dir,
         generate_ldscore_done = rules.generate_ldscore_run_all.output.done
     output:
         done = '{sample_name}/spatial_ldsc/{sample_name}_{trait_name}.csv.gz'
     params:
+        ldscore_input_dir = rules.generate_ldscore_run_all.params.ld_score_save_dir,
         ldsc_save_dir = '{sample_name}/spatial_ldsc',
         num_processes = 4,
         w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights."
@@ -201,5 +201,5 @@ rule cauchy_combination:
 
     shell:
         """
-        GPS run_cauchy_combination --input_hdf5_path {input.hdf5_path} --input_ldsc_dir {params.ldsc_dir} --sample_name {wildcards.sample_name} --cauchy_save_dir {params.cauchy_save_dir} --trait_name {wildcards.trait_name} --annotation {params.annotation}
+        GPS run_cauchy_combination --input_hdf5_path {input.hdf5_path} --input_ldsc_dir {params.ldsc_dir} --sample_name {wildcards.sample_name} --output_cauchy_dir {params.cauchy_save_dir} --trait_name {wildcards.trait_name} --annotation {params.annotation}
         """
