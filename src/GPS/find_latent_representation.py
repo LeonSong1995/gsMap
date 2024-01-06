@@ -1,20 +1,22 @@
+import argparse
 import logging
-import os
 import pprint
 import random
 import time
-from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import torch
 from sklearn import preprocessing
-import argparse
+
 from GPS.GNN_VAE.adjacency_matrix import Construct_Adjacency_Matrix
 from GPS.GNN_VAE.train import Model_Train
 from GPS.config import add_find_latent_representations_args, FindLatentRepresentationsConfig
-random.seed(20230609)
+
+# seed all
+
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
@@ -23,8 +25,21 @@ handler.setFormatter(logging.Formatter(
 logger.addHandler(handler)
 
 
+def set_seed(seed_value):
+    """
+    Set seed for reproducibility in PyTorch.
+    """
+    torch.manual_seed(seed_value)  # Set the seed for PyTorch
+    np.random.seed(seed_value)  # Set the seed for NumPy
+    random.seed(seed_value)  # Set the seed for Python random module
+    if torch.cuda.is_available():
+        print('Running use GPU')
+        torch.cuda.manual_seed(seed_value)  # Set seed for all CUDA devices
+        torch.cuda.manual_seed_all(seed_value)  # Set seed for all CUDA devices
+    else:
+        print('Running use CPU')
 
-
+set_seed(42)
 
 # The class for finding latent representations
 class Latent_Representation_Finder:
