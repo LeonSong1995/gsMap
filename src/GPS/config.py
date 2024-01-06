@@ -240,7 +240,7 @@ def add_all_mode_args(parser):
 
 @dataclass
 class SpatialLDSCConfig:
-    summary_stats_files: field(default_factory=list)
+    h2: str
     w_file: str
     sample_name: str
     ld_file: str

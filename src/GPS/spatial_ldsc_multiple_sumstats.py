@@ -247,7 +247,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         # Weight gwas summary statistics
         re = Regression_weight(sumstats_chunk, ref_ld_cnames, w_ld_cname, M_annot, n_annot_baseline)
         y, baseline_annotation, spatial_annotation, Nbar = re.weight_yx()
-        del sumstats_chunk, w_ld, M_annot
+        del sumstats_chunk, w_ld, M_annot, ld_file_spatial
         gc.collect()
 
         # Run LDSC
