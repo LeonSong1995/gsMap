@@ -127,7 +127,6 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     # Load and process the spatial data
     print('------Loading the spatial data...')
     adata = sc.read_h5ad(config.input_hdf5_with_latent_path)
-    num_cpus = min(multiprocessing.cpu_count(), config.num_processes)
     if not config.annotation is None:
         print(f'------Cell annotations are provided as {config.annotation}...')
         adata = adata[~pd.isnull(adata.obs[config.annotation]), :]
@@ -223,8 +222,6 @@ if __name__ == '__main__':
             '--output_feather_path', f'{test_dir}/{name}/gene_markers/{name}_rank.feather',
             '--method', 'rank',
             '--latent_representation', 'latent_GVAE',
-
-            '--num_processes', '4',
             '--type', 'count',
             '--annotation', 'layer_guess',
             '--num_neighbour', '51',
@@ -241,7 +238,6 @@ if __name__ == '__main__':
                'method': 'rank',
                'num_neighbour': 51,
                'num_neighbour_spatial': 201,
-               'num_processes': 20,
                'output_feather_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/latent_to_gene/T121_macaque1_gene_marker_score.feather',
                'pst': 0.2,
                'sample_name': 'T121_macaque1',

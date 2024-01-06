@@ -81,7 +81,6 @@ rule latent_to_gene:
         latent_representation = "latent_GVAE",
         num_neighbour = 51,
         num_neighbour_spatial = 101,
-        num_processes = 4,
         fold = 1.0,
         pst = 0.2,
         species = None,
@@ -101,7 +100,6 @@ rule latent_to_gene:
             --latent_representation {params.latent_representation} \
             --num_neighbour {params.num_neighbour} \
             --num_neighbour_spatial {params.num_neighbour_spatial} \
-            --num_processes {params.num_processes} \
             --fold {params.fold} \
             --pst {params.pst} \
              {'--species' + params.species if params.species is not None else ''} \
