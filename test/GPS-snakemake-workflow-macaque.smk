@@ -13,21 +13,6 @@ sample_names = [file.strip().split('.')[0]
 sample_names='''
 T101_macaque1
 T101_macaque1
-T125_macaque1
-T125_macaque1
-T127_macaque1
-T127_macaque1
-T129_macaque1
-T129_macaque1
-T135_macaque1
-T135_macaque1
-T137_macaque1
-T137_macaque1
-T138_macaque1
-T138_macaque1
-T139_macaque1
-T139_macaque1
-T867_macaque3
 T867_macaque3'''.strip().split('\n')
 annotation = "SubClass"
 data_type = "SCT"
@@ -217,6 +202,8 @@ rule spatial_ldsc:
         w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights."
     threads:
         6
+    benchmark:
+        '{sample_name}/spatial_ldsc/{sample_name}_{trait_name}.csv.gz.benchmark'
     resources:
         mem_mb_per_cpu= lambda wildcards, threads, attempt: 25_000 * np.log2(attempt + 1),
     shell:
@@ -245,6 +232,8 @@ rule cauchy_combination:
         cauchy_save_dir='{sample_name}/cauchy_combination',
         annotation="layer_guess",
         ldsc_dir=rules.spatial_ldsc.params.ldsc_save_dir
+    benchmark:
+        '{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz.benchmark'
     threads:
         2
     resources:

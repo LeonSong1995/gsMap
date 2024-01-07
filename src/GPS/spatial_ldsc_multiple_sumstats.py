@@ -2,7 +2,6 @@ import argparse
 import gc
 import multiprocessing
 import os
-from dataclasses import dataclass
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -11,9 +10,8 @@ import pandas as pd
 from scipy.stats import norm
 
 import GPS.jackknife as jk
-from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld, _read_M, _merge_and_log, _check_variance, \
-    _read_ref_ld_v2, _read_M_v2, _check_variance_v2
 from GPS.config import add_spatial_ldsc_args, SpatialLDSCConfig
+from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2, _read_M_v2, _check_variance_v2
 
 
 # %load_ext autoreload
@@ -96,20 +94,6 @@ class Regression_weight:
         y = self.apply_weights(self.chisq, self.initial_w)
 
         return y, basic_annotation, cell_annotation, Nbar
-
-    def _check_ld_condnum(self):
-        '''Check condition number'''
-        if len(self.ref_ld.shape) >= 2:
-            cond_num = int(np.linalg.cond(self.ref_ld))
-            if cond_num > 100000:
-                if self.args.invert_anyway:
-                    warn = "WARNING: LD Score matrix condition number is {C}. "
-                    warn += "Inverting anyway because the --invert-anyway flag is set."
-                    print(warn.format(C=cond_num))
-                else:
-                    warn = "WARNING: LD Score matrix condition number is {C}. "
-                    warn += "Remove collinear LD Scores. "
-                    raise ValueError(warn.format(C=cond_num))
 
     def _warn_length(self):
         if len(self.sumstats) < 200000:
@@ -248,7 +232,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         # Weight gwas summary statistics
         re = Regression_weight(sumstats_chunk, ref_ld_cnames, w_ld_cname, M_annot, n_annot_baseline)
         y, baseline_annotation, spatial_annotation, Nbar = re.weight_yx()
-        del sumstats_chunk, w_ld, M_annot, ld_file_spatial
+        del sumstats_chunk, M_annot, ld_file_spatial
         gc.collect()
 
         # Run LDSC
@@ -296,7 +280,7 @@ if __name__ == '__main__':
             "--num_processes", '4',
             "--ldscore_input_dir", ld_pth,
             "--ldsc_save_dir", out_pth,
-            '--trait_name','adult1_adult2_onset_asthma'
+            '--trait_name', 'adult1_adult2_onset_asthma'
         ]
         args = parser.parse_args(args_list)
     else:
