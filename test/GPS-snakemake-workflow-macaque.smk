@@ -10,6 +10,25 @@ trait_names = [
 root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/processed/h5ad"
 sample_names = [file.strip().split('.')[0]
                 for file in open(f'{root}/representative_slices2').readlines()]
+sample_names='''
+T101_macaque1
+T101_macaque1
+T125_macaque1
+T125_macaque1
+T127_macaque1
+T127_macaque1
+T129_macaque1
+T129_macaque1
+T135_macaque1
+T135_macaque1
+T137_macaque1
+T137_macaque1
+T138_macaque1
+T138_macaque1
+T139_macaque1
+T139_macaque1
+T867_macaque3
+T867_macaque3'''.strip().split('\n')
 annotation = "SubClass"
 data_type = "SCT"
 # sample_names = ['T121_macaque1']
@@ -18,6 +37,7 @@ num_processes = 20
 rule all:
     input:
         expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
+        # expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
 
 rule test_run:
     input:
@@ -169,9 +189,10 @@ rule generate_ldscore_run_all:
         ld_unit="CM"
     benchmark: '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chrall.done.benchmark'
     threads:
-        2
+        3
     resources:
-        mem_mb_per_cpu=25_000
+        mem_mb_per_cpu= lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
+        qos='huge'
     shell:
         """
         GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom all --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
@@ -195,9 +216,9 @@ rule spatial_ldsc:
         ldsc_save_dir='{sample_name}/spatial_ldsc',
         w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights."
     threads:
-        5
+        6
     resources:
-        mem_mb_per_cpu=25_000
+        mem_mb_per_cpu= lambda wildcards, threads, attempt: 25_000 * np.log2(attempt + 1),
     shell:
         """
         GPS run_spatial_ldsc --h2 {input.h2_file} --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --trait_name {wildcards.trait_name}
