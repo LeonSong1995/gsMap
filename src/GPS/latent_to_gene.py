@@ -103,7 +103,8 @@ def _compute_regional_mkscore(cell_tg, ):
     cell_select = find_Neighbors_Regional(cell_tg)
 
     # Ratio of expression fractions
-    frac_focal = np.array((adata[cell_select,].X > 0).sum(axis=0))[0] / (adata[cell_select,].shape[0])
+    # frac_focal = np.array((adata[cell_select,].X > 0).sum(axis=0))[0] / (adata[cell_select,].shape[0])
+    frac_focal = expressed_mask.loc[cell_select].sum(0)/len(cell_select)
     frac_region = frac_focal / frac_whole
     frac_region[frac_region <= 1] = 0
     frac_region[frac_region > 1] = 1
@@ -122,7 +123,7 @@ def _compute_regional_mkscore(cell_tg, ):
 
 
 def run_latent_to_gene(config: LatentToGeneConfig):
-    global adata, coor_latent, spatial_net, ranks, frac_whole, args, spatial_net_dict
+    global adata, coor_latent, spatial_net, ranks, frac_whole, args, spatial_net_dict,expressed_mask
     args = config
     # Load and process the spatial data
     print('------Loading the spatial data...')
@@ -175,12 +176,13 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         ranks = np.apply_along_axis(rankdata, 1, adata.X.toarray())
     else:
         print('------Ranking the spatial data...')
-        ranks = np.apply_along_axis(rankdata, 1, adata.X.toarray())
+        ranks=rankdata(adata.X.toarray().astype(np.float32), axis=1).astype(np.float32)
         gM = gmean(ranks, axis=0)
 
     # Compute the fraction of each gene across cells
-    frac_whole = np.array((adata.X > 0).sum(axis=0))[0] / (adata.shape[0])
-
+    expressed_mask = pd.DataFrame((adata.X > 0).toarray(),index=adata.obs.index,columns=adata.var.index)
+    # frac_whole = np.array((adata.X > 0).sum(axis=0))[0] / (adata.shape[0])
+    frac_whole = np.array(expressed_mask.sum(axis=0))[0] / (adata.shape[0])
     # Normalize the geometrical mean
     ranks = ranks / gM
     ranks = pd.DataFrame(ranks, index=adata.obs_names)
