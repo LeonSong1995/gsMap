@@ -160,7 +160,6 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     coor_latent = pd.DataFrame(adata.obsm[config.latent_representation])
     coor_latent.index = adata.obs.index
     # Find marker genes
-    mk_score = []
     cell_list = adata.obs.index.tolist()
 
     # Load the geometrical mean across slices
@@ -197,15 +196,16 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     # mk_score_normalized = mk_score.div(mk_score.sum())*1e+2
     # Remove the mitochondrial genes
     mt_genes = [gene for gene in mk_score.index if gene.startswith('MT-') or gene.startswith('mt-')]
-    mk_score_normalized = mk_score.loc[~mk_score.index.isin(mt_genes), :]
-    print(mk_score_normalized.shape)
+    mask = ~mk_score.index.isin(set(mt_genes))
+    mk_score = mk_score[mask]  # Apply the mask to mk_score
+    print(mk_score.shape)
     # Save the marker scores
     print(f'------Saving marker scores ...')
     output_file_path = Path(config.output_feather_path)
     output_file_path.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
-    mk_score_normalized = mk_score_normalized.reset_index()
-    mk_score_normalized.rename(columns={mk_score_normalized.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
-    mk_score_normalized.to_feather(output_file_path)
+    mk_score.reset_index(inplace=True)
+    mk_score.rename(columns={mk_score.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
+    mk_score.to_feather(output_file_path)
 
 
 if __name__ == '__main__':

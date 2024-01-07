@@ -1,3 +1,5 @@
+import numpy as np
+
 workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2'
 # workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque'
 sample_name = "Cortex_151507"
@@ -104,7 +106,7 @@ rule latent_to_gene:
     threads:
         3
     resources:
-        mem_mb_per_cpu= lambda wildcards, threads, attempt: 25_000 * attempt * 1.5,
+        mem_mb_per_cpu= lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
         qos='huge'
     run:
         command = f"""
