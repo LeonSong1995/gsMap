@@ -119,7 +119,7 @@ def add_generate_ldscore_args(parser):
 
     # Arguments with defaults
     parser.add_argument('--window_size', type=int, default=50000, help='Annotation window size for each gene')
-    parser.add_argument('--spots_per_chunk', type=int, default=10000, help='Number of spots per chunk')
+    parser.add_argument('--spots_per_chunk', type=int, default=5_000, help='Number of spots per chunk')
     parser.add_argument('--ld_wind', type=int, default=1, help='LD window size')
     parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
                         choices=['SNP', 'KB', 'CM'])
@@ -264,7 +264,7 @@ def add_all_mode_args(parser):
 
     # Arguments with defaults
     parser.add_argument('--window_size', type=int, default=50000, help='Annotation window size for each gene')
-    parser.add_argument('--spots_per_chunk', type=int, default=10000, help='Number of spots per chunk')
+    parser.add_argument('--spots_per_chunk', type=int, default=5_000, help='Number of spots per chunk')
     parser.add_argument('--ld_wind', type=int, default=1, help='LD window size')
     parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
                         choices=['SNP', 'KB', 'CM'])
@@ -371,7 +371,7 @@ class GenerateLDScoreConfig:
     bfile_root: str
     keep_snp_root: str
     window_size: int = 50000
-    spots_per_chunk: int = 10_000
+    spots_per_chunk: int = 5_000
     ld_wind: int = 1
     ld_unit: str = 'CM'
 
