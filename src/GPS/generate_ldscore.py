@@ -8,7 +8,7 @@ import pyranges as pr
 from scipy.sparse import csr_matrix
 from tqdm import trange
 
-from GPS.config import add_generate_ldscore_args, GenerateLDScoreConfig
+from GPS.config import GenerateLDScoreConfig, add_generate_ldscore_args
 # %%
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
@@ -54,45 +54,6 @@ def load_gtf(gtf_file, mk_score, window_size):
     # Transform the GTF to PyRanges
     gtf_pr = pr.PyRanges(gtf_bed)
     return gtf_pr, mk_score
-
-
-# %%
-# load gtf
-def load_gtf_all_gene(gtf_file, window_size):
-    """
-    Load the gene annotation file (gtf).
-    """
-    print("Loading gtf data")
-    #
-    # Load GTF file
-    gtf = pr.read_gtf(gtf_file)
-    gtf = gtf.df
-    #
-    # Select the common genes
-    gtf = gtf[gtf['Feature'] == 'gene']
-
-    # Remove duplicated lines
-    gtf = gtf.drop_duplicates(subset='gene_name', keep="first")
-    #
-    # Process the GTF (open 100-KB window: Tss - Ted)
-    gtf_bed = gtf[['Chromosome', 'Start', 'End', 'gene_name', 'Strand']].copy()
-    gtf_bed.loc[:, 'TSS'] = gtf_bed['Start']
-    gtf_bed.loc[:, 'TED'] = gtf_bed['End']
-
-    gtf_bed.loc[:, 'Start'] = gtf_bed['TSS'] - window_size
-    gtf_bed.loc[:, 'End'] = gtf_bed['TED'] + window_size
-    gtf_bed.loc[gtf_bed['Start'] < 0, 'Start'] = 0
-    #
-    # Correct the negative strand
-    tss_neg = gtf_bed.loc[gtf_bed['Strand'] == '-', 'TSS']
-    ted_neg = gtf_bed.loc[gtf_bed['Strand'] == '-', 'TED']
-    gtf_bed.loc[gtf_bed['Strand'] == '-', 'TSS'] = ted_neg
-    gtf_bed.loc[gtf_bed['Strand'] == '-', 'TED'] = tss_neg
-    gtf_bed = gtf_bed.drop('Strand', axis=1)
-    #
-    # Transform the GTF to PyRanges
-    gtf_pr = pr.PyRanges(gtf_bed)
-    return gtf_pr
 
 
 # %%
@@ -234,147 +195,148 @@ def calculate_SNP_Gene_weight_matrix(SNP_gene_pair_dummy, chrom, bfile_root, ld_
 
 
 # %%
-def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(snp_gene_weight_matrix,
-                                                          mk_score_chunk,
-                                                          chrom,
-                                                          save_file_name,
-                                                          keep_snp_root=None,
-                                                          ):
-    save_dir = Path(save_file_name).parent
-    save_dir.mkdir(parents=True, exist_ok=True)
-    if keep_snp_root is not None:
-        keep_snp = pd.read_csv(f'{keep_snp_root}.{chrom}.snp', header=None)[0].to_list()
-        keep_snp = np.intersect1d(keep_snp, snp_gene_weight_matrix.index)
-    ldscore_chr_chunk = snp_gene_weight_matrix @ mk_score_chunk
-    # %timeit snp_gene_weight_matrix @ mk_score_chunk
-    # snp_gene_weight_matrix_sparse_float16 = csr_matrix(snp_gene_weight_matrix)
-    # %timeit snp_gene_weight_matrix_sparse_float16 @ mk_score_chunk
-    # snp_gene_weight_matrix_sparse_float16.data = snp_gene_weight_matrix_sparse_float16.data.astype(np.float16)
-    # %time snp_gene_weight_matrix_sparse_float16 @ mk_score_chunk.values.astype(np.float16, )
-    ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
-    ldscore_chr_chunk = ldscore_chr_chunk if keep_snp_root is None else ldscore_chr_chunk.loc[keep_snp]
-    # save for each chunk
-    ldscore_chr_chunk.reset_index().to_feather(save_file_name)
+class S_LDSC_Boost:
+    def __init__(self, config: GenerateLDScoreConfig):
+        self.config = config
 
+        self.mk_score = load_marker_score(config.mkscore_feather_file)
 
-def calculate_M_use_SNP_gene_pair_dummy_by_chunk(SNP_gene_pair_dummy: pd.DataFrame,
-                                                 mk_score_chunk,
-                                                 snp_pass_maf,
-                                                 M_file_path, M_5_file_path,
-                                                 ):
-    '''
-    calculate M use SNP_gene_pair_dummy_sumed_along_snp_axis and mk_score_chunk
-    '''
-    SNP_gene_pair_dummy_sumed_along_snp_axis = SNP_gene_pair_dummy.values.sum(axis=0, keepdims=True)
-    SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf = SNP_gene_pair_dummy.loc[snp_pass_maf].values.sum(axis=0,
-                                                                                                         keepdims=True)
-    save_dir = Path(M_file_path).parent
-    save_dir.mkdir(parents=True, exist_ok=True)
-    M_chr_chunk = SNP_gene_pair_dummy_sumed_along_snp_axis @ mk_score_chunk
-    M_5_chr_chunk = SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf @ mk_score_chunk
-    np.savetxt(M_file_path, M_chr_chunk, delimiter='\t', )
-    np.savetxt(M_5_file_path, M_5_chr_chunk, delimiter='\t', )
+        # Load GTF and get common markers
+        self.gtf_pr, self.mk_score_common = load_gtf(config.gtf_file, self.mk_score, window_size=config.window_size)
 
+    def process_chromosome(self, chrom: int):
+        self.snp_pass_maf = get_snp_pass_maf(self.config.bfile_root, chrom, maf_min=0.05)
 
-def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix, mk_score_common, spots_per_chunk,
-                                                        save_dir, chrom, snp_pass_maf, sample_name, keep_snp_root=None):
-    """
-    Calculate the LD score using the SNP-gene weight matrix.
-    :param sample_name:
-    """
-    # Calculate the LD score
-    chunk_index = 1
-    for i in trange(0, mk_score_common.shape[1], spots_per_chunk, desc=f'Calculating LD score by chunk for chr{chrom}'):
-        mk_score_chunk = mk_score_common.iloc[:, i:i + spots_per_chunk]
+        # Get SNP-Gene dummy pairs
+        self.snp_gene_pair_dummy = get_snp_gene_dummy(chrom, self.config.bfile_root, self.gtf_pr, dummy_na=True)
 
-        ld_score_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.ldscore.feather'
-        M_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.M'
-        M_5_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.M_5_50'
+        # Calculate SNP-Gene weight matrix
+        self.snp_gene_weight_matrix = calculate_SNP_Gene_weight_matrix(self.snp_gene_pair_dummy, chrom,
+                                                                  self.config.bfile_root,
+                                                                  ld_wind=self.config.ld_wind,
+                                                                  ld_unit=self.config.ld_unit)
+        # convert to sparse
+        self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
 
-        calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(snp_gene_weight_matrix,
+        if self.config.keep_snp_root is not None:
+            keep_snp = pd.read_csv(f'{self.config.keep_snp_root}.{chrom}.snp', header=None)[0].to_list()
+            self.keep_snp_mask = self.snp_gene_pair_dummy.index.isin(keep_snp)
+            # the SNP name of keeped
+            self.snp_name = self.snp_gene_pair_dummy.index[self.keep_snp_mask].to_list()
+        else:
+            self.keep_snp_mask = None
+            self.snp_name = self.snp_gene_pair_dummy.index.to_list()
+        self.calculate_ldscore_for_base_line(chrom, self.config.sample_name, self.config.ldscore_save_dir)
+        self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(
+            self.mk_score_common.loc[self.snp_gene_pair_dummy.columns[:-1]],
+            chrom,
+            self.config.sample_name,
+            self.config.ldscore_save_dir,
+        )
+
+    def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(self,
                                                               mk_score_chunk,
-                                                              chrom,
-                                                              save_file_name=ld_score_file,
-                                                              keep_snp_root=keep_snp_root)
-        calculate_M_use_SNP_gene_pair_dummy_by_chunk(snp_gene_weight_matrix,
+                                                              save_file_name,
+                                                              drop_dummy_na=True,
+                                                              ):
+        save_dir = Path(save_file_name).parent
+        save_dir.mkdir(parents=True, exist_ok=True)
+        if drop_dummy_na:
+            ldscore_chr_chunk = self.snp_gene_weight_matrix[:, :-1] @ mk_score_chunk
+        else:
+            ldscore_chr_chunk = self.snp_gene_weight_matrix @ mk_score_chunk
+        ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
+        ldscore_chr_chunk = ldscore_chr_chunk if self.config.keep_snp_root is None else ldscore_chr_chunk[
+            self.keep_snp_mask]
+        # save for each chunk
+        pd.DataFrame(ldscore_chr_chunk,
+                     index=self.snp_name,
+                     columns=mk_score_chunk.columns,
+                     ).reset_index().to_feather(save_file_name)
+
+    def calculate_M_use_SNP_gene_pair_dummy_by_chunk(self,
                                                      mk_score_chunk,
-                                                     snp_pass_maf,
-                                                     M_file,
-                                                     M_5_file,
-                                                     )
+                                                     M_file_path, M_5_file_path,
+                                                     drop_dummy_na=True,
+                                                     ):
+        '''
+        calculate M use SNP_gene_pair_dummy_sumed_along_snp_axis and mk_score_chunk
+        '''
+        SNP_gene_pair_dummy_sumed_along_snp_axis = self.snp_gene_pair_dummy.values.sum(axis=0, keepdims=True)
+        SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf = self.snp_gene_pair_dummy.loc[self.snp_pass_maf].values.sum(
+            axis=0,
+            keepdims=True)
+        if drop_dummy_na:
+            SNP_gene_pair_dummy_sumed_along_snp_axis = SNP_gene_pair_dummy_sumed_along_snp_axis[:, :-1]
+            SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf = SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf[:,
+                                                                 :-1]
+        save_dir = Path(M_file_path).parent
+        save_dir.mkdir(parents=True, exist_ok=True)
+        M_chr_chunk = SNP_gene_pair_dummy_sumed_along_snp_axis @ mk_score_chunk
+        M_5_chr_chunk = SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf @ mk_score_chunk
+        np.savetxt(M_file_path, M_chr_chunk, delimiter='\t', )
+        np.savetxt(M_5_file_path, M_5_chr_chunk, delimiter='\t', )
 
-        chunk_index += 1
+    def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(self, mk_score_common, chrom, sample_name, save_dir):
+        """
+        Calculate the LD score using the SNP-gene weight matrix.
+        :param sample_name:
+        """
+        # Calculate the LD score
+        chunk_index = 1
+        for i in trange(0, mk_score_common.shape[1], self.config.spots_per_chunk,
+                        desc=f'Calculating LD score by chunk for chr{chrom}'):
+            mk_score_chunk = mk_score_common.iloc[:, i:i + self.config.spots_per_chunk]
 
+            ld_score_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.ldscore.feather'
+            M_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.M'
+            M_5_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.M_5_50'
 
-def calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy, snp_pass_maf, save_dir, chrom,
-                                    sample_name, keep_snp_root=None):
-    # save baseline ld score
-    baseline_mk_score = np.ones((snp_gene_weight_matrix.shape[1], 2))
-    baseline_mk_score[-1, 0] = 0  # all_gene
-    baseline_mk_score_df = pd.DataFrame(baseline_mk_score, index=snp_gene_weight_matrix.columns,
-                                        columns=['all_gene', 'base'])
-    ld_score_file = f'{save_dir}/baseline/baseline.{chrom}.l2.ldscore.feather'
-    M_file = f'{save_dir}/baseline/baseline.{chrom}.l2.M'
-    M_5_file = f'{save_dir}/baseline/baseline.{chrom}.l2.M_5_50'
+            self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(
+                mk_score_chunk,
+                save_file_name=ld_score_file,
+                drop_dummy_na=True,
+            )
+            self.calculate_M_use_SNP_gene_pair_dummy_by_chunk(
+                mk_score_chunk,
+                M_file,
+                M_5_file,
+                drop_dummy_na= True,
+            )
 
-    calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(snp_gene_weight_matrix,
-                                                          baseline_mk_score_df,
-                                                          chrom,
-                                                          ld_score_file,
-                                                          keep_snp_root=keep_snp_root)
-    # save baseline M
-    calculate_M_use_SNP_gene_pair_dummy_by_chunk(SNP_gene_pair_dummy,
-                                                 baseline_mk_score_df,
-                                                 snp_pass_maf,
-                                                 M_file,
-                                                 M_5_file,
-                                                 )
+            chunk_index += 1
 
+    def calculate_ldscore_for_base_line(self, chrom, sample_name, save_dir):
+        # save baseline ld score
+        baseline_mk_score = np.ones((self.snp_gene_pair_dummy.shape[1], 2))
+        baseline_mk_score[-1, 0] = 0  # all_gene
+        baseline_mk_score_df = pd.DataFrame(baseline_mk_score, index=self.snp_gene_pair_dummy.columns,
+                                            columns=['all_gene', 'base'])
+        ld_score_file = f'{save_dir}/baseline/baseline.{chrom}.l2.ldscore.feather'
+        M_file = f'{save_dir}/baseline/baseline.{chrom}.l2.M'
+        M_5_file = f'{save_dir}/baseline/baseline.{chrom}.l2.M_5_50'
 
-
-
+        self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(
+            baseline_mk_score_df,
+            save_file_name=ld_score_file,
+            drop_dummy_na=False,
+        )
+        # save baseline M
+        self.calculate_M_use_SNP_gene_pair_dummy_by_chunk(
+            baseline_mk_score_df,
+            M_file,
+            M_5_file,
+            drop_dummy_na=False,
+        )
 
 
 def run_generate_ldscore(config: GenerateLDScoreConfig):
-    # Load marker score
-    mk_score = load_marker_score(config.mkscore_feather_file)
-
-    # Load GTF and get common markers
-    gtf_pr, mk_score_common = load_gtf(config.gtf_file, mk_score, window_size=config.window_size)
-
-    def process_chromosome(chrom: int):
-        # Process SNPs
-        snp_pass_maf = get_snp_pass_maf(config.bfile_root, chrom, maf_min=0.05)
-
-        # Get SNP-Gene dummy pairs
-        SNP_gene_pair_dummy = get_snp_gene_dummy(chrom, config.bfile_root, gtf_pr, dummy_na=True)
-
-        # Calculate SNP-Gene weight matrix
-        snp_gene_weight_matrix = calculate_SNP_Gene_weight_matrix(SNP_gene_pair_dummy, chrom, config.bfile_root,
-                                                                  ld_wind=config.ld_wind, ld_unit=config.ld_unit)
-
-        # Calculate baseline LD score
-        calculate_ldscore_for_base_line(snp_gene_weight_matrix, SNP_gene_pair_dummy, snp_pass_maf, config.ldscore_save_dir,
-                                        chrom, config.sample_name, keep_snp_root=config.keep_snp_root)
-
-        # Process common genes and calculate LD score
-        common_gene_chr = SNP_gene_pair_dummy.columns[:-1]
-        calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(snp_gene_weight_matrix.iloc[:, :-1],
-                                                            mk_score_common.loc[common_gene_chr],
-                                                            spots_per_chunk=config.spots_per_chunk,
-                                                            save_dir=config.ldscore_save_dir,
-                                                            chrom=chrom, snp_pass_maf=snp_pass_maf,
-                                                            sample_name=config.sample_name,
-                                                            keep_snp_root=config.keep_snp_root)
-
-    # Handle 'all' case
+    s_ldsc_boost = S_LDSC_Boost(config)
     if config.chrom == 'all':
         for chrom in range(1, 23):
-            process_chromosome(chrom)
+            s_ldsc_boost.process_chromosome(chrom)
     else:
-        process_chromosome(config.chrom)
-
-
+        s_ldsc_boost.process_chromosome(config.chrom)
 
 
 # %%
@@ -384,7 +346,7 @@ if __name__ == '__main__':
         # %%
         sample_name = 'Cortex_151507'
         chrom = 'all'
-        save_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101'
+        save_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse'
         # %%
         gtf_file = '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf'
         mkscore_feather_file = f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/{sample_name}/gene_markers/{sample_name}_rank.feather'
@@ -394,7 +356,7 @@ if __name__ == '__main__':
         spots_per_chunk = 10_000
 
         # %%
-        config1 = GenerateLDScoreConfig(
+        config = GenerateLDScoreConfig(
             sample_name=sample_name,
             chrom=chrom,
             ldscore_save_dir=save_dir,
@@ -405,20 +367,8 @@ if __name__ == '__main__':
             window_size=window_size,
             spots_per_chunk=spots_per_chunk,
         )
-        config1 = GenerateLDScoreConfig(
-            **{'bfile_root': '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
-               'chrom': 21,
-               'gtf_file': '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
-               'keep_snp_root': '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
-               'ld_unit': 'CM',
-               'ld_wind': 1,
-               'ldscore_save_dir': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2/T101_macaque1/generate_ldscore',
-               'mkscore_feather_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2/T101_macaque1/latent_to_gene/T101_macaque1_gene_marker_score.feather',
-               'sample_name': 'T101_macaque1',
-               'spots_per_chunk': 5000,
-               'window_size': 50000})
-
-        run_generate_ldscore(config1)
+        # %%
+        run_generate_ldscore(config)
     else:
         parser = argparse.ArgumentParser(description="Configuration for the application.")
         add_generate_ldscore_args(parser)
