@@ -3,7 +3,8 @@ import numpy as np
 workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2'
 # workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque'
 sample_name = "Cortex_151507"
-chrom = "all"
+# chrom = "all"
+chrom = range(1,23)
 trait_names = [
     'ADULT1_ADULT2_ONSET_ASTHMA'
 ]
@@ -11,9 +12,8 @@ root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/proc
 sample_names = [file.strip().split('.')[0]
                 for file in open(f'{root}/representative_slices2').readlines()]
 sample_names='''
-T101_macaque1
-T101_macaque1
-T867_macaque3'''.strip().split('\n')
+T33_macaque1
+'''.strip().split('\n')
 annotation = "SubClass"
 data_type = "SCT"
 # sample_names = ['T121_macaque1']
@@ -135,44 +135,23 @@ GPS run_latent_to_gene \
             f'{command}'
         )
 
-#
-# rule generate_ldscore:
-#     input:
-#         mkscore_feather_file=rules.latent_to_gene.output.feather_path
-#     output:
-#         done='{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done'
-#     params:
-#         ld_score_save_dir='{sample_name}/generate_ldscore',
-#         chrom="all",
-#         gtf_file="/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf",
-#         bfile_root="/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC",
-#         keep_snp_root="/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm",
-#         window_size=50000,
-#         spots_per_chunk=10000,
-#         ld_wind=1,
-#         ld_unit="CM"
-#     shell:
-#         """
-#         # python generate_ldscore.py --sample_name {wildcards.sample_name} --chrom {params.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
-# GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom {params.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
-# touch {output.done}
-# """
 
-rule generate_ldscore_run_all:
+rule generate_ldscore:
     input:
         mkscore_feather_file=rules.latent_to_gene.output.feather_path
     output:
-        done='{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chrall.done'
+        done='{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done'
     params:
         ld_score_save_dir='{sample_name}/generate_ldscore',
+        chrom="all",
         gtf_file="/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf",
         bfile_root="/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC",
         keep_snp_root="/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm",
         window_size=50000,
-        spots_per_chunk=5_000,
+        spots_per_chunk=10000,
         ld_wind=1,
         ld_unit="CM"
-    benchmark: '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chrall.done.benchmark'
+    benchmark: '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done.benchmark'
     threads:
         3
     resources:
@@ -184,20 +163,25 @@ rule generate_ldscore_run_all:
         touch {output.done}
         """
 
-
 def get_h2_file(wildcards):
     gwas_root = "/storage/yangjianLab/songliyang/GWAS_trait/LDSC"
     return f"{gwas_root}/{wildcards.trait_name}.sumstats.gz",
 
+def get_ldscore(wildcards):
+    if chrom == "all":
+        return f"{wildcards.sample_name}/generate_ldscore/{wildcards.sample_name}_generate_ldscore_chr{chrom}.done"
+    else:
+        assert tuple(chrom)==tuple(range(1,23)), "chrom must be all or range(1,23)"
+        return [f"{wildcards.sample_name}/generate_ldscore/{wildcards.sample_name}_generate_ldscore_chr{chrom}.done" for chrom in chrom]
 
 rule spatial_ldsc:
     input:
         h2_file=get_h2_file,
-        generate_ldscore_done=rules.generate_ldscore_run_all.output.done
+        generate_ldscore_done=get_ldscore
     output:
         done='{sample_name}/spatial_ldsc/{sample_name}_{trait_name}.csv.gz'
     params:
-        ldscore_input_dir=rules.generate_ldscore_run_all.params.ld_score_save_dir,
+        ldscore_input_dir=rules.generate_ldscore.params.ld_score_save_dir,
         ldsc_save_dir='{sample_name}/spatial_ldsc',
         w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights."
     threads:
@@ -211,16 +195,6 @@ rule spatial_ldsc:
         GPS run_spatial_ldsc --h2 {input.h2_file} --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --trait_name {wildcards.trait_name}
         """
 
-#
-# class CauchyCombinationConfig:
-#     input_hdf5_path: str
-#     input_ldsc_dir: str
-#     output_cauchy_dir: str
-#     sample_name: str
-#     trait_name: str
-#     annotation: str
-#     meta: str = None
-#     slide: str = None
 
 rule cauchy_combination:
     output:
@@ -230,7 +204,7 @@ rule cauchy_combination:
         ldsc_done=rules.spatial_ldsc.output.done
     params:
         cauchy_save_dir='{sample_name}/cauchy_combination',
-        annotation="layer_guess",
+        annotation= annotation,
         ldsc_dir=rules.spatial_ldsc.params.ldsc_save_dir
     benchmark:
         '{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz.benchmark'

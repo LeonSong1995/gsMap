@@ -130,8 +130,6 @@ def _read_ref_ld_v2(ld_file):
         [pd.read_feather(f'{file}{chr}{suffix}{s}') for chr in range(1, 23)], axis=0
     )
     ref_ld.set_index('SNP', inplace=True)
-    # to float 32
-    ref_ld = ref_ld.astype('float32')
     return ref_ld
 
 def _read_M_v2(ld_file, n_annot, not_M_5_50):
@@ -179,7 +177,6 @@ def M(fh, common=False):
 
 
 def _check_variance(M_annot, ref_ld):
-    # TODO: need to optimize this
     '''
     Remove zero-variance LD Scores.
     '''
