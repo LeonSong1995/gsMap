@@ -145,6 +145,9 @@ def _coef(jknife, Nbar):
     z = coef / coef_se
     return coef, coef_cov, coef_se, z
 
+def _coef_new(jknife):
+    z= jknife.est/jknife.jknife_se
+    return jknife.est, jknife.jknife_cov, jknife.jknife_se, z
 
 def process_columns_cpu_worker(args):
     """LDSC for one spot"""
