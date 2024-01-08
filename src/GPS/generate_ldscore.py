@@ -5,6 +5,7 @@ import numpy as np
 # %%
 import pandas as pd
 import pyranges as pr
+from scipy.sparse import csr_matrix
 from tqdm import trange
 
 from GPS.config import add_generate_ldscore_args, GenerateLDScoreConfig
@@ -245,6 +246,11 @@ def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(snp_gene_weight_matrix
         keep_snp = pd.read_csv(f'{keep_snp_root}.{chrom}.snp', header=None)[0].to_list()
         keep_snp = np.intersect1d(keep_snp, snp_gene_weight_matrix.index)
     ldscore_chr_chunk = snp_gene_weight_matrix @ mk_score_chunk
+    # %timeit snp_gene_weight_matrix @ mk_score_chunk
+    # snp_gene_weight_matrix_sparse_float16 = csr_matrix(snp_gene_weight_matrix)
+    # %timeit snp_gene_weight_matrix_sparse_float16 @ mk_score_chunk
+    # snp_gene_weight_matrix_sparse_float16.data = snp_gene_weight_matrix_sparse_float16.data.astype(np.float16)
+    # %time snp_gene_weight_matrix_sparse_float16 @ mk_score_chunk.values.astype(np.float16, )
     ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
     ldscore_chr_chunk = ldscore_chr_chunk if keep_snp_root is None else ldscore_chr_chunk.loc[keep_snp]
     # save for each chunk
@@ -399,6 +405,19 @@ if __name__ == '__main__':
             window_size=window_size,
             spots_per_chunk=spots_per_chunk,
         )
+        config1 = GenerateLDScoreConfig(
+            **{'bfile_root': '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
+               'chrom': 21,
+               'gtf_file': '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
+               'keep_snp_root': '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
+               'ld_unit': 'CM',
+               'ld_wind': 1,
+               'ldscore_save_dir': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2/T101_macaque1/generate_ldscore',
+               'mkscore_feather_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2/T101_macaque1/latent_to_gene/T101_macaque1_gene_marker_score.feather',
+               'sample_name': 'T101_macaque1',
+               'spots_per_chunk': 5000,
+               'window_size': 50000})
+
         run_generate_ldscore(config1)
     else:
         parser = argparse.ArgumentParser(description="Configuration for the application.")
