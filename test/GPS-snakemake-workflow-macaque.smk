@@ -11,7 +11,7 @@ trait_names = [
 root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/processed/h5ad"
 sample_names = [file.strip().split('.')[0]
                 for file in open(f'{root}/representative_slices2').readlines()]
-sample_names='''
+sample_names = '''
 T33_macaque1
 '''.strip().split('\n')
 annotation = "SubClass"
@@ -22,7 +22,7 @@ num_processes = 20
 rule all:
     input:
         expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
-        # expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
+    # expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
 
 rule test_run:
     input:
@@ -111,7 +111,7 @@ rule latent_to_gene:
     threads:
         3
     resources:
-        mem_mb_per_cpu= lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
         qos='huge'
     run:
         command = f"""
@@ -148,14 +148,14 @@ rule generate_ldscore:
         bfile_root="/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC",
         keep_snp_root="/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm",
         window_size=50000,
-        spots_per_chunk=10000,
+        spots_per_chunk=1000,
         ld_wind=1,
         ld_unit="CM"
     benchmark: '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done.benchmark'
     threads:
         3
     resources:
-        mem_mb_per_cpu= lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
         qos='huge'
     shell:
         """
@@ -163,16 +163,20 @@ rule generate_ldscore:
         touch {output.done}
         """
 
+
 def get_h2_file(wildcards):
     gwas_root = "/storage/yangjianLab/songliyang/GWAS_trait/LDSC"
     return f"{gwas_root}/{wildcards.trait_name}.sumstats.gz",
+
 
 def get_ldscore(wildcards):
     if chrom == "all":
         return f"{wildcards.sample_name}/generate_ldscore/{wildcards.sample_name}_generate_ldscore_chr{chrom}.done"
     else:
-        assert tuple(chrom)==tuple(range(1,23)), "chrom must be all or range(1,23)"
-        return [f"{wildcards.sample_name}/generate_ldscore/{wildcards.sample_name}_generate_ldscore_chr{chrom}.done" for chrom in chrom]
+        assert tuple(chrom) == tuple(range(1,23)), "chrom must be all or range(1,23)"
+        return [f"{wildcards.sample_name}/generate_ldscore/{wildcards.sample_name}_generate_ldscore_chr{chrom}.done" for
+                chrom in chrom]
+
 
 rule spatial_ldsc:
     input:
@@ -185,11 +189,11 @@ rule spatial_ldsc:
         ldsc_save_dir='{sample_name}/spatial_ldsc',
         w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights."
     threads:
-        6
+        4
     benchmark:
         '{sample_name}/spatial_ldsc/{sample_name}_{trait_name}.csv.gz.benchmark'
     resources:
-        mem_mb_per_cpu= lambda wildcards, threads, attempt: 25_000 * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 50_000 / threads * np.log2(attempt + 1),
     shell:
         """
         GPS run_spatial_ldsc --h2 {input.h2_file} --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --trait_name {wildcards.trait_name}
@@ -204,7 +208,7 @@ rule cauchy_combination:
         ldsc_done=rules.spatial_ldsc.output.done
     params:
         cauchy_save_dir='{sample_name}/cauchy_combination',
-        annotation= annotation,
+        annotation=annotation,
         ldsc_dir=rules.spatial_ldsc.params.ldsc_save_dir
     benchmark:
         '{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz.benchmark'

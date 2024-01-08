@@ -123,7 +123,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     # Load the baseline annotations
     ld_file_baseline = f'{config.ldscore_input_dir}/baseline/baseline.'
     ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
-    common_snp = sumstats.index.intersection(set(ref_ld_baseline.index)).intersection(set(w_ld.index))
+    common_snp = ref_ld_baseline.index.intersection(w_ld.index).intersection(sumstats.index)
     logger.info(f'Find {len(common_snp)} common SNPs between GWAS and baseline annotations')
 
     filter_by_common_snp = lambda df: df.loc[common_snp]
