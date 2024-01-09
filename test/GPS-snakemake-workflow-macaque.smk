@@ -59,6 +59,7 @@ rule find_latent_representations:
         hierarchically=False
     threads:
         1
+    benchmark: '{sample_name}/find_latent_representations/{sample_name}_add_latent.h5ad.benchmark'
     run:
         command = f"""
 GPS run_find_latent_representations \
@@ -113,6 +114,7 @@ rule latent_to_gene:
     resources:
         mem_mb_per_cpu=lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
         qos='huge'
+    benchmark: '{sample_name}/latent_to_gene/{sample_name}_gene_marker_score.feather.benchmark'
     run:
         command = f"""
 GPS run_latent_to_gene \
