@@ -3,8 +3,8 @@ import numpy as np
 workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2'
 # workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque'
 sample_name = "Cortex_151507"
-# chrom = "all"
-chrom = range(1,23)
+chrom = "all"
+# chrom = range(1,23)
 trait_names = [
     'ADULT1_ADULT2_ONSET_ASTHMA'
 ]
@@ -12,11 +12,11 @@ root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/proc
 sample_names = [file.strip().split('.')[0]
                 for file in open(f'{root}/representative_slices2').readlines()]
 sample_names = '''
-T33_macaque1
-'''.strip().split('\n')
+T33_macaque1  T44_macaque1  T82_macaque1  T97_macaque1  T125_macaque1  T127_macaque1  T129_macaque1  T131_macaque1  T135_macaque1  T137_macaque1  T139_macaque1
+'''.strip().split()
 annotation = "SubClass"
 data_type = "SCT"
-# sample_names = ['T121_macaque1']
+sample_names = ['T135_macaque1']
 num_processes = 20
 
 rule all:
@@ -143,7 +143,6 @@ rule generate_ldscore:
         done='{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done'
     params:
         ld_score_save_dir='{sample_name}/generate_ldscore',
-        chrom="all",
         gtf_file="/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf",
         bfile_root="/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC",
         keep_snp_root="/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm",
@@ -159,7 +158,7 @@ rule generate_ldscore:
         qos='huge'
     shell:
         """
-        GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom all --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
+        GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom {wildcards.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
         touch {output.done}
         """
 
@@ -174,8 +173,8 @@ def get_ldscore(wildcards):
         return f"{wildcards.sample_name}/generate_ldscore/{wildcards.sample_name}_generate_ldscore_chr{chrom}.done"
     else:
         assert tuple(chrom) == tuple(range(1,23)), "chrom must be all or range(1,23)"
-        return [f"{wildcards.sample_name}/generate_ldscore/{wildcards.sample_name}_generate_ldscore_chr{chrom}.done" for
-                chrom in chrom]
+        return [f"{wildcards.sample_name}/generate_ldscore/{wildcards.sample_name}_generate_ldscore_chr{c}.done" for
+                c in chrom]
 
 
 rule spatial_ldsc:

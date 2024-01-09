@@ -129,6 +129,8 @@ def _read_ref_ld_v2(ld_file):
     ref_ld = pd.concat(
         [pd.read_feather(f'{file}{chr}{suffix}{s}') for chr in range(1, 23)], axis=0
     )
+    # set first column as index
+    ref_ld.rename(columns={'index': 'SNP'}, inplace=True)
     ref_ld.set_index('SNP', inplace=True)
     return ref_ld
 

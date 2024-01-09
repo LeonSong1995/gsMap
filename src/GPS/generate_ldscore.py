@@ -249,10 +249,12 @@ class S_LDSC_Boost:
         ldscore_chr_chunk = ldscore_chr_chunk if self.config.keep_snp_root is None else ldscore_chr_chunk[
             self.keep_snp_mask]
         # save for each chunk
-        pd.DataFrame(ldscore_chr_chunk,
+        df=pd.DataFrame(ldscore_chr_chunk,
                      index=self.snp_name,
                      columns=mk_score_chunk.columns,
-                     ).reset_index().to_feather(save_file_name)
+                     )
+        df.index.name='SNP'
+        df.reset_index().to_feather(save_file_name)
 
     def calculate_M_use_SNP_gene_pair_dummy_by_chunk(self,
                                                      mk_score_chunk,
