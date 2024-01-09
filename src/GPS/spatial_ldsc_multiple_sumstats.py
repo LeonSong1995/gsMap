@@ -196,7 +196,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     # Save the results
     out_dir = Path(config.ldsc_save_dir)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
-    out_file_name = out_dir / f'{data_name}_{trait_name}.new.csv.gz'
+    out_file_name = out_dir / f'{data_name}_{trait_name}.csv.gz'
     out_all['spot'] = out_all.index
     out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
     out_all.to_csv(out_file_name, compression='gzip', index=False)
