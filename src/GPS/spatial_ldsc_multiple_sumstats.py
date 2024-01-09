@@ -128,6 +128,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
     filter_by_common_snp = lambda df: df.loc[common_snp]
     sumstats = filter_by_common_snp(sumstats)
+    CHISQ = sumstats.chisq.to_numpy(dtype=np.float32).reshape((-1, 1)).copy()
     ref_ld_baseline = filter_by_common_snp(ref_ld_baseline)
     w_ld = filter_by_common_snp(w_ld)
     n_annot_baseline = len(ref_ld_baseline.columns)
@@ -178,8 +179,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         ref_ld_spatial *= initial_w
         ref_ld_spatial = ref_ld_spatial.to_numpy(dtype=np.float32)
 
-        y = sumstats.chisq.to_numpy(dtype=np.float32).reshape((-1, 1))
-        y *= initial_w
+        y = CHISQ * initial_w
 
         chunk_size = ref_ld_spatial.shape[1]
         out_chunk = process_map(jackknife_for_processmap, range(chunk_size),
@@ -234,5 +234,19 @@ if __name__ == '__main__':
         args = parser.parse_args(args_list)
     else:
         args = parser.parse_args()
-    config = SpatialLDSCConfig(**vars(args))
+    import os
+
+    os.chdir('/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2')
+    config = SpatialLDSCConfig(**{'all_chunk': None,
+                                  'chisq_max': None,
+                                  'h2': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/ADULT1_ADULT2_ONSET_ASTHMA.sumstats.gz',
+                                  'ldsc_save_dir': 'T135_macaque1/spatial_ldsc',
+                                  'ldscore_input_dir': 'T135_macaque1/generate_ldscore',
+                                  'n_blocks': 200,
+                                  'not_M_5_50': False,
+                                  'num_processes': 4,
+                                  'sample_name': 'T135_macaque1',
+                                  'trait_name': 'ADULT1_ADULT2_ONSET_ASTHMA',
+                                  'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'})
+    # config = SpatialLDSCConfig(**vars(args))
     run_spatial_ldsc(config)
