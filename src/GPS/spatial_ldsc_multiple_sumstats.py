@@ -27,8 +27,8 @@ def warn_length(sumstats):
 
 def _coef_new(jknife):
     # return coef[0], coef_se[0], z[0]]
-    est_ = jknife.est[0, 0]
-    se_ = jknife.jknife_se[0, 0]
+    est_ = jknife.est[0, 0]/Nbar
+    se_ = jknife.jknife_se[0, 0]/Nbar
     return est_, se_
 
 
@@ -104,7 +104,7 @@ def jackknife_for_processmap(spot_id):
 
 def run_spatial_ldsc(config: SpatialLDSCConfig):
 
-    global ref_ld_spatial, baseline_annotation, y, n_blocks
+    global ref_ld_spatial, baseline_annotation, y, n_blocks, Nbar
     n_blocks = config.n_blocks
     trait_name = config.trait_name
     print(f'------Running Spatial LDSC for {trait_name}...')
@@ -129,6 +129,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     filter_by_common_snp = lambda df: df.loc[common_snp]
     sumstats = filter_by_common_snp(sumstats)
     CHISQ = sumstats.chisq.to_numpy(dtype=np.float32).reshape((-1, 1)).copy()
+    Nbar = sumstats.N.mean()
     ref_ld_baseline = filter_by_common_snp(ref_ld_baseline)
     w_ld = filter_by_common_snp(w_ld)
     n_annot_baseline = len(ref_ld_baseline.columns)
