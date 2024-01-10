@@ -182,7 +182,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     # Compute the fraction of each gene across cells
     expressed_mask = pd.DataFrame((adata.X > 0).toarray(),index=adata.obs.index,columns=adata.var.index)
     # frac_whole = np.array((adata.X > 0).sum(axis=0))[0] / (adata.shape[0])
-    frac_whole = np.array(expressed_mask.sum(axis=0))[0] / (adata.shape[0])
+    frac_whole = np.array(expressed_mask.sum(axis=0)) / (adata.shape[0])
     # Normalize the geometrical mean
     ranks = ranks / gM
     ranks = pd.DataFrame(ranks, index=adata.obs_names)

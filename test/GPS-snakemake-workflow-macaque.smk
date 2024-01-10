@@ -6,7 +6,7 @@ sample_name = "Cortex_151507"
 chrom = "all"
 # chrom = range(1,23)
 trait_names = [
-    'ADULT1_ADULT2_ONSET_ASTHMA'
+    'PGC3_SCZ_wave3_public_INFO80'
 ]
 root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/processed/h5ad"
 sample_names = [file.strip().split('.')[0]
@@ -16,7 +16,7 @@ T33_macaque1  T44_macaque1  T82_macaque1  T97_macaque1  T125_macaque1  T127_maca
 '''.strip().split()
 annotation = "SubClass"
 data_type = "SCT"
-sample_names = ['T135_macaque1']
+# sample_names = ['T135_macaque1']
 num_processes = 20
 
 rule all:

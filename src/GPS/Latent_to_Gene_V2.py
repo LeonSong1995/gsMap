@@ -94,7 +94,7 @@ def _build_spatial_net(adata,annotation,num_neighbour):
 
 def find_Neighbors_Regional(cell):
     cell_use = spatial_net.loc[spatial_net.Cell1 == cell,'Cell2'].to_list()
-    # TODO: To modify the wrongly usage of global variable `coor_latent`
+
     similarity  = cosine_similarity(coor_latent.loc[cell].values.reshape(1, -1), 
                                     coor_latent.loc[cell_use].values).tolist()[0]
     if not args.annotation is None:
@@ -268,6 +268,22 @@ do
 
 	qsubshcom "$command" 4 50G mkS_${name} 24:00:00 "--qos huge -queue=intel-sc3,amd-ep2,amd-ep2-short"
 done
+'''
+
+'''
+python3 /storage/yangjianLab/songliyang/SpatialData/spatial_ldsc_v1/Latent_to_Gene_V2.py \
+	--latent_representation latent_GVAE \
+	--spe_path /storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/annotation/T135_macaque1/SubClass/h5ad \
+	--spe_name T135_macaque1_add_latent.h5ad \
+	--num_processes 20 \
+  --type SCT \
+  --annotation SubClass \
+  --species MACAQUE_GENE_SYM \
+  --gs_species /storage/yangjianLab/songliyang/SpatialData/homologs/macaque_human_homologs.txt \
+  --num_neighbour 51 \
+  --num_neighbour_spatial 201 \
+  --spe_out /storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/reproduce-liyang/T135_macaque1/old_gene_markers
+
 '''
 if __name__ == '__main__':
     TEST=True
