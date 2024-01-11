@@ -1,16 +1,15 @@
 import argparse
 import logging
 import multiprocessing
-import os
+from collections import defaultdict
 from pathlib import Path
-
+import os
 from scipy.stats import norm
-from tqdm import trange
 from tqdm.contrib.concurrent import process_map
 
 import GPS.jackknife as jk
 from GPS.config import add_spatial_ldsc_args, SpatialLDSCConfig
-from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2, _read_M_v2, _check_variance_v2
+from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2, _read_M_v2
 
 logger = logging.getLogger(__name__)
 
@@ -27,8 +26,8 @@ def warn_length(sumstats):
 
 def _coef_new(jknife):
     # return coef[0], coef_se[0], z[0]]
-    est_ = jknife.est[0, 0]/Nbar
-    se_ = jknife.jknife_se[0, 0]/Nbar
+    est_ = jknife.est[0, 0] / Nbar
+    se_ = jknife.jknife_se[0, 0] / Nbar
     return est_, se_
 
 
@@ -66,9 +65,9 @@ def filter_sumstats_by_chisq(sumstats, chisq_max):
 
 
 # Core Functionalities
-def get_weight(sumstats, ref_ld_baseline, ref_ld_spatial, w_ld, M_annot, intercept=1):
+def get_weight(sumstats, ref_ld_baseline, spatial_annotation, w_ld, M_annot, intercept=1):
     M_tot = np.sum(M_annot)
-    x_tot = ref_ld_baseline.sum(axis=1).values + ref_ld_spatial.sum(axis=1).values
+    x_tot = ref_ld_baseline.sum(axis=1).values + spatial_annotation.sum(axis=1).values
     tot_agg = aggregate(sumstats.chisq, x_tot, sumstats.N, M_tot, intercept)
     initial_w = weights(x_tot, w_ld.LD_weights.values, sumstats.N.values, M_tot, tot_agg, intercept)
     initial_w = np.sqrt(initial_w)
@@ -94,47 +93,84 @@ def weights(ld, w_ld, N, M, hsq, intercept=1):
 
 
 def jackknife_for_processmap(spot_id):
-    x_focal = np.concatenate((np.reshape(ref_ld_spatial[:, spot_id], (-1, 1)),
+    x_focal = np.concatenate((np.reshape(spatial_annotation[:, spot_id], (-1, 1)),
                               baseline_annotation), axis=1)
     # random shuffle x and y
     jknife = jk.LstsqJackknifeFast(x_focal, y, n_blocks)
     return _coef_new(jknife)
 
 
+# Updated function
+def get_weight_optimized(sumstats, x_tot_precomputed, M_tot, w_ld, intercept=1):
+    tot_agg = aggregate(sumstats.chisq, x_tot_precomputed, sumstats.N, M_tot, intercept)
+    initial_w = weights(x_tot_precomputed, w_ld.LD_weights.values, sumstats.N.values, M_tot, tot_agg, intercept)
+    initial_w = np.sqrt(initial_w)
+    return initial_w
 
-def run_spatial_ldsc(config: SpatialLDSCConfig):
 
-    global ref_ld_spatial, baseline_annotation, y, n_blocks, Nbar
-    n_blocks = config.n_blocks
-    trait_name = config.trait_name
-    print(f'------Running Spatial LDSC for {trait_name}...')
-    data_name = config.sample_name
-    num_cpus = min(multiprocessing.cpu_count(), config.num_processes)
+def _preprocess_sumstats(trait_name, sumstat_file_path, baseline_and_w_ld_common_snp: pd.Index, chisq_max=None):
     # Load the gwas summary statistics
-    sumstats = _read_sumstats(fh=config.h2, alleles=False, dropna=False)
+    sumstats = _read_sumstats(fh=sumstat_file_path, alleles=False, dropna=False)
     sumstats.set_index('SNP', inplace=True)
     sumstats = sumstats.astype(np.float32)
-    sumstats = filter_sumstats_by_chisq(sumstats, config.chisq_max)
+    sumstats = filter_sumstats_by_chisq(sumstats, chisq_max)
 
+    # NB: The intersection order is essential for keeping the same order of SNPs by its BP location
+    common_snp = baseline_and_w_ld_common_snp.intersection(sumstats.index)
+    if len(common_snp) < 200000:
+        logger.warning(f'WARNING: number of SNPs less than 200k; for {trait_name} this is almost always bad.')
+
+    sumstats = sumstats.loc[common_snp]
+    return sumstats
+
+
+def _get_sumstats_from_sumstats_dict(sumstats_config_dict: dict, baseline_and_w_ld_common_snp: pd.Index,
+                                     chisq_max=None):
+    # first validate if all sumstats file exists
+    logger.info('Validating sumstats files...')
+    for trait_name, sumstat_file_path in sumstats_config_dict.items():
+        if not os.path.exists(sumstat_file_path):
+            raise FileNotFoundError(f'{sumstat_file_path} not found')
+    # then load all sumstats
+    sumstats_cleaned_dict = {}
+    for trait_name, sumstat_file_path in sumstats_config_dict.items():
+        sumstats_cleaned_dict[trait_name] = _preprocess_sumstats(trait_name, sumstat_file_path,
+                                                                 baseline_and_w_ld_common_snp, chisq_max)
+    logger.info('cleaned sumstats loaded')
+    return sumstats_cleaned_dict
+
+
+def run_spatial_ldsc(config: SpatialLDSCConfig):
+    global spatial_annotation, baseline_annotation, y, n_blocks, Nbar
+    # config
+    n_blocks = config.n_blocks
+    sample_name = config.sample_name
+    num_cpus = min(multiprocessing.cpu_count(), config.num_processes)
+
+    print(f'------Running Spatial LDSC for {sample_name}...')
     # Load the regression weights
     w_ld = _read_w_ld(config.w_file)
     w_ld_cname = w_ld.columns[1]
     w_ld.set_index('SNP', inplace=True)
+
     # Load the baseline annotations
     ld_file_baseline = f'{config.ldscore_input_dir}/baseline/baseline.'
     ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
-    common_snp = ref_ld_baseline.index.intersection(w_ld.index).intersection(sumstats.index)
-    logger.info(f'Find {len(common_snp)} common SNPs between GWAS and baseline annotations')
-
-    filter_by_common_snp = lambda df: df.loc[common_snp]
-    sumstats = filter_by_common_snp(sumstats)
-    CHISQ = sumstats.chisq.to_numpy(dtype=np.float32).reshape((-1, 1)).copy()
-    Nbar = sumstats.N.mean()
-    ref_ld_baseline = filter_by_common_snp(ref_ld_baseline)
-    w_ld = filter_by_common_snp(w_ld)
     n_annot_baseline = len(ref_ld_baseline.columns)
     M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, config.not_M_5_50)
-    # Detect chunk files
+
+    # common snp between baseline and w_ld
+    baseline_and_w_ld_common_snp = ref_ld_baseline.index.intersection(w_ld.index)
+    if len(baseline_and_w_ld_common_snp) < 200000:
+        logger.warning(f'WARNING: number of SNPs less than 200k; for {sample_name} this is almost always bad.')
+    ref_ld_baseline = ref_ld_baseline.loc[baseline_and_w_ld_common_snp]
+    w_ld = w_ld.loc[baseline_and_w_ld_common_snp]
+
+    # Clean the sumstats
+    sumstats_cleaned_dict = _get_sumstats_from_sumstats_dict(config.sumstats_config_dict, baseline_and_w_ld_common_snp,
+                                                             chisq_max=config.chisq_max)
+
+    # Detect avalable chunk files
     all_file = os.listdir(config.ldscore_input_dir)
     if config.all_chunk is None:
         all_chunk = sum('chunk' in name for name in all_file)
@@ -142,66 +178,90 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         print(f'Find {all_chunk} chunked files')
     else:
         all_chunk = config.all_chunk
+        print(f'using {all_chunk} chunked files by provided argument')
         print(f'\t')
         print(f'Input {all_chunk} chunked files')
+
     # Process each chunk
-    out_all = pd.DataFrame()
+    output_dict = defaultdict(list)
     for chunk_index in range(1, all_chunk + 1):
         print(f'------Processing chunk-{chunk_index}')
-        # Load the spatial ldscore annotations
-        ld_file_spatial = f'{config.ldscore_input_dir}/{data_name}_chunk{chunk_index}/{data_name}.'
+
+        # Load the spatial annotations for this chunk
+        ld_file_spatial = f'{config.ldscore_input_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.'
         ref_ld_spatial = _read_ref_ld_v2(ld_file_spatial)
-        ref_ld_spatial = filter_by_common_snp(ref_ld_spatial).astype(np.float32)
-        ref_ld_spatial_cnames = ref_ld_spatial.columns
+        ref_ld_spatial = ref_ld_spatial.loc[baseline_and_w_ld_common_snp]
+        ref_ld_spatial = ref_ld_spatial.astype(np.float32, copy=False)
 
+        # check the variance of the design matrix
+        # ref_ld_spatial, spatial_annotation = _check_variance_v2(ref_ld_spatial, ref_ld_baseline)
+
+        # load M file of spatial annotation
         n_annot_spatial = len(ref_ld_spatial.columns)
-        M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_M_5_50)
-
-        # Merge the spatial annotations and baseline annotations
         n_annot = n_annot_baseline + n_annot_spatial
+        M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_M_5_50)
         M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
 
-        # Check the variance of the design matrix
-        # M_annot, ref_ld_spatial = _check_variance_v2(M_annot, ref_ld_spatial)
+        # precompute x_tot and M_tot
+        x_tot_precomputed = ref_ld_baseline.sum(axis=1) + ref_ld_spatial.sum(axis=1)
+        M_tot = np.sum(M_annot)
 
-        initial_w = get_weight(sumstats, ref_ld_baseline, ref_ld_spatial, w_ld, M_annot).astype(np.float32).reshape(
-            (-1, 1))
+        for trait_name, sumstats in sumstats_cleaned_dict.items():
+            logger.info(f'Processing {trait_name}...')
 
-        assert np.any(initial_w > 0), 'Weights must be > 0'
+            # filter ldscore by common snp
+            common_snp = sumstats.index
+            spatial_annotation = ref_ld_spatial.loc[common_snp].astype(np.float32, copy=False)
+            spatial_annotation_cnames = spatial_annotation.columns
+            baseline_annotation = ref_ld_baseline.loc[common_snp].astype(np.float32, copy=False)
+            w_ld_common_snp = w_ld.loc[common_snp].astype(np.float32, copy=False)
+            x_tot_precomputed_common_snp = x_tot_precomputed.loc[common_snp].values
 
-        baseline_annotation = ref_ld_baseline.copy()
-        baseline_annotation = baseline_annotation * sumstats.N.values.reshape((-1, 1)) / sumstats.N.mean()
-        # append intercept
-        baseline_annotation = append_intercept(baseline_annotation)
+            initial_w = (
+                get_weight_optimized(sumstats, x_tot_precomputed_common_snp, M_tot, w_ld_common_snp, intercept=1)
+                .astype(np.float32)
+                .reshape((-1, 1)))
+            assert np.any(initial_w > 0), 'Weights must be > 0'
 
-        # apply weight
-        initial_w = initial_w / np.sum(initial_w)
-        baseline_annotation *= initial_w
-        ref_ld_spatial *= initial_w
-        ref_ld_spatial = ref_ld_spatial.to_numpy(dtype=np.float32)
+            baseline_annotation = baseline_annotation * sumstats.N.values.reshape((-1, 1)) / sumstats.N.mean()
+            # append intercept
+            baseline_annotation = append_intercept(baseline_annotation)
 
-        y = CHISQ * initial_w
+            # apply weight
+            initial_w_scaled = initial_w / np.sum(initial_w)
+            baseline_annotation *= initial_w_scaled
+            spatial_annotation *= initial_w_scaled
+            spatial_annotation = spatial_annotation.to_numpy(dtype=np.float32)
+            CHISQ = sumstats.chisq.to_numpy(dtype=np.float32).reshape((-1, 1)).copy()
+            y = CHISQ * initial_w_scaled
+            Nbar = sumstats.N.mean()
 
-        chunk_size = ref_ld_spatial.shape[1]
-        out_chunk = process_map(jackknife_for_processmap, range(chunk_size),
-                                max_workers=config.num_processes,
-                                chunksize=10,
-                                desc=f'Running LDSC for {chunk_size} cells in chunk-{chunk_index}.'
-                                )
-        out_chunk = pd.DataFrame.from_records(out_chunk, columns=['beta', 'se', ],
-                                              index=ref_ld_spatial_cnames)
-        out_chunk['z'] = out_chunk.beta / out_chunk.se
-        out_chunk['p'] = norm.sf(out_chunk['z'])
-        # Concat results
-        out_all = pd.concat([out_all, out_chunk], axis=0)
+            # Run the jackknife
+            chunk_size = spatial_annotation.shape[1]
+            out_chunk = process_map(jackknife_for_processmap, range(chunk_size),
+                                    max_workers=config.num_processes,
+                                    chunksize=10,
+                                    desc=f'LDSC chunk-{chunk_index}: {trait_name}')
+
+            # cache the results
+            out_chunk = pd.DataFrame.from_records(out_chunk,
+                                                  columns=['beta', 'se', ],
+                                                  index=spatial_annotation_cnames)
+            out_chunk['z'] = out_chunk.beta / out_chunk.se
+            out_chunk['p'] = norm.sf(out_chunk['z'])
+            output_dict[trait_name].append(out_chunk)
+
     # Save the results
     out_dir = Path(config.ldsc_save_dir)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
-    out_file_name = out_dir / f'{data_name}_{trait_name}.csv.gz'
-    out_all['spot'] = out_all.index
-    out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
-    out_all.to_csv(out_file_name, compression='gzip', index=False)
-    print(f'Done! Results saved to {out_file_name}')
+    for trait_name, out_chunk_list in output_dict.items():
+        out_all = pd.concat(out_chunk_list, axis=0)
+        out_file_name = out_dir / f'{sample_name}_{trait_name}.csv.gz'
+        out_all['spot'] = out_all.index
+        out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
+        out_all.to_csv(out_file_name, compression='gzip', index=False)
+        logger.info(f'Output saved to {out_file_name} for {trait_name}')
+    logger.info(f'------Spatial LDSC for {sample_name} finished!')
 
 
 if __name__ == '__main__':
@@ -238,16 +298,18 @@ if __name__ == '__main__':
     import os
 
     os.chdir('/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2')
-    config = SpatialLDSCConfig(**{'all_chunk': None,
+    config = SpatialLDSCConfig(**{'all_chunk': 2,
                                   'chisq_max': None,
-                                  'h2': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/ADULT1_ADULT2_ONSET_ASTHMA.sumstats.gz',
+                                  # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/ADULT1_ADULT2_ONSET_ASTHMA.sumstats.gz',
                                   'ldsc_save_dir': 'T135_macaque1/spatial_ldsc',
                                   'ldscore_input_dir': 'T135_macaque1/generate_ldscore',
                                   'n_blocks': 200,
                                   'not_M_5_50': False,
                                   'num_processes': 4,
                                   'sample_name': 'T135_macaque1',
-                                  'trait_name': 'ADULT1_ADULT2_ONSET_ASTHMA',
-                                  'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'})
+                                  # 'trait_name': 'ADULT1_ADULT2_ONSET_ASTHMA',
+                                  'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
+                                  'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
+                                  })
     # config = SpatialLDSCConfig(**vars(args))
     run_spatial_ldsc(config)

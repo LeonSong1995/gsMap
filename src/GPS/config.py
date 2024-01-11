@@ -148,27 +148,33 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
     parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
     parser.add_argument('--gM_slices', type=str, default=None, )
+
+
 def add_spatial_ldsc_args(parser):
     # Group for GWAS input data
-    parser.add_argument('--h2', required=True, help="Path to GWAS summary statistics file.")
-    parser.add_argument('--w_file', required=True, help="Path to regression weight file.")
     parser.add_argument('--sample_name', required=True, help="Name of the spatial transcriptomic dataset.")
+
+    parser.add_argument('--sumstats_file',default=None,help="Path to GWAS summary statistics file.")
+    parser.add_argument('--sumstats_config_file',default=None,help="Path to GWAS summary statistics config file.")
+    parser.add_argument('--w_file', required=True, help="Path to regression weight file.")
     parser.add_argument('--ldscore_input_dir', required=True, help="Input directory for LD Score files.")
     parser.add_argument('--ldsc_save_dir', required=True, help="Directory to save Spatial LDSC results.")
-    parser.add_argument('--trait_name', required=True, help="Name of the trait.")
-    parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
+    parser.add_argument('--trait_name', default=None, help="Name of the trait.")
     parser.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
     parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
     parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
     parser.add_argument('--all_chunk', type=int, help="Number of chunks for processing spatial data.")
+    parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
 
     return parser
+
 
 def add_Cauchy_combination_args(parser):
     # Required arguments
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
     parser.add_argument('--input_ldsc_dir', required=True, type=str, help='Directory containing LDSC results')
-    parser.add_argument('--output_cauchy_dir', required=True, type=str, help='Output directory for Cauchy combination results')
+    parser.add_argument('--output_cauchy_dir', required=True, type=str,
+                        help='Output directory for Cauchy combination results')
     parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample')
     parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
     parser.add_argument('--annotation', required=True, type=str, help='Annotation layer name')
@@ -176,6 +182,7 @@ def add_Cauchy_combination_args(parser):
     # Optional arguments
     parser.add_argument('--meta', default=None, type=str, )
     parser.add_argument('--slide', default=None, type=str, )
+
 
 def add_all_mode_args(parser):
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
@@ -279,7 +286,8 @@ def add_all_mode_args(parser):
 
     # cauchy combination args:
     # Required arguments
-    parser.add_argument('--output_cauchy_dir', required=True, type=str, help='Output directory for Cauchy combination results')
+    parser.add_argument('--output_cauchy_dir', required=True, type=str,
+                        help='Output directory for Cauchy combination results')
 
     # Optional arguments
     parser.add_argument('--meta', default=None, type=str, )
@@ -300,7 +308,7 @@ def get_runall_mode_config(args: argparse.ArgumentParser):
     args.ldscore_input_dir = args.ldscore_save_dir
     args.chrom = 'all'
     args.input_ldsc_dir = args.ldsc_save_dir
-    args.input_spatial_ldsc= f'{args.save_dir}/{args.sample_name}/spatial_ldsc/{args.sample_name}_{args.trait_name}.gz'
+    args.input_spatial_ldsc = f'{args.save_dir}/{args.sample_name}/spatial_ldsc/{args.sample_name}_{args.trait_name}.gz'
     # find_latent_representations
     flr_config = get_dataclass_from_parser(args, FindLatentRepresentationsConfig)
     # latent_to_gene
@@ -313,6 +321,8 @@ def get_runall_mode_config(args: argparse.ArgumentParser):
     cauchy_config = get_dataclass_from_parser(args, CauchyCombinationConfig)
     return RunAllModeConfig(flr_config=flr_config, ltg_config=ltg_config, gls_config=gls_config,
                             ldsc_config=ldsc_config, cauchy_config=cauchy_config)
+
+
 @dataclass
 class FindLatentRepresentationsConfig:
     input_hdf5_path: str
@@ -378,17 +388,42 @@ class GenerateLDScoreConfig:
 
 @dataclass
 class SpatialLDSCConfig:
-    h2: str
-    w_file: str
     sample_name: str
+    w_file: str
     ldscore_input_dir: str
     ldsc_save_dir: str
-    trait_name: str
+    trait_name: str = None
+    sumstats_file: str = None
+    sumstats_config_file: str = None
     num_processes: int = 4
     not_M_5_50: bool = False
     n_blocks: int = 200
     chisq_max: int = None
     all_chunk: int = None
+
+    def __post_init__(self):
+        if self.sumstats_file is None and self.sumstats_config_file is None:
+            raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
+        if self.sumstats_file is not None and self.sumstats_config_file is not None:
+            raise ValueError('Only one of sumstats_file and sumstats_config_file must be provided.')
+        if self.sumstats_file is not None and self.trait_name is None:
+            raise ValueError('trait_name must be provided if sumstats_file is provided.')
+        if self.sumstats_config_file is not None and self.trait_name is not None:
+            raise ValueError('trait_name must not be provided if sumstats_config_file is provided.')
+        self.sumstats_config_dict = {}
+        # load the sumstats config file
+        if self.sumstats_config_file is not None:
+            import yaml
+            with open(self.sumstats_config_file) as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
+            for trait_name, sumstats_file in config.items():
+                self.sumstats_config_dict[trait_name] = sumstats_file
+        # load the sumstats file
+        elif self.sumstats_file is not None:
+            self.sumstats_config_dict[self.trait_name] = self.sumstats_file
+        else:
+            raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
+
 
 @dataclass
 class CauchyCombinationConfig:
@@ -401,6 +436,7 @@ class CauchyCombinationConfig:
     meta: str = None
     slide: str = None
 
+
 @dataclass
 class RunAllModeConfig:
     flr_config: FindLatentRepresentationsConfig
@@ -408,7 +444,6 @@ class RunAllModeConfig:
     gls_config: GenerateLDScoreConfig
     ldsc_config: SpatialLDSCConfig
     cauchy_config: CauchyCombinationConfig
-
 
 
 @register_cli(name='run_find_latent_representations',
@@ -437,6 +472,7 @@ def run_generate_ldscore_from_cli(args: argparse.ArgumentParser):
     config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
     run_generate_ldscore(config)
 
+
 @register_cli(name='run_spatial_ldsc',
               description='Run Spatial_ldsc \nRun spatial LDSC for each spot',
               add_args_function=add_spatial_ldsc_args)
@@ -445,12 +481,13 @@ def run_spatial_ldsc_from_cli(args: argparse.ArgumentParser):
     config = get_dataclass_from_parser(args, SpatialLDSCConfig)
     run_spatial_ldsc(config)
 
+
 @register_cli(name='run_cauchy_combination',
-                description='Run Cauchy_combiination for each annotation',
-                add_args_function=add_Cauchy_combination_args)
+              description='Run Cauchy_combiination for each annotation',
+              add_args_function=add_Cauchy_combination_args)
 def run_Cauchy_combiination_from_cli(args: argparse.ArgumentParser):
     from GPS.cauchy_combination_test import run_Cauchy_combiination
-    config=get_dataclass_from_parser(args, CauchyCombinationConfig)
+    config = get_dataclass_from_parser(args, CauchyCombinationConfig)
     run_Cauchy_combiination(config)
 
 
