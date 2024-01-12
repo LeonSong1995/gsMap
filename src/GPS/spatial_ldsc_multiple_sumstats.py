@@ -251,6 +251,10 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             out_chunk['p'] = norm.sf(out_chunk['z'])
             output_dict[trait_name].append(out_chunk)
 
+            # garbage collection
+            del spatial_annotation
+
+
     # Save the results
     out_dir = Path(config.ldsc_save_dir)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
