@@ -1,6 +1,8 @@
+from pathlib import Path
+
 import numpy as np
 
-workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2'
+workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/processed'
 # workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque'
 sample_name = "Cortex_151507"
 chrom = "all"
@@ -9,11 +11,16 @@ trait_names = [
     'PGC3_SCZ_wave3_public_INFO80'
 ]
 root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/processed/h5ad"
-sample_names = [file.strip().split('.')[0]
-                for file in open(f'{root}/representative_slices2').readlines()]
-sample_names = '''
-T33_macaque1  T44_macaque1  T82_macaque1  T97_macaque1  T125_macaque1  T127_macaque1  T129_macaque1  T131_macaque1  T135_macaque1  T137_macaque1  T139_macaque1
-'''.strip().split()
+# sample_names = [file.strip().split('.')[0]
+#                 for file in open(f'{root}/representative_slices2').readlines()]
+#
+# sample_names = '''
+# T33_macaque1  T44_macaque1  T82_macaque1  T97_macaque1  T125_macaque1  T127_macaque1  T129_macaque1  T131_macaque1  T135_macaque1  T137_macaque1  T139_macaque1
+# '''.strip().split()
+sample_names=[]
+for file in Path(root).glob('*.h5ad'):
+    sample_names.append(file.stem)
+
 annotation = "SubClass"
 data_type = "SCT"
 # sample_names = ['T135_macaque1']
@@ -21,7 +28,9 @@ num_processes = 20
 
 rule all:
     input:
-        expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
+        expand('{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done',trait_name=trait_names,sample_name=sample_names)
+
+# expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
     # expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
 
 rule test_run:
@@ -29,7 +38,7 @@ rule test_run:
         [f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done' for sample_name in
          sample_names]
 
-localrules: find_latent_representations
+localrules: find_latent_representations,latent_to_gene
 
 rule find_latent_representations:
     input:
@@ -112,7 +121,8 @@ rule latent_to_gene:
     threads:
         3
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
+        mem_mb=80_000,
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 80_000 * np.log2(attempt + 1),
         qos='huge'
     benchmark: '{sample_name}/latent_to_gene/{sample_name}_gene_marker_score.feather.benchmark'
     run:
@@ -156,7 +166,7 @@ rule generate_ldscore:
     threads:
         3
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 30_000 / threads * np.log2(attempt + 1),
         qos='huge'
     shell:
         """
@@ -181,24 +191,30 @@ def get_ldscore(wildcards):
 
 rule spatial_ldsc:
     input:
-        h2_file=get_h2_file,
+        # h2_file=get_h2_file,
         generate_ldscore_done=get_ldscore
     output:
-        done='{sample_name}/spatial_ldsc/{sample_name}_{trait_name}.csv.gz'
+        done='{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done'
     params:
         ldscore_input_dir=rules.generate_ldscore.params.ld_score_save_dir,
         ldsc_save_dir='{sample_name}/spatial_ldsc',
-        w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights."
+        w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.",
+        sumstats_config_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config.yaml',
+        all_chunk = 20
     threads:
-        4
+        3
     benchmark:
-        '{sample_name}/spatial_ldsc/{sample_name}_{trait_name}.csv.gz.benchmark'
+        '{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done.benchmark'
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 50_000 / threads * np.log2(attempt + 1),
-    shell:
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 60_000 / threads * np.log2(attempt + 1),
+    run:
+       command = f"""
+        GPS run_spatial_ldsc --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --sumstats_config_file {params.sumstats_config_file} {f'--all_chunk {params.all_chunk}' if params.all_chunk else ''}
         """
-        GPS run_spatial_ldsc --h2 {input.h2_file} --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --trait_name {wildcards.trait_name}
-        """
+       shell(
+           f'{command}'
+           'touch {output.done}'
+       )
 
 
 rule cauchy_combination:
