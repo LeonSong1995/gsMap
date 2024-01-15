@@ -23,7 +23,7 @@ for file in Path(root).glob('*.h5ad'):
 
 annotation = "SubClass"
 data_type = "SCT"
-# sample_names = ['T135_macaque1']
+# sample_names = ['T584_macaque2']
 num_processes = 20
 
 rule all:
@@ -38,7 +38,7 @@ rule test_run:
         [f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done' for sample_name in
          sample_names]
 
-localrules: find_latent_representations,latent_to_gene
+# localrules: find_latent_representations,latent_to_gene
 
 rule find_latent_representations:
     input:
@@ -67,8 +67,11 @@ rule find_latent_representations:
         convergence_threshold=1e-4,
         hierarchically=False
     threads:
-        1
+        2
     benchmark: '{sample_name}/find_latent_representations/{sample_name}_add_latent.h5ad.benchmark'
+    resources:
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
+        qos='huge'
     run:
         command = f"""
 GPS run_find_latent_representations \
@@ -119,10 +122,9 @@ rule latent_to_gene:
         annotation=annotation,
         type=data_type
     threads:
-        3
+        1
     resources:
-        mem_mb=80_000,
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 80_000 * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 70_000 * np.log2(attempt + 1),
         qos='huge'
     benchmark: '{sample_name}/latent_to_gene/{sample_name}_gene_marker_score.feather.benchmark'
     run:
@@ -166,7 +168,7 @@ rule generate_ldscore:
     threads:
         3
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 30_000 / threads * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 45_000 / threads * np.log2(attempt + 1),
         qos='huge'
     shell:
         """
@@ -202,7 +204,7 @@ rule spatial_ldsc:
         sumstats_config_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config.yaml',
         all_chunk = 20
     threads:
-        3
+        2
     benchmark:
         '{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done.benchmark'
     resources:
