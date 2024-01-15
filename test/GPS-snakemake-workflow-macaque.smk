@@ -23,7 +23,7 @@ for file in Path(root).glob('*.h5ad'):
 
 annotation = "SubClass"
 data_type = "SCT"
-# sample_names = ['T135_macaque1']
+# sample_names = ['T584_macaque2']
 num_processes = 20
 
 rule all:
@@ -38,7 +38,15 @@ rule test_run:
         [f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done' for sample_name in
          sample_names]
 
-localrules: find_latent_representations,latent_to_gene
+# localrules: find_latent_representations,latent_to_gene
+def get_annotation(wildcards):
+    if wildcards.sample_name.endswith('3'):
+        print(wildcards.sample_name,'will use None as annotation')
+        return None
+    else:
+        print(wildcards.sample_name,'will use SubClass as annotation')
+        return 'SubClass'
+
 
 rule find_latent_representations:
     input:
@@ -46,7 +54,7 @@ rule find_latent_representations:
     output:
         hdf5_output='{sample_name}/find_latent_representations/{sample_name}_add_latent.h5ad'
     params:
-        annotation=annotation,
+        annotation= get_annotation,
         type=data_type,
         epochs=300,
         feat_hidden1=256,
@@ -67,15 +75,18 @@ rule find_latent_representations:
         convergence_threshold=1e-4,
         hierarchically=False
     threads:
-        1
+        3
     benchmark: '{sample_name}/find_latent_representations/{sample_name}_add_latent.h5ad.benchmark'
+    resources:
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
+        qos='huge'
     run:
         command = f"""
 GPS run_find_latent_representations \
     --input_hdf5_path {input.hdf5_path} \
     --sample_name {wildcards.sample_name} \
     --output_hdf5_path {output.hdf5_output} \
-    --annotation {params.annotation} \
+    { '--annotation ' + params.annotation if params.annotation is not None else ''} \
     --type {params.type} \
     --epochs {params.epochs} \
     --feat_hidden1 {params.feat_hidden1} \
@@ -116,13 +127,12 @@ rule latent_to_gene:
         species='MACAQUE_GENE_SYM',
         gs_species='/storage/yangjianLab/songliyang/SpatialData/homologs/macaque_human_homologs.txt',
         gM_slices=None,
-        annotation=annotation,
+        annotation=get_annotation,
         type=data_type
     threads:
-        3
+        1
     resources:
-        mem_mb=80_000,
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 80_000 * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 70_000 * np.log2(attempt + 1),
         qos='huge'
     benchmark: '{sample_name}/latent_to_gene/{sample_name}_gene_marker_score.feather.benchmark'
     run:
@@ -131,7 +141,7 @@ GPS run_latent_to_gene \
     --input_hdf5_with_latent_path {input.hdf5_with_latent_path} \
     --sample_name {wildcards.sample_name} \
     --output_feather_path {output.feather_path} \
-    --annotation {params.annotation} \
+    { '--annotation ' + params.annotation if params.annotation is not None else ''} \
     --type {params.type} \
     --method {params.method} \
     --latent_representation {params.latent_representation} \
@@ -166,7 +176,7 @@ rule generate_ldscore:
     threads:
         3
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 30_000 / threads * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 45_000 / threads * np.log2(attempt + 1),
         qos='huge'
     shell:
         """
@@ -202,11 +212,12 @@ rule spatial_ldsc:
         sumstats_config_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config.yaml',
         all_chunk = 20
     threads:
-        3
+        2
     benchmark:
         '{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done.benchmark'
     resources:
         mem_mb_per_cpu=lambda wildcards, threads, attempt: 60_000 / threads * np.log2(attempt + 1),
+        qos='huge'
     run:
        command = f"""
         GPS run_spatial_ldsc --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --sumstats_config_file {params.sumstats_config_file} {f'--all_chunk {params.all_chunk}' if params.all_chunk else ''}

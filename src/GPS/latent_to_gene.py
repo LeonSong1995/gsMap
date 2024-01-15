@@ -115,11 +115,10 @@ def _compute_regional_mkscore(cell_tg, ):
     gene_ranks_region[gene_ranks_region <= 1] = 0
 
     # Simultaneously consider the ratio of expression fractions and ranks
-    gene_ranks_region = pd.DataFrame(gene_ranks_region * frac_region)
-    gene_ranks_region.columns = [cell_tg]
+    gene_ranks_region = (gene_ranks_region * frac_region).values
 
     mkscore = np.exp(gene_ranks_region ** 2) - 1
-    return mkscore
+    return mkscore.astype(np.float16, copy=False)
 
 
 def run_latent_to_gene(config: LatentToGeneConfig):
@@ -193,8 +192,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
                             desc="Finding markers (Rank-based approach) | cells")
     ]
     # Normalize the marker scores
-    mk_score = pd.concat(mk_score, axis=1)
-    mk_score.index = adata.var_names
+    mk_score=pd.DataFrame(np.vstack(mk_score).T, index=adata.var.index,columns=cell_list)
     # mk_score_normalized = mk_score.div(mk_score.sum())*1e+2
     # Remove the mitochondrial genes
     mt_genes = [gene for gene in mk_score.index if gene.startswith('MT-') or gene.startswith('mt-')]
@@ -248,8 +246,8 @@ if __name__ == '__main__':
         )
     else:
         args = parser.parse_args()
+        config = LatentToGeneConfig(**vars(args))
     logger.info(f'Latent to gene for {args.sample_name}...')
-    config = LatentToGeneConfig(**vars(args))
     pprint.pprint(config)
     start_time = time.time()
     run_latent_to_gene(config)

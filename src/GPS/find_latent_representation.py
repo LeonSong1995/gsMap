@@ -177,7 +177,30 @@ if __name__ == '__main__':
 
     else:
         args = parser.parse_args()
-    config=FindLatentRepresentationsConfig(**vars(args))
+    config=FindLatentRepresentationsConfig(**{'annotation': 'SubClass',
+ 'convergence_threshold': 0.0001,
+ 'epochs': 300,
+ 'feat_cell': 3000,
+ 'feat_hidden1': 256,
+ 'feat_hidden2': 128,
+ 'gcn_decay': 0.01,
+ 'gcn_hidden1': 64,
+ 'gcn_hidden2': 30,
+ 'gcn_lr': 0.001,
+ 'hierarchically': False,
+ 'input_hdf5_path': '/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/processed/h5ad/T862_macaque3.h5ad',
+ 'label_w': 1.0,
+ 'n_comps': 300,
+ 'n_neighbors': 11,
+ 'nheads': 3,
+ 'output_hdf5_path': 'T862_macaque3/find_latent_representations/T862_macaque3_add_latent.h5ad',
+ 'p_drop': 0.1,
+ 'rec_w': 1.0,
+ 'sample_name': 'T862_macaque3',
+ 'type': 'SCT',
+ 'var': False,
+ 'weighted_adj': False})
+    # config=FindLatentRepresentationsConfig(**vars(args))
     start_time = time.time()
     logger.info(f'Find latent representations for {config.sample_name}...')
     pprint.pprint(config)
