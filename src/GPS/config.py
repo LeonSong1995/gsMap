@@ -133,7 +133,7 @@ def add_latent_to_gene_args(parser):
                         help='Path to save output gene marker score feather file.')
     # no_expression_fraction
     parser.add_argument('--no_expression_fraction', action='store_true',default=False,
-                        help='Flag to not use no_expression_fraction. Default is False.')
+                        help='Flag to not use expression fraction as filter when calculate the maker score. Default is False.')
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
     parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
 
