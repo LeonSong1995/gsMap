@@ -102,27 +102,27 @@ def _compute_regional_mkscore(cell_tg, ):
     """
     cell_select = find_Neighbors_Regional(cell_tg)
 
-    # Ratio of expression fractions
-    # frac_focal = np.array((adata[cell_select,].X > 0).sum(axis=0))[0] / (adata[cell_select,].shape[0])
-    frac_focal = expressed_mask.loc[cell_select].sum(0)/len(cell_select)
-    frac_region = frac_focal / frac_whole
-    frac_region[frac_region <= 1] = 0
-    frac_region[frac_region > 1] = 1
-
     # Ratio of expression ranks
     ranks_tg = ranks.loc[cell_select]
     gene_ranks_region = gmean(ranks_tg, axis=0)
     gene_ranks_region[gene_ranks_region <= 1] = 0
 
-    # Simultaneously consider the ratio of expression fractions and ranks
-    gene_ranks_region = (gene_ranks_region * frac_region).values
+    if not args.no_expression_fraction:
+        # Ratio of expression fractions
+        frac_focal = expressed_mask.loc[cell_select].sum(0) / len(cell_select)
+        frac_region = frac_focal / frac_whole
+        frac_region[frac_region <= 1] = 0
+        frac_region[frac_region > 1] = 1
+
+        # Simultaneously consider the ratio of expression fractions and ranks
+        gene_ranks_region = (gene_ranks_region * frac_region).values
 
     mkscore = np.exp(gene_ranks_region ** 2) - 1
     return mkscore.astype(np.float16, copy=False)
 
 
 def run_latent_to_gene(config: LatentToGeneConfig):
-    global adata, coor_latent, spatial_net, ranks, frac_whole, args, spatial_net_dict,expressed_mask
+    global adata, coor_latent, spatial_net, ranks, frac_whole, args, spatial_net_dict, expressed_mask
     args = config
     # Load and process the spatial data
     print('------Loading the spatial data...')
@@ -175,11 +175,11 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         ranks = np.apply_along_axis(rankdata, 1, adata.X.toarray())
     else:
         print('------Ranking the spatial data...')
-        ranks=rankdata(adata.X.toarray().astype(np.float32), axis=1).astype(np.float32)
+        ranks = rankdata(adata.X.toarray().astype(np.float32), axis=1).astype(np.float32)
         gM = gmean(ranks, axis=0)
 
     # Compute the fraction of each gene across cells
-    expressed_mask = pd.DataFrame((adata.X > 0).toarray(),index=adata.obs.index,columns=adata.var.index)
+    expressed_mask = pd.DataFrame((adata.X > 0).toarray(), index=adata.obs.index, columns=adata.var.index)
     # frac_whole = np.array((adata.X > 0).sum(axis=0))[0] / (adata.shape[0])
     frac_whole = np.array(expressed_mask.sum(axis=0)) / (adata.shape[0])
     # Normalize the geometrical mean
@@ -192,7 +192,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
                             desc="Finding markers (Rank-based approach) | cells")
     ]
     # Normalize the marker scores
-    mk_score=pd.DataFrame(np.vstack(mk_score).T, index=adata.var.index,columns=cell_list)
+    mk_score = pd.DataFrame(np.vstack(mk_score).T, index=adata.var.index, columns=cell_list)
     # mk_score_normalized = mk_score.div(mk_score.sum())*1e+2
     # Remove the mitochondrial genes
     mt_genes = [gene for gene in mk_score.index if gene.startswith('MT-') or gene.startswith('mt-')]
@@ -207,7 +207,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     mk_score.rename(columns={mk_score.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
     mk_score.to_feather(output_file_path)
 
-
+#%%
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process latent to gene data.")
     add_latent_to_gene_args(parser)
@@ -225,25 +225,26 @@ if __name__ == '__main__':
             '--type', 'count',
             '--annotation', 'layer_guess',
             '--num_neighbour', '51',
+            # '--no_expression_fraction',
 
         ])
 
-        config = LatentToGeneConfig(
-            **{'annotation': 'SubClass',
-               'fold': 1.0,
-               'gM_slices': None,
-               'gs_species': '/storage/yangjianLab/songliyang/SpatialData/homologs/macaque_human_homologs.txt',
-               'input_hdf5_with_latent_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/find_latent_representations/T121_macaque1_add_latent.h5ad',
-               'latent_representation': 'latent_GVAE',
-               'method': 'rank',
-               'num_neighbour': 51,
-               'num_neighbour_spatial': 201,
-               'output_feather_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/latent_to_gene/T121_macaque1_gene_marker_score.feather',
-               'pst': 0.2,
-               'sample_name': 'T121_macaque1',
-               'species': 'MACAQUE_GENE_SYM',
-               'type': 'SCT'}
-        )
+        # config = LatentToGeneConfig(
+        #     **{'annotation': 'SubClass',
+        #        'fold': 1.0,
+        #        'gM_slices': None,
+        #        'gs_species': '/storage/yangjianLab/songliyang/SpatialData/homologs/macaque_human_homologs.txt',
+        #        'input_hdf5_with_latent_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/find_latent_representations/T121_macaque1_add_latent.h5ad',
+        #        'latent_representation': 'latent_GVAE',
+        #        'method': 'rank',
+        #        'num_neighbour': 51,
+        #        'num_neighbour_spatial': 201,
+        #        'output_feather_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/latent_to_gene/T121_macaque1_gene_marker_score.feather',
+        #        'pst': 0.2,
+        #        'sample_name': 'T121_macaque1',
+        #        'species': 'MACAQUE_GENE_SYM',
+        #        'type': 'SCT'}
+        # )
     else:
         args = parser.parse_args()
         config = LatentToGeneConfig(**vars(args))

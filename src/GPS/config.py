@@ -131,6 +131,9 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
     parser.add_argument('--output_feather_path', type=str, required=True,
                         help='Path to save output gene marker score feather file.')
+    # no_expression_fraction
+    parser.add_argument('--no_expression_fraction', action='store_true',default=False,
+                        help='Flag to not use no_expression_fraction. Default is False.')
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
     parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
 
@@ -357,7 +360,7 @@ class LatentToGeneConfig:
     input_hdf5_with_latent_path: str
     sample_name: str
     output_feather_path: str
-
+    no_expression_fraction: bool = False
     method: str = 'rank'
     latent_representation: str = 'latent_GVAE'
     num_neighbour: int = 21
