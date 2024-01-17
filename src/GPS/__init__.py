@@ -2,4 +2,4 @@
 Genetics-informed pathogenic spatial mapping
 '''
 
-__version__ = '1.2'
+__version__ = '1.3'
