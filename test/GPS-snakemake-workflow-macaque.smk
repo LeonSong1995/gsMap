@@ -20,6 +20,7 @@ root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/proc
 sample_names=[]
 for file in Path(root).glob('*.h5ad'):
     sample_names.append(file.stem)
+sample_names.remove('T825_macaque3') # due to 25% of spot don't have spatial coordinates
 
 annotation = "SubClass"
 data_type = "SCT"
@@ -210,7 +211,7 @@ rule spatial_ldsc:
         ldsc_save_dir='{sample_name}/spatial_ldsc',
         w_file="/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.",
         sumstats_config_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config.yaml',
-        all_chunk = 20
+        all_chunk = None
     threads:
         2
     benchmark:
