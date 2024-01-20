@@ -39,7 +39,7 @@ def set_seed(seed_value):
     else:
         print('Running use CPU')
 
-set_seed(42)
+set_seed(2024)
 
 # The class for finding latent representations
 class Latent_Representation_Finder:

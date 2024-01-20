@@ -65,7 +65,7 @@ def acat_test(pvalues, weights=None):
     return pval
 
 
-def run_Cauchy_combiination(config:CauchyCombinationConfig):
+def run_Cauchy_combination(config:CauchyCombinationConfig):
     # Load the ldsc results
     print(f'------Loading LDSC results of {config.input_ldsc_dir}...')
     ldsc_input_file= Path(config.input_ldsc_dir)/f'{config.sample_name}_{config.trait_name}.csv.gz'
@@ -143,4 +143,4 @@ if __name__ == '__main__':
         add_Cauchy_combination_args(parser)
         args = parser.parse_args()
         config = CauchyCombinationConfig(**vars(args))
-    run_Cauchy_combiination(config)
+    run_Cauchy_combination(config)

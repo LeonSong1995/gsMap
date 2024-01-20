@@ -187,6 +187,26 @@ def add_Cauchy_combination_args(parser):
     parser.add_argument('--slide', default=None, type=str, )
 
 
+def add_Visualization_args(parser):
+    # Required arguments
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
+    parser.add_argument('--input_ldsc_dir', required=True, type=str, help='Directory containing LDSC results')
+    parser.add_argument('--output_figure_dir', required=True, type=str,help='Output directory for figures')
+    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample')
+    parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
+
+    # Arguments with defaults
+    parser.add_argument('--fig_title', type=str, default=None, help='Title of figure')
+    parser.add_argument('--fig_height', type=float, default=6, help='Height of figure')
+    parser.add_argument('--fig_wdith', type=float, default=7, help='Width of figure')
+    parser.add_argument('--fig_dpi', type=float, default=300, help='Dpi of figure')
+    parser.add_argument('--text_size', type=float, default=10, help='Text size of figure')
+    parser.add_argument('--font_size', type=float, default=12, help='Title size of figure')
+    parser.add_argument('--point_size', type=float, default=1, help='Point size of figure')
+    parser.add_argument('--fig_facecolor', type=str, default='black', help='Facecolor of figure')
+
+
+
 def add_all_mode_args(parser):
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
     parser.add_argument('--save_dir', required=True, type=str, help='Path to the running results.')
@@ -441,6 +461,24 @@ class CauchyCombinationConfig:
 
 
 @dataclass
+class VisualizeConfig:
+    input_hdf5_path: str
+    input_ldsc_dir: str
+    output_figure_dir: str
+    sample_name: str
+    trait_name: str
+
+    fig_title: str = None
+    fig_height: float = 6
+    fig_wdith: float = 7
+    fig_dpi: float = 300
+    text_size: float = 10
+    font_size: float = 12
+    point_size: float = 1
+    fig_facecolor: str = 'black'
+
+
+@dataclass
 class RunAllModeConfig:
     flr_config: FindLatentRepresentationsConfig
     ltg_config: LatentToGeneConfig
@@ -486,12 +524,21 @@ def run_spatial_ldsc_from_cli(args: argparse.ArgumentParser):
 
 
 @register_cli(name='run_cauchy_combination',
-              description='Run Cauchy_combiination for each annotation',
+              description='Run Cauchy_combination for each annotation',
               add_args_function=add_Cauchy_combination_args)
-def run_Cauchy_combiination_from_cli(args: argparse.ArgumentParser):
-    from GPS.cauchy_combination_test import run_Cauchy_combiination
+def run_Cauchy_combination_from_cli(args: argparse.ArgumentParser):
+    from GPS.cauchy_combination_test import run_Cauchy_combination
     config = get_dataclass_from_parser(args, CauchyCombinationConfig)
-    run_Cauchy_combiination(config)
+    run_Cauchy_combination(config)
+
+
+@register_cli(name='run_visualize',
+              description='Visualize the GPS results',
+              add_args_function=add_Visualization_args)
+def run_Visualize_from_cli(args: argparse.ArgumentParser):
+    from GPS.visualize import run_Visualize
+    config = get_dataclass_from_parser(args, VisualizeConfig)
+    run_Visualize(config)
 
 
 @register_cli(name='run_all_mode',
@@ -502,10 +549,10 @@ def run_all_mode_from_cli(args: argparse.ArgumentParser):
     from GPS.latent_to_gene import run_latent_to_gene
     from GPS.generate_ldscore import run_generate_ldscore
     from GPS.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
-    from GPS.cauchy_combination_test import run_Cauchy_combiination
+    from GPS.cauchy_combination_test import run_Cauchy_combination
     config = get_runall_mode_config(args)
     run_find_latent_representation(config.flr_config)
     run_latent_to_gene(config.ltg_config)
     run_generate_ldscore(config.gls_config)
     run_spatial_ldsc(config.ldsc_config)
-    run_Cauchy_combiination(config.cauchy_config)
+    run_Cauchy_combination(config.cauchy_config)
