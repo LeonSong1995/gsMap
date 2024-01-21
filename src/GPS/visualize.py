@@ -10,18 +10,24 @@ import matplotlib.colors as mcolors
 from GPS.config import VisualizeConfig, add_Visualization_args
 
 # The fun of visualization
-def visualize(space_coord,plt_pth,title,height,wdith,dpi,text_size,font_size,point_size,fig_facecolor):
+def visualize(space_coord,plt_pth,title,height,wdith,dpi,text_size,font_size,point_size,fig_facecolor,fig_style):
 
     fig, ax = plt.subplots(figsize=(height,wdith),dpi=dpi)
+    
+    if(fig_style=='dark'):
+        facecolor = 'black'
+        text_color = 'white'
+    else:
+        facecolor = 'white'
+        text_color = 'black'
+    
     # Set the background color to black
-    fig.set_facecolor('white')
+    fig.set_facecolor(facecolor)
     ax.set_facecolor(fig_facecolor)
     
     # Set the Pvalue color
-    custom_colors = ['#313695','#4575b4','#74add1',
-                     '#abd9e9','#e0f3f8','#fee090',
-                     '#fdae61','#f46d43','#d73027',
-                     '#a50026']
+    custom_colors = ['#313695','#4575b4','#74add1','#abd9e9','#e0f3f8',
+                     '#fee090','#fdae61','#f46d43','#d73027','#a50026']
     cmap_custom = mcolors.ListedColormap(custom_colors)
 
     # Plot the results
@@ -29,14 +35,14 @@ def visualize(space_coord,plt_pth,title,height,wdith,dpi,text_size,font_size,poi
                           cmap = cmap_custom,marker='.',edgecolor='none',lw=0, s=point_size)
     
     # Adjust the cbar
-    cbar = plt.colorbar(shrink=0.80)
-    cbar.set_label(r'$-\log_{10}(\text{P-value})$',labelpad=2,size=text_size,color='black')
-    cbar.ax.tick_params(labelsize=text_size, colors='black')
+    cbar = plt.colorbar(shrink=0.60,location = 'left')
+    cbar.set_label(r'$-\log_{10}(\text{P-value})$',labelpad=2,size=text_size,color=text_color)
+    cbar.ax.tick_params(labelsize=text_size, colors=text_color)
     
     # Add labels and title
     # plt.xlabel('Sx')
     # plt.ylabel('Sy')
-    plt.title(title,fontsize = font_size)
+    plt.title(title,fontsize = font_size,color=text_color)
 
     # Remove other elements
     ax.set_xticks([])
@@ -88,7 +94,8 @@ def run_Visualize(config:VisualizeConfig):
               text_size=config.text_size,
               font_size=config.font_size,
               point_size=config.point_size,
-              fig_facecolor=config.fig_facecolor)
+              fig_facecolor=config.fig_facecolor,
+              fig_style=config.fig_style)
     
 
 if __name__ == '__main__':
@@ -107,7 +114,8 @@ if __name__ == '__main__':
             fig_title='Adult Asthma',
             fig_height=6,fig_wdith=7,fig_dpi=300,
             text_size=10,font_size=12,point_size=1,
-            fig_facecolor='black'
+            fig_facecolor='black',
+            fig_style='dark'
         )
     else:
         parser = argparse.ArgumentParser(description="Visualization the results")
