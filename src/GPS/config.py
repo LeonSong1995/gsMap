@@ -204,6 +204,7 @@ def add_Visualization_args(parser):
     parser.add_argument('--font_size', type=float, default=12, help='Title size of figure')
     parser.add_argument('--point_size', type=float, default=1, help='Point size of figure')
     parser.add_argument('--fig_facecolor', type=str, default='black', help='Facecolor of figure')
+    parser.add_argument('--fig_style', type=str, default='dark', help='Plot style of figure')
 
 
 
@@ -476,6 +477,7 @@ class VisualizeConfig:
     font_size: float = 12
     point_size: float = 1
     fig_facecolor: str = 'black'
+    fig_style: str = 'dark'
 
 
 @dataclass
