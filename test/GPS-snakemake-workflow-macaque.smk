@@ -181,7 +181,7 @@ rule generate_ldscore:
         qos='huge'
     shell:
         """
-        GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom {wildcards.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_file {params.gtf_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
+        GPS run_generate_ldscore --sample_name {wildcards.sample_name} --chrom {wildcards.chrom} --ldscore_save_dir {params.ld_score_save_dir} --gtf_annotation_file {params.gtf_annotation_file} --mkscore_feather_file {input.mkscore_feather_file} --bfile_root {params.bfile_root} --keep_snp_root {params.keep_snp_root} --window_size {params.window_size} --spots_per_chunk {params.spots_per_chunk} --ld_wind {params.ld_wind} --ld_unit {params.ld_unit}
         touch {output.done}
         """
 

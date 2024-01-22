@@ -439,7 +439,7 @@ def scipy_sparse_to_torch_sparse(matrix):
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--mk_score_file', default=None, type=str)
-parser.add_argument('--gtf_file', default=None, type=str)
+parser.add_argument('--gtf_annotation_file', default=None, type=str)
 parser.add_argument('--bfile_root', default=None, type=str)
 parser.add_argument('--annot_root', default=None, type=str)
 parser.add_argument('--annot_name', default=None, type=str)
@@ -473,7 +473,7 @@ if __name__ == '__main__':
         args = parser.parse_args([
             '--mk_score_file',
             f'/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{name}/gene_markers/{name}_rank.feather',
-            '--gtf_file', '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
+            '--gtf_annotation_file', '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
             '--bfile_root', '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
             '--annot_root',
             f'{test_dir}/{name}/snp_annotation',

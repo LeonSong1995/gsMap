@@ -479,7 +479,7 @@ def add_make_annotation_args(parser):
     parser.add_argument('--input_feather_file', required=True, type=str, help='Input feather file for marker genes score (output of GPS latent_to_gene)')
     parser.add_argument('--output_dir', required=True, type=str, help='Output directory to save the SNP annotation files')
     parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
-    parser.add_argument('--gtf_file', default=None, type=str, help='Path to the GTF file', required=True)
+    parser.add_argument('--gtf_annotation_file', default=None, type=str, help='Path to the GTF file', required=True)
     parser.add_argument('--bfile_root', default=None, type=str, help='Bfile root for LD score', required=True)
     parser.add_argument('--baseline_annotation', default=None, type=str, help='Baseline annotation')
     parser.add_argument('--keep_snp_root', default=None, type=str,

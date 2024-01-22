@@ -2,7 +2,7 @@ import argparse
 import logging
 from dataclasses import dataclass, field
 from pprint import pprint
-from typing import Union
+from typing import Union, Literal
 
 from collections import OrderedDict, namedtuple
 from typing import Callable
@@ -112,10 +112,13 @@ def add_generate_ldscore_args(parser):
     parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
     parser.add_argument('--chrom', type=chrom_choice, required=True, help='Chromosome number (1-22) or "all"')
     parser.add_argument('--ldscore_save_dir', type=str, required=True, help='Directory to save ld score files')
-    parser.add_argument('--gtf_file', type=str, required=True, help='GTF file path')
+    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='GTF file path')
     parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
     parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
     parser.add_argument('--keep_snp_root', type=str, required=True, help='Keep SNP root path')
+
+    # enhancer annotation
+    parser.add_argument('--enhancer_annotation', type=str, default=None, help='Enhancer annotation bed file path, optional.')
 
     # Arguments with defaults
     parser.add_argument('--window_size', type=int, default=50000, help='Annotation window size for each gene')
@@ -287,7 +290,7 @@ def add_all_mode_args(parser):
     # parser.add_argument('--chrom', type=chrom_choice, required=True, help='Chromosome number (1-22) or "all"')
     # output
     # parser.add_argument('--ldscore_save_dir', type=str, required=True, help='Directory to save ld score files')
-    parser.add_argument('--gtf_file', type=str, required=True, help='GTF file path')
+    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='GTF file path')
     # input
     # parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
     parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
@@ -400,14 +403,42 @@ class GenerateLDScoreConfig:
     sample_name: str
     chrom: Union[int, str]
     ldscore_save_dir: str
-    gtf_file: str
     mkscore_feather_file: str
     bfile_root: str
     keep_snp_root: str
-    window_size: int = 50000
+
+    # annotation by gene distance
+    gtf_annotation_file: str
+    gene_window_size: int = 50000
+
+    # annotation by enhancer
+    enhancer_annotation_file: str = None
+    snp_multiple_enhancer_strategy: Literal['max_mkscore', 'nearest_TSS'] = 'max_mkscore'
+    gene_window_enhancer_priority: Literal['gene_window_first', 'enhancer_first', 'enhancer_only', ] = None
+
+    # for calculating ld score
     spots_per_chunk: int = 5_000
     ld_wind: int = 1
     ld_unit: str = 'CM'
+
+    def __post_init__(self):
+        if self.enhancer_annotation_file is not None and self.gene_window_enhancer_priority is None:
+            logger.warning("enhancer_annotation_file is provided but gene_window_enhancer_priority is not provided. "
+                           "by default, gene_window_enhancer_priority is set to 'enhancer_only', when enhancer_annotation_file is provided.")
+            self.gene_window_enhancer_priority = 'enhancer_only'
+        if self.enhancer_annotation_file is None and self.gene_window_enhancer_priority is not None:
+            logger.warning("gene_window_enhancer_priority is provided but enhancer_annotation_file is not provided. "
+                           "by default, gene_window_enhancer_priority is set to None, when enhancer_annotation_file is not provided.")
+            self.gene_window_enhancer_priority = None
+        assert self.gene_window_enhancer_priority in [None, 'gene_window_first', 'enhancer_first', 'enhancer_only', ], \
+            f"gene_window_enhancer_priority must be one of None, 'gene_window_first', 'enhancer_first', 'enhancer_only', but got {self.gene_window_enhancer_priority}."
+        if self.gene_window_enhancer_priority in ['gene_window_first', 'enhancer_first']:
+            logger.info(f'Both gene_window and enhancer annotation will be used to calculate LD score. ')
+            logger.info(f'SNP within +-{self.gene_window_size} bp of gene body will be used and enhancer annotation will be used to calculate LD score. If a snp maps to multiple enhancers, the strategy to choose by your select strategy: {self.snp_multiple_enhancer_strategy}.')
+        elif self.gene_window_enhancer_priority == 'enhancer_only':
+            logger.info(f'Only enhancer annotation will be used to calculate LD score. ')
+        else:
+            logger.info(f'Only gene window annotation will be used to calculate LD score. SNP within +-{self.gene_window_size} bp of gene body will be used. ')
 
 
 @dataclass

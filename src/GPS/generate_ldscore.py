@@ -1,4 +1,5 @@
 import argparse
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -11,6 +12,13 @@ from tqdm import trange
 from GPS.config import GenerateLDScoreConfig, add_generate_ldscore_args
 # %%
 from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    '[{asctime}] {levelname:6s} {message}', style='{'))
+logger.addHandler(handler)
 
 
 # %%
@@ -102,20 +110,6 @@ def Overlaps_gtf_bim(gtf_pr, bim_pr):
 
 
 # %%
-def get_snp_gene_dummy(chrom, bfile_root, gtf_pr, dummy_na=True):
-    """
-    Get the dummy matrix of SNP-gene pairs.
-    """
-    # Load the bim file
-    bim, bim_pr = load_bim(bfile_root, chrom)
-    # Find overlaps between gtf and bim file
-    overlaps_small = Overlaps_gtf_bim(gtf_pr, bim_pr)
-    # Get the SNP-gene pair
-    annot = bim[["CHR", "BP", "SNP", "CM"]]
-    SNP_gene_pair = overlaps_small[['SNP', 'gene_name']].set_index('SNP').join(annot.set_index('SNP'), how='right')
-    # Get the dummy matrix
-    SNP_gene_pair_dummy = pd.get_dummies(SNP_gene_pair['gene_name'], dummy_na=dummy_na)
-    return SNP_gene_pair_dummy
 
 
 # %%
@@ -202,19 +196,39 @@ class S_LDSC_Boost:
         self.mk_score = load_marker_score(config.mkscore_feather_file)
 
         # Load GTF and get common markers
-        self.gtf_pr, self.mk_score_common = load_gtf(config.gtf_file, self.mk_score, window_size=config.window_size)
+        self.gtf_pr, self.mk_score_common = load_gtf(config.gtf_annotation_file, self.mk_score,
+                                                     window_size=config.gene_window_size)
+
+        # Load enhancer
+        if config.enhancer_annotation_file is not None:
+            enhancer_df = pr.read_bed(config.enhancer_annotation_file,as_df=True)
+            enhancer_df.set_index('Name',inplace=True)
+            enhancer_df.index.name='gene_name'
+
+            # keep the common genes and add the enhancer score
+            avg_mkscore=pd.DataFrame(self.mk_score_common.mean(axis=1),columns=['avg_mkscore'])
+            enhancer_df=enhancer_df.join(avg_mkscore,how='inner',on='gene_name',)
+
+            # add distance to TSS
+            enhancer_df['TSS']=self.gtf_pr.df.set_index('gene_name').reindex(enhancer_df.index)['TSS']
+
+            # convert to pyranges
+            self.enhancer_pr=pr.PyRanges(enhancer_df.reset_index())
+
+        else:
+            self.enhancer_pr = None
 
     def process_chromosome(self, chrom: int):
         self.snp_pass_maf = get_snp_pass_maf(self.config.bfile_root, chrom, maf_min=0.05)
 
         # Get SNP-Gene dummy pairs
-        self.snp_gene_pair_dummy = get_snp_gene_dummy(chrom, self.config.bfile_root, self.gtf_pr, dummy_na=True)
+        self.snp_gene_pair_dummy = self.get_snp_gene_dummy(chrom, )
 
         # Calculate SNP-Gene weight matrix
         self.snp_gene_weight_matrix = calculate_SNP_Gene_weight_matrix(self.snp_gene_pair_dummy, chrom,
-                                                                  self.config.bfile_root,
-                                                                  ld_wind=self.config.ld_wind,
-                                                                  ld_unit=self.config.ld_unit)
+                                                                       self.config.bfile_root,
+                                                                       ld_wind=self.config.ld_wind,
+                                                                       ld_unit=self.config.ld_unit)
         # convert to sparse
         self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
 
@@ -249,11 +263,11 @@ class S_LDSC_Boost:
         ldscore_chr_chunk = ldscore_chr_chunk if self.config.keep_snp_root is None else ldscore_chr_chunk[
             self.keep_snp_mask]
         # save for each chunk
-        df=pd.DataFrame(ldscore_chr_chunk,
-                     index=self.snp_name,
-                     columns=mk_score_chunk.columns,
-                     )
-        df.index.name='SNP'
+        df = pd.DataFrame(ldscore_chr_chunk,
+                          index=self.snp_name,
+                          columns=mk_score_chunk.columns,
+                          )
+        df.index.name = 'SNP'
         df.reset_index().to_feather(save_file_name)
 
     def calculate_M_use_SNP_gene_pair_dummy_by_chunk(self,
@@ -271,7 +285,7 @@ class S_LDSC_Boost:
         if drop_dummy_na:
             SNP_gene_pair_dummy_sumed_along_snp_axis = SNP_gene_pair_dummy_sumed_along_snp_axis[:, :-1]
             SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf = SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf[:,
-                                                                 :-1]
+                                                                :-1]
         save_dir = Path(M_file_path).parent
         save_dir.mkdir(parents=True, exist_ok=True)
         M_chr_chunk = SNP_gene_pair_dummy_sumed_along_snp_axis @ mk_score_chunk
@@ -303,7 +317,7 @@ class S_LDSC_Boost:
                 mk_score_chunk,
                 M_file,
                 M_5_file,
-                drop_dummy_na= True,
+                drop_dummy_na=True,
             )
 
             chunk_index += 1
@@ -331,6 +345,76 @@ class S_LDSC_Boost:
             drop_dummy_na=False,
         )
 
+    def get_snp_gene_dummy(self, chrom, ):
+        """
+        Get the dummy matrix of SNP-gene pairs.
+        """
+        # Load the bim file
+        bim, bim_pr = load_bim(bfile_root, chrom)
+
+        if self.config.gene_window_enhancer_priority in ['gene_window_first', 'enhancer_first']:
+
+            SNP_gene_pair_gtf = self.get_SNP_gene_pair_from_gtf(bim, bim_pr, )
+            SNP_gene_pair_enhancer = self.get_SNP_gene_pair_from_enhancer(bim, bim_pr, )
+            total_SNP_gene_pair = SNP_gene_pair_gtf.join(SNP_gene_pair_enhancer, how='outer', lsuffix='_gtf',)
+
+            mask_of_nan_gtf = SNP_gene_pair_gtf.gene_name.isna()
+            mask_of_nan_enhancer = SNP_gene_pair_enhancer.gene_name.isna()
+
+            if self.config.gene_window_enhancer_priority == 'gene_window_first':
+                SNP_gene_pair = SNP_gene_pair_gtf
+                SNP_gene_pair.loc[mask_of_nan_gtf, 'gene_name'] = SNP_gene_pair_enhancer.loc[
+                    mask_of_nan_gtf, 'gene_name']
+            elif self.config.gene_window_enhancer_priority == 'enhancer_first':
+                SNP_gene_pair = SNP_gene_pair_enhancer
+                SNP_gene_pair.loc[mask_of_nan_enhancer, 'gene_name'] = SNP_gene_pair_gtf.loc[
+                    mask_of_nan_enhancer, 'gene_name']
+            else:
+                raise ValueError(
+                    f'Invalid self.config.gene_window_enhancer_priority: {self.config.gene_window_enhancer_priority}')
+
+        elif self.config.gene_window_enhancer_priority is None: # use gtf only
+            SNP_gene_pair_gtf = self.get_SNP_gene_pair_from_gtf(bim, bim_pr, )
+            SNP_gene_pair = SNP_gene_pair_gtf
+
+        elif self.config.gene_window_enhancer_priority == 'enhancer_only':
+            SNP_gene_pair_enhancer = self.get_SNP_gene_pair_from_enhancer(bim, bim_pr, )
+            SNP_gene_pair = SNP_gene_pair_enhancer
+        else:
+            raise ValueError('gtf_pr and enhancer_pr cannot be None at the same time')
+
+        # Get the dummy matrix
+        SNP_gene_pair_dummy = pd.get_dummies(SNP_gene_pair['gene_name'], dummy_na=True)
+        return SNP_gene_pair_dummy
+
+    def get_SNP_gene_pair_from_gtf(self, bim, bim_pr):
+        logger.info(
+            "Get SNP-gene pair from gtf, if a SNP is in multiple genes, it will be assigned to the most nearby gene (TSS)")
+        overlaps_small = Overlaps_gtf_bim(self.gtf_pr, bim_pr)
+        # Get the SNP-gene pair
+        annot = bim[["CHR", "BP", "SNP", "CM"]]
+        SNP_gene_pair = overlaps_small[['SNP', 'gene_name']].set_index('SNP').join(annot.set_index('SNP'), how='right')
+        return SNP_gene_pair
+
+    def get_SNP_gene_pair_from_enhancer(self, bim, bim_pr, ):
+        logger.info(
+            "Get SNP-gene pair from enhancer, if a SNP is in multiple genes, it will be assigned to the gene with highest marker score")
+        # Get the SNP-gene pair
+        overlaps_small = self.enhancer_pr.join(bim_pr).df
+        annot = bim[["CHR", "BP", "SNP", "CM"]]
+        if self.config.snp_multiple_enhancer_strategy == 'max_mkscore':
+            logger.debug('select the gene with highest marker score')
+            overlaps_small = overlaps_small.loc[overlaps_small.groupby('SNP').avg_mkscore.idxmax()]
+
+        elif self.config.snp_multiple_enhancer_strategy == 'nearest_TSS':
+            logger.debug('select the gene with nearest TSS')
+            overlaps_small['Distance'] = np.abs(overlaps_small['Start_b'] - overlaps_small['TSS'])
+            overlaps_small = overlaps_small.loc[overlaps_small.groupby('SNP').Distance.idxmin()]
+
+        SNP_gene_pair = overlaps_small[['SNP', 'gene_name']].set_index('SNP').join(annot.set_index('SNP'), how='right')
+
+        return SNP_gene_pair
+
 
 def run_generate_ldscore(config: GenerateLDScoreConfig):
     s_ldsc_boost = S_LDSC_Boost(config)
@@ -356,18 +440,21 @@ if __name__ == '__main__':
         window_size = 50000
         keep_snp_root = '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm'
         spots_per_chunk = 10_000
-
+        enhancer_annotation = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/epigenome/cleaned_data/by_tissue/BRN/ABC_roadmap_merged.bed'
         # %%
         config = GenerateLDScoreConfig(
             sample_name=sample_name,
             chrom=chrom,
             ldscore_save_dir=save_dir,
-            gtf_file=gtf_file,
+            gtf_annotation_file=gtf_file,
             mkscore_feather_file=mkscore_feather_file,
             bfile_root=bfile_root,
             keep_snp_root=keep_snp_root,
-            window_size=window_size,
+            gene_window_size=window_size,
             spots_per_chunk=spots_per_chunk,
+            enhancer_annotation_file=enhancer_annotation,
+            gene_window_enhancer_priority = 'enhancer_first',
+
         )
         # %%
         run_generate_ldscore(config)
