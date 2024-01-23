@@ -260,6 +260,8 @@ class S_LDSC_Boost:
         else:
             ldscore_chr_chunk = self.snp_gene_weight_matrix @ mk_score_chunk
         ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
+        # avoid overflow of float16, if inf, set to max of float16
+        ldscore_chr_chunk[np.isinf(ldscore_chr_chunk)] = np.finfo(np.float16).max
         ldscore_chr_chunk = ldscore_chr_chunk if self.config.keep_snp_root is None else ldscore_chr_chunk[
             self.keep_snp_mask]
         # save for each chunk

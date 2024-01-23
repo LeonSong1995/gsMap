@@ -267,7 +267,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         logger.info(f'Output saved to {out_file_name} for {trait_name}')
     logger.info(f'------Spatial LDSC for {sample_name} finished!')
 
-
+#%%
 if __name__ == '__main__':
     # Main function of analysis
     parser = argparse.ArgumentParser(
@@ -315,5 +315,22 @@ if __name__ == '__main__':
                                   'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
                                   'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
                                   })
+    TASK_ID=16
+    spe_name=f'E{TASK_ID}.5_E1S1'
+    config = SpatialLDSCConfig(**{
+    'sumstats_file': f'{gwas_root}/GIANT_EUR_Height_2022_Nature.sumstats.gz',
+    'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.',
+    'sample_name': f'{spe_name}',
+    'ldscore_input_dir': f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/annotation/E{TASK_ID}.5_E1S1/generate_ldscore',
+    'ldsc_save_dir': f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/ldsc_enrichment_new/{spe_name}',
+    'trait_name': 'GIANT_EUR_Height_2022_Nature',
+    'num_processes': 1,
+    # Additional fields from the example dictionary
+    'all_chunk': None,
+    'chisq_max': None,
+    'n_blocks': 200,
+    'not_M_5_50': None,
+    'sumstats_config_file': None
+})
     # config = SpatialLDSCConfig(**vars(args))
     run_spatial_ldsc(config)

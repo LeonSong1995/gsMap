@@ -36,7 +36,7 @@ def visualize(space_coord,plt_pth,title,height,wdith,dpi,text_size,font_size,poi
     
     # Adjust the cbar
     cbar = plt.colorbar(shrink=0.60,location = 'left')
-    cbar.set_label(r'$-\log_{10}(\text{P-value})$',labelpad=2,size=text_size,color=text_color)
+    cbar.set_label(r"$-\log_{10}({P-value})$",labelpad=2,size=text_size,color=text_color)
     cbar.ax.tick_params(labelsize=text_size, colors=text_color)
     
     # Add labels and title
@@ -123,4 +123,4 @@ if __name__ == '__main__':
         args = parser.parse_args()
         config = VisualizeConfig(**vars(args))
         
-    run_Visualize(config)    
+    run_Visualize(config)
