@@ -3,7 +3,7 @@ import logging
 import multiprocessing
 from collections import defaultdict
 from pathlib import Path
-import os
+
 from scipy.stats import norm
 from tqdm.contrib.concurrent import process_map
 
@@ -170,6 +170,19 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     sumstats_cleaned_dict = _get_sumstats_from_sumstats_dict(config.sumstats_config_dict, baseline_and_w_ld_common_snp,
                                                              chisq_max=config.chisq_max)
 
+    # calculate the weight for each trait
+    init_w_dict = {}
+    for trait_name, sumstats in sumstats_cleaned_dict.items():
+        init_w_dict[trait_name] = (
+            get_weight_optimized(
+                sumstats,
+                x_tot_precomputed=ref_ld_baseline.loc[sumstats.index].base.values,
+                M_tot=M_annot_baseline[0, 1],  # This is the total number of SNPs of the baseline annotation
+                w_ld=w_ld.loc[sumstats.index],
+                intercept=1)
+            .astype(np.float32)
+            .reshape((-1, 1)))
+
     # Detect avalable chunk files
     all_file = os.listdir(config.ldscore_input_dir)
     if config.all_chunk is None:
@@ -197,14 +210,14 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         # ref_ld_spatial, spatial_annotation = _check_variance_v2(ref_ld_spatial, ref_ld_baseline)
 
         # load M file of spatial annotation
-        n_annot_spatial = len(ref_ld_spatial.columns)
-        n_annot = n_annot_baseline + n_annot_spatial
-        M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_M_5_50)
-        M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
+        # n_annot_spatial = len(ref_ld_spatial.columns)
+        # n_annot = n_annot_baseline + n_annot_spatial
+        # M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_M_5_50)
+        # M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
 
         # precompute x_tot and M_tot
-        x_tot_precomputed = ref_ld_baseline.sum(axis=1) + ref_ld_spatial.sum(axis=1)
-        M_tot = np.sum(M_annot)
+        # x_tot_precomputed = ref_ld_baseline.sum(axis=1) + ref_ld_spatial.sum(axis=1)
+        # M_tot = np.sum(M_annot)
 
         for trait_name, sumstats in sumstats_cleaned_dict.items():
             logger.info(f'Processing {trait_name}...')
@@ -214,13 +227,14 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             spatial_annotation = ref_ld_spatial.loc[common_snp].astype(np.float32, copy=False)
             spatial_annotation_cnames = spatial_annotation.columns
             baseline_annotation = ref_ld_baseline.loc[common_snp].astype(np.float32, copy=False)
-            w_ld_common_snp = w_ld.loc[common_snp].astype(np.float32, copy=False)
-            x_tot_precomputed_common_snp = x_tot_precomputed.loc[common_snp].values
+            # w_ld_common_snp = w_ld.loc[common_snp].astype(np.float32, copy=False)
+            # x_tot_precomputed_common_snp = x_tot_precomputed.loc[common_snp].values
 
-            initial_w = (
-                get_weight_optimized(sumstats, x_tot_precomputed_common_snp, M_tot, w_ld_common_snp, intercept=1)
-                .astype(np.float32)
-                .reshape((-1, 1)))
+            # initial_w = (
+            #     get_weight_optimized(sumstats, x_tot_precomputed_common_snp, M_tot, w_ld_common_snp, intercept=1)
+            #     .astype(np.float32)
+            #     .reshape((-1, 1)))
+            initial_w = init_w_dict[trait_name]
             assert np.any(initial_w > 0), 'Weights must be > 0'
 
             baseline_annotation = baseline_annotation * sumstats.N.values.reshape((-1, 1)) / sumstats.N.mean()
@@ -254,7 +268,6 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             # garbage collection
             del spatial_annotation
 
-
     # Save the results
     out_dir = Path(config.ldsc_save_dir)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
@@ -267,7 +280,8 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         logger.info(f'Output saved to {out_file_name} for {trait_name}')
     logger.info(f'------Spatial LDSC for {sample_name} finished!')
 
-#%%
+
+# %%
 if __name__ == '__main__':
     # Main function of analysis
     parser = argparse.ArgumentParser(
@@ -296,41 +310,40 @@ if __name__ == '__main__':
             "--ldsc_save_dir", out_pth,
             '--trait_name', 'adult1_adult2_onset_asthma'
         ]
-        args = parser.parse_args(args_list)
+        # args = parser.parse_args(args_list)
     else:
         args = parser.parse_args()
     import os
 
-    os.chdir('/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2')
-    config = SpatialLDSCConfig(**{'all_chunk': 2,
+    # os.chdir('/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2')
+    # config = SpatialLDSCConfig(**{'all_chunk': 2,
+    #                               'chisq_max': None,
+    #                               # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/ADULT1_ADULT2_ONSET_ASTHMA.sumstats.gz',
+    #                               'ldsc_save_dir': 'T135_macaque1/spatial_ldsc',
+    #                               'ldscore_input_dir': 'T135_macaque1/generate_ldscore',
+    #                               'n_blocks': 200,
+    #                               'not_M_5_50': False,
+    #                               'num_processes': 4,
+    #                               'sample_name': 'T135_macaque1',
+    #                               # 'trait_name': 'ADULT1_ADULT2_ONSET_ASTHMA',
+    #                               'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
+    #                               'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
+    #                               })
+    os.chdir('/storage/yangjianLab/chenwenhao/tmp/GPS_Height_debug')
+    TASK_ID = 16
+    spe_name = f'E{TASK_ID}.5_E1S1'
+    config = SpatialLDSCConfig(**{'all_chunk': None,
                                   'chisq_max': None,
-                                  # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/ADULT1_ADULT2_ONSET_ASTHMA.sumstats.gz',
-                                  'ldsc_save_dir': 'T135_macaque1/spatial_ldsc',
-                                  'ldscore_input_dir': 'T135_macaque1/generate_ldscore',
+                                  # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/GIANT_EUR_Height_2022_Nature.sumstats.gz',
+                                  'ldsc_save_dir': f'{spe_name}/ldsc_results_unified_init_w',
+                                  'ldscore_input_dir': '/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/annotation/E16.5_E1S1/generate_ldscore_new',
                                   'n_blocks': 200,
                                   'not_M_5_50': False,
                                   'num_processes': 4,
-                                  'sample_name': 'T135_macaque1',
-                                  # 'trait_name': 'ADULT1_ADULT2_ONSET_ASTHMA',
+                                  'sample_name': spe_name,
+                                  # 'trait_name': 'GIANT_EUR_Height_2022_Nature',
                                   'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
                                   'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
                                   })
-    TASK_ID=16
-    spe_name=f'E{TASK_ID}.5_E1S1'
-    config = SpatialLDSCConfig(**{
-    'sumstats_file': f'{gwas_root}/GIANT_EUR_Height_2022_Nature.sumstats.gz',
-    'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.',
-    'sample_name': f'{spe_name}',
-    'ldscore_input_dir': f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/annotation/E{TASK_ID}.5_E1S1/generate_ldscore',
-    'ldsc_save_dir': f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/ldsc_enrichment_new/{spe_name}',
-    'trait_name': 'GIANT_EUR_Height_2022_Nature',
-    'num_processes': 1,
-    # Additional fields from the example dictionary
-    'all_chunk': None,
-    'chisq_max': None,
-    'n_blocks': 200,
-    'not_M_5_50': None,
-    'sumstats_config_file': None
-})
     # config = SpatialLDSCConfig(**vars(args))
     run_spatial_ldsc(config)
