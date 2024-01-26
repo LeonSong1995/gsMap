@@ -110,23 +110,25 @@ def get_dataclass_from_parser(parser, data_class: dataclass):
 
 def add_generate_ldscore_args(parser):
     parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
-    parser.add_argument('--chrom', type=chrom_choice, required=True, help='Chromosome number (1-22) or "all"')
+    parser.add_argument('--chrom', type=str, required=True, help='Chromosome number (1-22) or "all"')
     parser.add_argument('--ldscore_save_dir', type=str, required=True, help='Directory to save ld score files')
-    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='GTF file path')
     parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
     parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
     parser.add_argument('--keep_snp_root', type=str, required=True, help='Keep SNP root path')
 
-    # enhancer annotation
-    parser.add_argument('--enhancer_annotation', type=str, default=None, help='Enhancer annotation bed file path, optional.')
+    # Annotation by gene distance
+    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='GTF file path')
+    parser.add_argument('--gene_window_size', type=int, default=50000, help='Gene window size')
 
-    # Arguments with defaults
-    parser.add_argument('--window_size', type=int, default=50000, help='Annotation window size for each gene')
+    # Enhancer annotation
+    parser.add_argument('--enhancer_annotation_file', type=str, default=None, help='Enhancer annotation bed file path, optional.')
+    parser.add_argument('--snp_multiple_enhancer_strategy', type=str, default='max_mkscore', choices=['max_mkscore', 'nearest_TSS'], help='Strategy for multiple enhancers per SNP')
+    parser.add_argument('--gene_window_enhancer_priority', type=str, default=None, choices=['gene_window_first', 'enhancer_first', 'enhancer_only'], help='Priority between gene window and enhancer')
+
+    # Arguments for calculating ld score
     parser.add_argument('--spots_per_chunk', type=int, default=5_000, help='Number of spots per chunk')
     parser.add_argument('--ld_wind', type=int, default=1, help='LD window size')
-    parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
-                        choices=['SNP', 'KB', 'CM'])
-
+    parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)', choices=['SNP', 'KB', 'CM'])
 
 def add_latent_to_gene_args(parser):
     parser.add_argument('--input_hdf5_with_latent_path', type=str, required=True,
