@@ -18,12 +18,6 @@ import pandas as pd
 
 
 # %%
-# Helper Functions
-def warn_length(sumstats):
-    if len(sumstats) < 200000:
-        print('WARNING: number of SNPs less than 200k; this is almost always bad.')
-
-
 def _coef_new(jknife):
     # return coef[0], coef_se[0], z[0]]
     est_ = jknife.est[0, 0] / Nbar
@@ -35,17 +29,6 @@ def append_intercept(x):
     n_row = x.shape[0]
     intercept = np.ones((n_row, 1))
     x_new = np.concatenate((x, intercept), axis=1)
-    return x_new
-
-
-def apply_weights(x, w):
-    if np.any(w <= 0):
-        raise ValueError('Weights must be > 0')
-    (n, p) = x.shape
-    if w.shape != (n, 1):
-        raise ValueError('w must have shape (n, 1).')
-    w = w / float(np.sum(w))
-    x_new = np.multiply(x, w)
     return x_new
 
 
@@ -62,16 +45,6 @@ def filter_sumstats_by_chisq(sumstats, chisq_max):
     else:
         logger.info(f'No SNPs removed with chi^2 > {chisq_max} ({after_len} SNPs remain)')
     return sumstats
-
-
-# Core Functionalities
-def get_weight(sumstats, ref_ld_baseline, spatial_annotation, w_ld, M_annot, intercept=1):
-    M_tot = np.sum(M_annot)
-    x_tot = ref_ld_baseline.sum(axis=1).values + spatial_annotation.sum(axis=1).values
-    tot_agg = aggregate(sumstats.chisq, x_tot, sumstats.N, M_tot, intercept)
-    initial_w = weights(x_tot, w_ld.LD_weights.values, sumstats.N.values, M_tot, tot_agg, intercept)
-    initial_w = np.sqrt(initial_w)
-    return initial_w
 
 
 def aggregate(y, x, N, M, intercept=1):
@@ -93,9 +66,22 @@ def weights(ld, w_ld, N, M, hsq, intercept=1):
 
 
 def jackknife_for_processmap(spot_id):
-    x_focal = np.concatenate((np.reshape(spatial_annotation[:, spot_id], (-1, 1)),
-                              baseline_annotation), axis=1)
-    # random shuffle x and y
+    # calculate the initial weight for each spot
+    initial_w = (
+        get_weight_optimized(sumstats, x_tot_precomputed_common_snp[:, spot_id], 10000, w_ld_common_snp, intercept=1)
+        .astype(np.float32)
+        .reshape((-1, 1)))
+
+    # apply the weight to baseline annotation, spatial annotation and CHISQ
+    initial_w_scaled = initial_w / np.sum(initial_w)
+    baseline_annotation_spot = baseline_annotation * initial_w_scaled
+    spatial_annotation_spot = spatial_annotation.iloc[:, spot_id].values.reshape((-1, 1)) * initial_w_scaled
+    CHISQ = sumstats.chisq.to_numpy(dtype=np.float32).reshape((-1, 1)).copy()
+    y = CHISQ * initial_w_scaled
+
+    # run the jackknife
+    x_focal = np.concatenate((spatial_annotation_spot,
+                              baseline_annotation_spot), axis=1)
     jknife = jk.LstsqJackknifeFast(x_focal, y, n_blocks)
     return _coef_new(jknife)
 
@@ -141,7 +127,7 @@ def _get_sumstats_from_sumstats_dict(sumstats_config_dict: dict, baseline_and_w_
 
 
 def run_spatial_ldsc(config: SpatialLDSCConfig):
-    global spatial_annotation, baseline_annotation, y, n_blocks, Nbar
+    global spatial_annotation, baseline_annotation, n_blocks, Nbar, sumstats, x_tot_precomputed_common_snp, w_ld_common_snp
     # config
     n_blocks = config.n_blocks
     sample_name = config.sample_name
@@ -170,19 +156,6 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     sumstats_cleaned_dict = _get_sumstats_from_sumstats_dict(config.sumstats_config_dict, baseline_and_w_ld_common_snp,
                                                              chisq_max=config.chisq_max)
 
-    # calculate the weight for each trait
-    init_w_dict = {}
-    for trait_name, sumstats in sumstats_cleaned_dict.items():
-        init_w_dict[trait_name] = (
-            get_weight_optimized(
-                sumstats,
-                x_tot_precomputed=ref_ld_baseline.loc[sumstats.index].base.values,
-                M_tot=M_annot_baseline[0, 1],  # This is the total number of SNPs of the baseline annotation
-                w_ld=w_ld.loc[sumstats.index],
-                intercept=1)
-            .astype(np.float32)
-            .reshape((-1, 1)))
-
     # Detect avalable chunk files
     all_file = os.listdir(config.ldscore_input_dir)
     if config.all_chunk is None:
@@ -206,18 +179,8 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         ref_ld_spatial = ref_ld_spatial.loc[baseline_and_w_ld_common_snp]
         ref_ld_spatial = ref_ld_spatial.astype(np.float32, copy=False)
 
-        # check the variance of the design matrix
-        # ref_ld_spatial, spatial_annotation = _check_variance_v2(ref_ld_spatial, ref_ld_baseline)
-
-        # load M file of spatial annotation
-        # n_annot_spatial = len(ref_ld_spatial.columns)
-        # n_annot = n_annot_baseline + n_annot_spatial
-        # M_annot_spatial = _read_M_v2(ld_file_spatial, n_annot_spatial, config.not_M_5_50)
-        # M_annot = np.concatenate((M_annot_baseline, M_annot_spatial), axis=1)
-
-        # precompute x_tot and M_tot
-        # x_tot_precomputed = ref_ld_baseline.sum(axis=1) + ref_ld_spatial.sum(axis=1)
-        # M_tot = np.sum(M_annot)
+        # get the x_tot_precomputed matrix by adding baseline and spatial annotation
+        x_tot_precomputed = ref_ld_spatial + ref_ld_baseline.sum(axis=1).values.reshape((-1, 1))
 
         for trait_name, sumstats in sumstats_cleaned_dict.items():
             logger.info(f'Processing {trait_name}...')
@@ -227,30 +190,16 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             spatial_annotation = ref_ld_spatial.loc[common_snp].astype(np.float32, copy=False)
             spatial_annotation_cnames = spatial_annotation.columns
             baseline_annotation = ref_ld_baseline.loc[common_snp].astype(np.float32, copy=False)
-            # w_ld_common_snp = w_ld.loc[common_snp].astype(np.float32, copy=False)
-            # x_tot_precomputed_common_snp = x_tot_precomputed.loc[common_snp].values
+            w_ld_common_snp = w_ld.loc[common_snp].astype(np.float32, copy=False)
+            x_tot_precomputed_common_snp = x_tot_precomputed.loc[common_snp].values
 
-            # initial_w = (
-            #     get_weight_optimized(sumstats, x_tot_precomputed_common_snp, M_tot, w_ld_common_snp, intercept=1)
-            #     .astype(np.float32)
-            #     .reshape((-1, 1)))
-            initial_w = init_w_dict[trait_name]
-            assert np.any(initial_w > 0), 'Weights must be > 0'
-
+            # weight the baseline annotation by N
             baseline_annotation = baseline_annotation * sumstats.N.values.reshape((-1, 1)) / sumstats.N.mean()
             # append intercept
             baseline_annotation = append_intercept(baseline_annotation)
 
-            # apply weight
-            initial_w_scaled = initial_w / np.sum(initial_w)
-            baseline_annotation *= initial_w_scaled
-            spatial_annotation *= initial_w_scaled
-            spatial_annotation = spatial_annotation.to_numpy(dtype=np.float32)
-            CHISQ = sumstats.chisq.to_numpy(dtype=np.float32).reshape((-1, 1)).copy()
-            y = CHISQ * initial_w_scaled
-            Nbar = sumstats.N.mean()
-
             # Run the jackknife
+            Nbar = sumstats.N.mean()
             chunk_size = spatial_annotation.shape[1]
             out_chunk = process_map(jackknife_for_processmap, range(chunk_size),
                                     max_workers=config.num_processes,
@@ -315,31 +264,17 @@ if __name__ == '__main__':
         args = parser.parse_args()
     import os
 
-    # os.chdir('/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/representative_slices2')
-    # config = SpatialLDSCConfig(**{'all_chunk': 2,
-    #                               'chisq_max': None,
-    #                               # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/ADULT1_ADULT2_ONSET_ASTHMA.sumstats.gz',
-    #                               'ldsc_save_dir': 'T135_macaque1/spatial_ldsc',
-    #                               'ldscore_input_dir': 'T135_macaque1/generate_ldscore',
-    #                               'n_blocks': 200,
-    #                               'not_M_5_50': False,
-    #                               'num_processes': 4,
-    #                               'sample_name': 'T135_macaque1',
-    #                               # 'trait_name': 'ADULT1_ADULT2_ONSET_ASTHMA',
-    #                               'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
-    #                               'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
-    #                               })
     os.chdir('/storage/yangjianLab/chenwenhao/tmp/GPS_Height_debug')
     TASK_ID = 16
     spe_name = f'E{TASK_ID}.5_E1S1'
     config = SpatialLDSCConfig(**{'all_chunk': None,
                                   'chisq_max': None,
                                   # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/GIANT_EUR_Height_2022_Nature.sumstats.gz',
-                                  'ldsc_save_dir': f'{spe_name}/ldsc_results_unified_init_w',
+                                  'ldsc_save_dir': f'{spe_name}/ldsc_results_three_row_sum_sub_config_traits',
                                   'ldscore_input_dir': '/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/annotation/E16.5_E1S1/generate_ldscore_new',
                                   'n_blocks': 200,
                                   'not_M_5_50': False,
-                                  'num_processes': 4,
+                                  'num_processes': 15,
                                   'sample_name': spe_name,
                                   # 'trait_name': 'GIANT_EUR_Height_2022_Nature',
                                   'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
