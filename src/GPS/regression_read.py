@@ -1,6 +1,6 @@
 import numpy as np
-
-from GPS.Build_LD_Score_old import *
+import pandas as pd
+import os
 
 
 # Fun for reading gwas data
