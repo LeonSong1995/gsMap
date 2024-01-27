@@ -1,3 +1,7 @@
+import os
+import numpy as np
+import pandas as pd
+
 import argparse
 import logging
 import multiprocessing
@@ -12,9 +16,6 @@ from GPS.config import add_spatial_ldsc_args, SpatialLDSCConfig
 from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2, _read_M_v2
 
 logger = logging.getLogger(__name__)
-
-import numpy as np
-import pandas as pd
 
 
 # %%
@@ -262,7 +263,6 @@ if __name__ == '__main__':
         # args = parser.parse_args(args_list)
     else:
         args = parser.parse_args()
-    import os
 
     os.chdir('/storage/yangjianLab/chenwenhao/tmp/GPS_Height_debug')
     TASK_ID = 16
