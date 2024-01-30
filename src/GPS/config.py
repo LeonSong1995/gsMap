@@ -529,9 +529,9 @@ class SpatialLDSCConfig:
                 f'------Additional baseline annotation is provided. It will be used with the default baseline annotation.')
             logger.info(f'------Additional baseline annotation directory: {additional_baseline_annotation_dir_path}')
 
-            chrom_list = range(1, 23) if self.chrom == 'all' else [self.chrom]
+            chrom_list = range(1, 23)
             for chrom in chrom_list:
-                baseline_annotation_path = additional_baseline_annotation_dir_path / f'baseline.{chrom}.annot.gz'
+                baseline_annotation_path = additional_baseline_annotation_dir_path / f'baseline.{chrom}.l2.ldscore.feather'
                 if not baseline_annotation_path.exists():
                     raise FileNotFoundError(
                         f'baseline.{chrom}.annot.gz is not found in {additional_baseline_annotation_dir_path}.')

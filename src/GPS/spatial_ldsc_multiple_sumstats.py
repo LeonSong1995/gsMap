@@ -153,13 +153,13 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
     # load additional baseline annotations
     if config.use_additional_baseline_annotation:
-        ld_file_baseline_additional = f'{config.ldscore_input_dir}/additional_baseline/baseline_additional.'
+        ld_file_baseline_additional = f'{config.ldscore_input_dir}/additional_baseline/baseline.'
         ref_ld_baseline_additional = _read_ref_ld_v2(ld_file_baseline_additional)
         n_annot_baseline_additional = len(ref_ld_baseline_additional.columns)
         logger.info(f'{len(ref_ld_baseline_additional.columns)} additional baseline annotations loaded')
         # M_annot_baseline_additional = _read_M_v2(ld_file_baseline_additional, n_annot_baseline_additional,
         #                                             config.not_M_5_50)
-        # ref_ld_baseline_additional = ref_ld_baseline_additional.loc[baseline_and_w_ld_common_snp]
+        ref_ld_baseline_additional = ref_ld_baseline_additional.loc[baseline_and_w_ld_common_snp]
         ref_ld_baseline = pd.concat([ref_ld_baseline, ref_ld_baseline_additional], axis=1)
         del ref_ld_baseline_additional
 
@@ -283,7 +283,7 @@ if __name__ == '__main__':
                                   'chisq_max': None,
                                   # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/GIANT_EUR_Height_2022_Nature.sumstats.gz',
                                   'ldsc_save_dir': f'{spe_name}/ldsc_results_three_row_sum_sub_config_traits',
-                                  'ldscore_input_dir': '/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/annotation/E16.5_E1S1/generate_ldscore_new',
+                                  'ldscore_input_dir': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse',
                                   'n_blocks': 200,
                                   'not_M_5_50': False,
                                   'num_processes': 15,
