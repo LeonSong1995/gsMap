@@ -433,13 +433,13 @@ class S_LDSC_Boost:
         Get the dummy matrix of SNP-gene pairs.
         """
         # Load the bim file
-        bim, bim_pr = load_bim(bfile_root, chrom)
+        bim, bim_pr = load_bim(self.config.bfile_root, chrom)
 
         if self.config.gene_window_enhancer_priority in ['gene_window_first', 'enhancer_first']:
 
             SNP_gene_pair_gtf = self.get_SNP_gene_pair_from_gtf(bim, bim_pr, )
             SNP_gene_pair_enhancer = self.get_SNP_gene_pair_from_enhancer(bim, bim_pr, )
-            total_SNP_gene_pair = SNP_gene_pair_gtf.join(SNP_gene_pair_enhancer, how='outer', lsuffix='_gtf', )
+            # total_SNP_gene_pair = SNP_gene_pair_gtf.join(SNP_gene_pair_enhancer, how='outer', lsuffix='_gtf', )
 
             mask_of_nan_gtf = SNP_gene_pair_gtf.gene_name.isna()
             mask_of_nan_enhancer = SNP_gene_pair_enhancer.gene_name.isna()

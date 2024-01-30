@@ -194,7 +194,7 @@ rule generate_ldscore:
             --spots_per_chunk {params.spots_per_chunk} \
             --ld_wind {params.ld_wind} \
             --ld_unit {params.ld_unit} \
-            { '--additional_baseline_annotation_dir_path' +  params.additional_baseline_annotation_dir_path if params.additional_baseline_annotation_dir_path is not None else '' }
+            { '--additional_baseline_annotation_dir_path ' +  params.additional_baseline_annotation_dir_path if params.additional_baseline_annotation_dir_path is not None else '' }
         """
         shell(command)
 
