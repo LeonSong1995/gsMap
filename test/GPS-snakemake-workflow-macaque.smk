@@ -171,7 +171,8 @@ rule generate_ldscore:
         gene_window_enhancer_priority=None,
         spots_per_chunk=5000,
         ld_wind=1,
-        ld_unit="CM"
+        ld_unit="CM",
+        additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'
     benchmark: '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done.benchmark'
     threads:
         3
@@ -194,7 +195,8 @@ rule generate_ldscore:
             {'--gene_window_enhancer_priority ' + params.gene_window_enhancer_priority if params.gene_window_enhancer_priority is not None else ''} \
             --spots_per_chunk {params.spots_per_chunk} \
             --ld_wind {params.ld_wind} \
-            --ld_unit {params.ld_unit}
+            --ld_unit {params.ld_unit} \
+            { '--additional_baseline_annotation_dir_path' +  params.additional_baseline_annotation_dir_path if params.additional_baseline_annotation_dir_path is not None else '' }
         """
         shell(command)
 
