@@ -82,7 +82,6 @@ rule latent_to_gene:
     output:
         feather_path='{sample_name}/latent_to_gene/{sample_name}_gene_marker_score.feather'
     params:
-        method="rank",
         latent_representation="latent_GVAE",
         num_neighbour=51,
         num_neighbour_spatial=201,
@@ -105,7 +104,6 @@ GPS run_latent_to_gene \
     --output_feather_path {output.feather_path} \
     { '--annotation ' + params.annotation if params.annotation is not None else ''} \
     --type {params.type} \
-    --method {params.method} \
     --latent_representation {params.latent_representation} \
     --num_neighbour {params.num_neighbour} \
     --num_neighbour_spatial {params.num_neighbour_spatial} \
