@@ -5,17 +5,15 @@ sample_names = ["Cortex_151507"]
 # chrom = "all"
 
 chrom = range(1,23)
-trait_names=[
-    'ADULT1_ADULT2_ONSET_ASTHMA'
-]
+# trait_names=[
+#     'ADULT1_ADULT2_ONSET_ASTHMA'
+# ]
 annotation= "layer_guess"
 data_type = 'count'
 rule all:
     input:
-        expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz', trait_name=trait_names, sample_name=sample_names)
-# rule test_run:
-#     input:
-#         [f'{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done' for chrom in chroms for sample_name in sample_names],
+        expand('{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done', sample_name=sample_names)
+        # expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz', trait_name=trait_names, sample_name=sample_names)
 
 rule find_latent_representations:
     input:
