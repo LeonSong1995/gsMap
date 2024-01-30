@@ -326,8 +326,7 @@ class S_LDSC_Boost:
                                                               save_file_name,
                                                               drop_dummy_na=True,
                                                               ):
-        save_dir = Path(save_file_name).parent
-        save_dir.mkdir(parents=True, exist_ok=True)
+
         if drop_dummy_na:
             ldscore_chr_chunk = self.snp_gene_weight_matrix[:, :-1] @ mk_score_chunk
         else:
@@ -339,6 +338,9 @@ class S_LDSC_Boost:
                           )
 
     def save_ldscore(self, ldscore_chr_chunk: np.ndarray, column_names, save_file_name):
+        save_dir = Path(save_file_name).parent
+        save_dir.mkdir(parents=True, exist_ok=True)
+
         ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
         # avoid overflow of float16, if inf, set to max of float16
         ldscore_chr_chunk[np.isinf(ldscore_chr_chunk)] = np.finfo(np.float16).max
