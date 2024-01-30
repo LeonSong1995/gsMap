@@ -283,7 +283,7 @@ if __name__ == '__main__':
                                   'chisq_max': None,
                                   # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/GIANT_EUR_Height_2022_Nature.sumstats.gz',
                                   'ldsc_save_dir': f'{spe_name}/ldsc_results_three_row_sum_sub_config_traits',
-                                  'ldscore_input_dir': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse',
+                                  'ldscore_input_dir': '/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/annotation/E16.5_E1S1/generate_ldscore_new',
                                   'n_blocks': 200,
                                   'not_M_5_50': False,
                                   'num_processes': 15,
