@@ -132,7 +132,6 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     # config
     n_blocks = config.n_blocks
     sample_name = config.sample_name
-    num_cpus = min(multiprocessing.cpu_count(), config.num_processes)
 
     print(f'------Running Spatial LDSC for {sample_name}...')
     # Load the regression weights

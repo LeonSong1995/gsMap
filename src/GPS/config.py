@@ -115,6 +115,9 @@ def add_generate_ldscore_args(parser):
     parser.add_argument('--ldscore_save_dir', type=str, required=True, help='Directory to save ld score files')
     parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
 
+    # additional baseline annotation
+    parser.add_argument('--additional_baseline_annotation_dir_path', type=str, default=None,)
+
     # reference panel
     parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
     parser.add_argument('--keep_snp_root', type=str, required=True, help='Keep SNP root path')
@@ -178,6 +181,10 @@ def add_spatial_ldsc_args(parser):
     parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
     parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
     parser.add_argument('--all_chunk', type=int, help="Number of chunks for processing spatial data.")
+
+    # if use additional baseline annotation
+    parser.add_argument('--disable_additional_baseline_annotation', action='store_true', default=False,)
+
     parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
 
     return parser
