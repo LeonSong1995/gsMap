@@ -174,18 +174,37 @@ def get_ldscore(bfile_root, chrom, annot_matrix, ld_wind, ld_unit='CM'):
 
 
 # %%
-def calculate_SNP_Gene_weight_matrix(SNP_gene_pair_dummy, chrom, bfile_root, ld_wind=1, ld_unit='CM'):
+def calculate_ldscore_from_annotation(SNP_annotation_df, chrom, bfile_root, ld_wind=1, ld_unit='CM'):
     """
     Calculate the SNP-gene weight matrix.
     """
     # Get the dummy matrix
     # Get the SNP-gene weight matrix
-    snp_gene_weight_matrix = get_ldscore(bfile_root, chrom, SNP_gene_pair_dummy.values, ld_wind=ld_wind,
+    snp_gene_weight_matrix = get_ldscore(bfile_root, chrom, SNP_annotation_df.values, ld_wind=ld_wind,
                                          ld_unit=ld_unit)
     snp_gene_weight_matrix = snp_gene_weight_matrix.astype(np.float32, copy=False)
-    snp_gene_weight_matrix.index = SNP_gene_pair_dummy.index
-    snp_gene_weight_matrix.columns = SNP_gene_pair_dummy.columns
+    snp_gene_weight_matrix.index = SNP_annotation_df.index
+    snp_gene_weight_matrix.columns = SNP_annotation_df.columns
     return snp_gene_weight_matrix
+
+
+def calculate_ldscore_from_multiple_annotation(SNP_annotation_df_list, chrom, bfile_root, ld_wind=1, ld_unit='CM'):
+    SNP_annotation_df = pd.concat(SNP_annotation_df_list, axis=1)
+
+    snp_gene_weight_matrix = get_ldscore(bfile_root, chrom, SNP_annotation_df.values, ld_wind=ld_wind,
+                                         ld_unit=ld_unit)
+    snp_gene_weight_matrix = snp_gene_weight_matrix.astype(np.float32, copy=False)
+    snp_gene_weight_matrix.index = SNP_annotation_df.index
+    snp_gene_weight_matrix.columns = SNP_annotation_df.columns
+
+    # split to each annotation
+    snp_annotation_len_list = [len(df.columns) for df in SNP_annotation_df_list]
+    snp_gene_weight_matrix_list = []
+    start = 0
+    for snp_annotation_len in snp_annotation_len_list:
+        snp_gene_weight_matrix_list.append(snp_gene_weight_matrix.iloc[:, start:start + snp_annotation_len])
+        start += snp_annotation_len
+    return snp_gene_weight_matrix_list
 
 
 # %%
@@ -201,19 +220,19 @@ class S_LDSC_Boost:
 
         # Load enhancer
         if config.enhancer_annotation_file is not None:
-            enhancer_df = pr.read_bed(config.enhancer_annotation_file,as_df=True)
-            enhancer_df.set_index('Name',inplace=True)
-            enhancer_df.index.name='gene_name'
+            enhancer_df = pr.read_bed(config.enhancer_annotation_file, as_df=True)
+            enhancer_df.set_index('Name', inplace=True)
+            enhancer_df.index.name = 'gene_name'
 
             # keep the common genes and add the enhancer score
-            avg_mkscore=pd.DataFrame(self.mk_score_common.mean(axis=1),columns=['avg_mkscore'])
-            enhancer_df=enhancer_df.join(avg_mkscore,how='inner',on='gene_name',)
+            avg_mkscore = pd.DataFrame(self.mk_score_common.mean(axis=1), columns=['avg_mkscore'])
+            enhancer_df = enhancer_df.join(avg_mkscore, how='inner', on='gene_name', )
 
             # add distance to TSS
-            enhancer_df['TSS']=self.gtf_pr.df.set_index('gene_name').reindex(enhancer_df.index)['TSS']
+            enhancer_df['TSS'] = self.gtf_pr.df.set_index('gene_name').reindex(enhancer_df.index)['TSS']
 
             # convert to pyranges
-            self.enhancer_pr=pr.PyRanges(enhancer_df.reset_index())
+            self.enhancer_pr = pr.PyRanges(enhancer_df.reset_index())
 
         else:
             self.enhancer_pr = None
@@ -224,14 +243,6 @@ class S_LDSC_Boost:
         # Get SNP-Gene dummy pairs
         self.snp_gene_pair_dummy = self.get_snp_gene_dummy(chrom, )
 
-        # Calculate SNP-Gene weight matrix
-        self.snp_gene_weight_matrix = calculate_SNP_Gene_weight_matrix(self.snp_gene_pair_dummy, chrom,
-                                                                       self.config.bfile_root,
-                                                                       ld_wind=self.config.ld_wind,
-                                                                       ld_unit=self.config.ld_unit)
-        # convert to sparse
-        self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
-
         if self.config.keep_snp_root is not None:
             keep_snp = pd.read_csv(f'{self.config.keep_snp_root}.{chrom}.snp', header=None)[0].to_list()
             self.keep_snp_mask = self.snp_gene_pair_dummy.index.isin(keep_snp)
@@ -240,7 +251,69 @@ class S_LDSC_Boost:
         else:
             self.keep_snp_mask = None
             self.snp_name = self.snp_gene_pair_dummy.index.to_list()
+
+        if self.config.additional_baseline_annotation_dir_path is not None:
+            additional_baseline_annotation_dir_path = Path(self.config.additional_baseline_annotation_dir_path)
+            additional_baseline_annotation_file_path = additional_baseline_annotation_dir_path / f'baseline.{chrom}.annot.gz'
+            assert additional_baseline_annotation_file_path.exists(), f'additional_baseline_annotation_file_path not exists: {additional_baseline_annotation_file_path}'
+            additional_baseline_annotation_df = pd.read_csv(additional_baseline_annotation_file_path, sep='\t')
+            additional_baseline_annotation_df.set_index('SNP', inplace=True)
+
+            # drop these columns if exists CHR         BP       CM]
+            additional_baseline_annotation_df.drop(['CHR', 'BP', 'CM'], axis=1, inplace=True, errors='ignore')
+
+            # reindex, for those SNPs not in additional_baseline_annotation_df, set to 0
+            num_of_not_exist_snp = (~self.snp_gene_pair_dummy.index.isin(additional_baseline_annotation_df.index)).sum()
+            if num_of_not_exist_snp > 0:
+                logger.warning(
+                    f'{num_of_not_exist_snp} SNPs not in additional_baseline_annotation_df but in the reference panel, so the additional baseline annotation of these SNP will set to 0')
+                additional_baseline_annotation_df = additional_baseline_annotation_df.reindex(
+                    self.snp_gene_pair_dummy.index,
+                    fill_value=0)
+            else:
+                additional_baseline_annotation_df = additional_baseline_annotation_df.reindex(
+                    self.snp_gene_pair_dummy.index)
+
+            # do this for saving the cpu time, by only calculate r2 once
+            self.snp_gene_weight_matrix, additional_baseline_annotation_ldscore = (
+                calculate_ldscore_from_multiple_annotation(
+                    [self.snp_gene_pair_dummy, additional_baseline_annotation_df],
+                    chrom,
+                    self.config.bfile_root,
+                    ld_wind=self.config.ld_wind,
+                    ld_unit=self.config.ld_unit))
+
+            ld_score_file = f'{self.config.ldscore_save_dir}/additional_baseline/baseline.{chrom}.l2.ldscore.feather'
+            M_file_path = f'{self.config.ldscore_save_dir}/additional_baseline/baseline.{chrom}.l2.M'
+            M_5_file_path = f'{self.config.ldscore_save_dir}/additional_baseline/baseline.{chrom}.l2.M_5_50'
+
+            # save additional baseline annotation ldscore
+            self.save_ldscore(additional_baseline_annotation_ldscore.values,
+                              column_names=additional_baseline_annotation_ldscore.columns,
+                              save_file_name=ld_score_file,
+                              )
+
+            # caculate the M and save
+            save_dir = Path(M_file_path).parent
+            save_dir.mkdir(parents=True, exist_ok=True)
+            M_chr_chunk = additional_baseline_annotation_df.values.sum(axis=0, keepdims=True)
+            M_5_chr_chunk = additional_baseline_annotation_df.loc[self.snp_pass_maf].values.sum(axis=0,keepdims=True)
+            np.savetxt(M_file_path, M_chr_chunk, delimiter='\t', )
+            np.savetxt(M_5_file_path, M_5_chr_chunk, delimiter='\t', )
+
+        else:
+            # Calculate SNP-Gene weight matrix
+            self.snp_gene_weight_matrix = calculate_ldscore_from_annotation(self.snp_gene_pair_dummy, chrom,
+                                                                            self.config.bfile_root,
+                                                                            ld_wind=self.config.ld_wind,
+                                                                            ld_unit=self.config.ld_unit)
+        # convert to sparse
+        self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
+
+        # calculate baseline ld score
         self.calculate_ldscore_for_base_line(chrom, self.config.sample_name, self.config.ldscore_save_dir)
+
+        # calculate ld score for annotation
         self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(
             self.mk_score_common.loc[self.snp_gene_pair_dummy.columns[:-1]],
             chrom,
@@ -259,6 +332,13 @@ class S_LDSC_Boost:
             ldscore_chr_chunk = self.snp_gene_weight_matrix[:, :-1] @ mk_score_chunk
         else:
             ldscore_chr_chunk = self.snp_gene_weight_matrix @ mk_score_chunk
+
+        self.save_ldscore(ldscore_chr_chunk,
+                          column_names=mk_score_chunk.columns,
+                          save_file_name=save_file_name,
+                          )
+
+    def save_ldscore(self, ldscore_chr_chunk: np.ndarray, column_names, save_file_name):
         ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
         # avoid overflow of float16, if inf, set to max of float16
         ldscore_chr_chunk[np.isinf(ldscore_chr_chunk)] = np.finfo(np.float16).max
@@ -267,7 +347,7 @@ class S_LDSC_Boost:
         # save for each chunk
         df = pd.DataFrame(ldscore_chr_chunk,
                           index=self.snp_name,
-                          columns=mk_score_chunk.columns,
+                          columns=column_names,
                           )
         df.index.name = 'SNP'
         df.reset_index().to_feather(save_file_name)
@@ -294,6 +374,7 @@ class S_LDSC_Boost:
         M_5_chr_chunk = SNP_gene_pair_dummy_sumed_along_snp_axis_pass_maf @ mk_score_chunk
         np.savetxt(M_file_path, M_chr_chunk, delimiter='\t', )
         np.savetxt(M_5_file_path, M_5_chr_chunk, delimiter='\t', )
+
 
     def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(self, mk_score_common, chrom, sample_name, save_dir):
         """
@@ -358,7 +439,7 @@ class S_LDSC_Boost:
 
             SNP_gene_pair_gtf = self.get_SNP_gene_pair_from_gtf(bim, bim_pr, )
             SNP_gene_pair_enhancer = self.get_SNP_gene_pair_from_enhancer(bim, bim_pr, )
-            total_SNP_gene_pair = SNP_gene_pair_gtf.join(SNP_gene_pair_enhancer, how='outer', lsuffix='_gtf',)
+            total_SNP_gene_pair = SNP_gene_pair_gtf.join(SNP_gene_pair_enhancer, how='outer', lsuffix='_gtf', )
 
             mask_of_nan_gtf = SNP_gene_pair_gtf.gene_name.isna()
             mask_of_nan_enhancer = SNP_gene_pair_enhancer.gene_name.isna()
@@ -375,7 +456,7 @@ class S_LDSC_Boost:
                 raise ValueError(
                     f'Invalid self.config.gene_window_enhancer_priority: {self.config.gene_window_enhancer_priority}')
 
-        elif self.config.gene_window_enhancer_priority is None: # use gtf only
+        elif self.config.gene_window_enhancer_priority is None:  # use gtf only
             SNP_gene_pair_gtf = self.get_SNP_gene_pair_from_gtf(bim, bim_pr, )
             SNP_gene_pair = SNP_gene_pair_gtf
 
@@ -455,8 +536,8 @@ if __name__ == '__main__':
             gene_window_size=window_size,
             spots_per_chunk=spots_per_chunk,
             enhancer_annotation_file=enhancer_annotation,
-            gene_window_enhancer_priority = 'enhancer_first',
-
+            gene_window_enhancer_priority='enhancer_first',
+            additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'
         )
         # %%
         run_generate_ldscore(config)

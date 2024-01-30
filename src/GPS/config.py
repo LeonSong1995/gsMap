@@ -3,6 +3,7 @@ import logging
 from dataclasses import dataclass, field
 from pprint import pprint
 from typing import Union, Literal
+from pathlib import Path
 
 from collections import OrderedDict, namedtuple
 from typing import Callable
@@ -402,6 +403,7 @@ class GenerateLDScoreConfig:
     gene_window_enhancer_priority: Literal['gene_window_first', 'enhancer_first', 'enhancer_only',] = None
 
     # for calculating ld score
+    additional_baseline_annotation_dir_path: str = None
     spots_per_chunk: int = 5_000
     ld_wind: int = 1
     ld_unit: str = 'CM'
@@ -427,6 +429,25 @@ class GenerateLDScoreConfig:
             logger.info(
                 f'Only gene window annotation will be used to calculate LD score. SNP within +-{self.gene_window_size} bp of gene body will be used. ')
 
+        # remind for baseline annotation
+        if self.additional_baseline_annotation_dir_path is None:
+            logger.info(f'------Baseline annotation is not provided. Default baseline annotation will be used.')
+        else:
+            logger.info(f'------Baseline annotation is provided. Additional baseline annotation will be used with the default baseline annotation.')
+            logger.info(f'------Baseline annotation directory: {self.additional_baseline_annotation_dir_path}')
+            # check the existence of baseline annotation
+            if self.chrom == 'all':
+                for chrom in range(1, 23):
+                    chrom = str(chrom)
+                    baseline_annotation_path = Path(self.additional_baseline_annotation_dir_path) / f'baseline.{chrom}.annot.gz'
+                    if not baseline_annotation_path.exists():
+                        raise FileNotFoundError(f'baseline.{chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
+            else:
+                baseline_annotation_path = Path(self.additional_baseline_annotation_dir_path) / f'baseline.{self.chrom}.annot.gz'
+                if not baseline_annotation_path.exists():
+                    raise FileNotFoundError(f'baseline.{self.chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
+
+
 
 @dataclass
 class SpatialLDSCConfig:
@@ -434,6 +455,7 @@ class SpatialLDSCConfig:
     w_file: str
     ldscore_input_dir: str
     ldsc_save_dir: str
+    disable_additional_baseline_annotation: bool = False
     trait_name: str = None
     sumstats_file: str = None
     sumstats_config_file: str = None
@@ -465,6 +487,48 @@ class SpatialLDSCConfig:
             self.sumstats_config_dict[self.trait_name] = self.sumstats_file
         else:
             raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
+
+        # check if additional baseline annotation is exist
+        self.use_additional_baseline_annotation = False
+        self.process_additional_baseline_annotation()
+
+    def process_additional_baseline_annotation(self):
+        additional_baseline_annotation_dir_path = Path(self.ldscore_input_dir) / 'additional_baseline'
+        dir_exists = additional_baseline_annotation_dir_path.exists()
+
+        if not dir_exists:
+            if self.use_additional_baseline_annotation:
+                logger.warning(f"additional_baseline directory is not found in {self.ldscore_input_dir}.")
+                print('''\
+                    if you want to use additional baseline annotation, 
+                    please provide additional baseline annotation when calculating ld score.
+                    ''')
+                raise FileNotFoundError(
+                    f'additional_baseline directory is not found. You should disable use_additional_baseline_annotation')
+            return
+
+        self.use_additional_baseline_annotation = self.use_additional_baseline_annotation or True
+
+        if self.disable_additional_baseline_annotation:
+            logger.warning(
+                f"additional_baseline directory is found in {self.ldscore_input_dir}, but use_additional_baseline_annotation is disabled.")
+            print('''\
+                if you want to use additional baseline annotation,
+                please enable by not adding --disable_additional_baseline_annotation.
+                ''')
+            self.use_additional_baseline_annotation = False
+        else:
+            logger.info(
+                f'------Additional baseline annotation is provided. It will be used with the default baseline annotation.')
+            logger.info(f'------Additional baseline annotation directory: {additional_baseline_annotation_dir_path}')
+
+            chrom_list = range(1, 23) if self.chrom == 'all' else [self.chrom]
+            for chrom in chrom_list:
+                baseline_annotation_path = additional_baseline_annotation_dir_path / f'baseline.{chrom}.annot.gz'
+                if not baseline_annotation_path.exists():
+                    raise FileNotFoundError(
+                        f'baseline.{chrom}.annot.gz is not found in {additional_baseline_annotation_dir_path}.')
+
 
 
 @dataclass

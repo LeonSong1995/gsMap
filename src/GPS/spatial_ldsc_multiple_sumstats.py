@@ -151,6 +151,19 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     if len(baseline_and_w_ld_common_snp) < 200000:
         logger.warning(f'WARNING: number of SNPs less than 200k; for {sample_name} this is almost always bad.')
     ref_ld_baseline = ref_ld_baseline.loc[baseline_and_w_ld_common_snp]
+
+    # load additional baseline annotations
+    if config.use_additional_baseline_annotation:
+        ld_file_baseline_additional = f'{config.ldscore_input_dir}/additional_baseline/baseline_additional.'
+        ref_ld_baseline_additional = _read_ref_ld_v2(ld_file_baseline_additional)
+        n_annot_baseline_additional = len(ref_ld_baseline_additional.columns)
+        logger.info(f'{len(ref_ld_baseline_additional.columns)} additional baseline annotations loaded')
+        # M_annot_baseline_additional = _read_M_v2(ld_file_baseline_additional, n_annot_baseline_additional,
+        #                                             config.not_M_5_50)
+        # ref_ld_baseline_additional = ref_ld_baseline_additional.loc[baseline_and_w_ld_common_snp]
+        ref_ld_baseline = pd.concat([ref_ld_baseline, ref_ld_baseline_additional], axis=1)
+        del ref_ld_baseline_additional
+
     w_ld = w_ld.loc[baseline_and_w_ld_common_snp]
 
     # Clean the sumstats
