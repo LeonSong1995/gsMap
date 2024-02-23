@@ -6,6 +6,7 @@ workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/macaque/proce
 # workdir: '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque'
 sample_name = "Cortex_151507"
 chrom = "all"
+QOS = "huge"
 # chrom = range(1,23)
 trait_names = [
     'PGC3_SCZ_wave3_public_INFO80'
@@ -24,12 +25,12 @@ sample_names.remove('T825_macaque3') # due to 25% of spot don't have spatial coo
 
 annotation = "SubClass"
 data_type = "SCT"
-sample_names = ['T584_macaque2']
-num_processes = 20
+# sample_names = ['T584_macaque2']
 
 rule all:
     input:
         expand('{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done',trait_name=trait_names,sample_name=sample_names)
+
 
 # expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
     # expand('{sample_name}/cauchy_combination/{sample_name}_{trait_name}.Cauchy.csv.gz',trait_name=trait_names,sample_name=sample_names)
@@ -80,7 +81,7 @@ rule find_latent_representations:
     benchmark: '{sample_name}/find_latent_representations/{sample_name}_add_latent.h5ad.benchmark'
     resources:
         mem_mb_per_cpu=lambda wildcards, threads, attempt: 20_000 * np.log2(attempt + 1),
-        qos='huge'
+        qos=QOS
     run:
         command = f"""
 GPS run_find_latent_representations \
@@ -131,7 +132,7 @@ rule latent_to_gene:
         1
     resources:
         mem_mb_per_cpu=lambda wildcards, threads, attempt: 70_000 * np.log2(attempt + 1),
-        qos='huge'
+        qos=QOS
     benchmark: '{sample_name}/latent_to_gene/{sample_name}_gene_marker_score.feather.benchmark'
     run:
         command = f"""
@@ -170,13 +171,14 @@ rule generate_ldscore:
         spots_per_chunk=5000,
         ld_wind=1,
         ld_unit="CM",
-        additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'
+        additional_baseline_annotation_dir_path=None
+        # additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'
     benchmark: '{sample_name}/generate_ldscore/{sample_name}_generate_ldscore_chr{chrom}.done.benchmark'
     threads:
         3
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 45_000 / threads * np.log2(attempt + 1),
-        qos='huge'
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 65_000 / threads * np.log2(attempt + 1),
+        qos=QOS
     run:
         command = f"""
         GPS run_generate_ldscore \
@@ -197,6 +199,7 @@ rule generate_ldscore:
             { '--additional_baseline_annotation_dir_path ' +  params.additional_baseline_annotation_dir_path if params.additional_baseline_annotation_dir_path is not None else '' }
         """
         shell(command)
+        shell('touch {output.done}')
 
 
 def get_h2_file(wildcards):
@@ -226,12 +229,13 @@ rule spatial_ldsc:
         sumstats_config_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
         all_chunk = None
     threads:
-        2
+        10
     benchmark:
         '{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done.benchmark'
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 60_000 / threads * np.log2(attempt + 1),
-        qos='huge'
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 80_000 / threads * np.log2(attempt + 1),
+        qos=QOS,
+        partition='intel-sc3,amd-ep2'
     run:
        command = f"""
         GPS run_spatial_ldsc --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --sumstats_config_file {params.sumstats_config_file} {f'--all_chunk {params.all_chunk}' if params.all_chunk else ''}

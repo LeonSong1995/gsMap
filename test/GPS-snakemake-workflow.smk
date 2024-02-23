@@ -161,6 +161,7 @@ rule generate_ldscore:
             { '--additional_baseline_annotation_dir_path' +  params.additional_baseline_annotation_dir_path if params.additional_baseline_annotation_dir_path is not None else '' }
         """
         shell(command)
+        shell('touch {output.done}')
 
 
 def get_h2_file(wildcards):
