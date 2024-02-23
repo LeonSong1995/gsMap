@@ -26,7 +26,7 @@ Overview of ``GPS`` Method
 
 3. **Spatial S-LDSC**: ``GPS`` uses the spatial S-LDSC method to identify spots that are associated with complex traits. This method uses the gene specificity scores of SNPs to calculate the association between individual spots and complex traits.
 
-4. **Spatial Region and Trait Association**: Finally, ``GPS`` uses the Cauchy combination test to aggregate P values of individual spots within specific spatial regions. This step is critical in evaluating the association of specific spatial regions with complex traits.
+4. **Spatial Region Significance Test**: Finally, ``GPS`` uses the Cauchy combination test to aggregate P values of individual spots within specific spatial regions. This step is critical in evaluating the association of specific spatial regions with complex traits.
 
 .. image:: _static/architecture.svg
    :width: 600
@@ -51,7 +51,7 @@ You could visit our `GPS website <https://gps.yanglab.westlake.edu.cn/>`__ to se
 
 Online Analysis Service
 +++++++++++++++++++++++
-Please check out our `GPS application <https://gps.yanglab.westlake.edu.cn/>`__ for a user-friendly online analysis.
+Please check out our `GPS online application <https://gps.yanglab.westlake.edu.cn/>`__ for a user-friendly online analysis.
 
 User could upload their own GWAS summary statistics data to perform the analysis.
 

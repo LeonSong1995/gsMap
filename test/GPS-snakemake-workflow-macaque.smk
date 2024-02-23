@@ -168,7 +168,7 @@ rule generate_ldscore:
         enhancer_annotation_file=None,
         snp_multiple_enhancer_strategy='max_mkscore',
         gene_window_enhancer_priority=None,
-        spots_per_chunk=5000,
+        spots_per_chunk=1000,
         ld_wind=1,
         ld_unit="CM",
         additional_baseline_annotation_dir_path=None
@@ -177,7 +177,7 @@ rule generate_ldscore:
     threads:
         3
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 65_000 / threads * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 50_000 / threads * np.log2(attempt + 1),
         qos=QOS
     run:
         command = f"""
@@ -233,7 +233,7 @@ rule spatial_ldsc:
     benchmark:
         '{sample_name}/spatial_ldsc/{sample_name}.spatial_ldsc.done.benchmark'
     resources:
-        mem_mb_per_cpu=lambda wildcards, threads, attempt: 80_000 / threads * np.log2(attempt + 1),
+        mem_mb_per_cpu=lambda wildcards, threads, attempt: 40_000 / threads * np.log2(attempt + 1),
         qos=QOS,
         partition='intel-sc3,amd-ep2'
     run:

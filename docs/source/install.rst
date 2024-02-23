@@ -25,4 +25,4 @@ or via the source code:
 
     git clone https://github.com/LeonSong1995/GPS.git
     cd GPS
-    pip install .
+    pip install -e .
