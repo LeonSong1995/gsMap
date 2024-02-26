@@ -65,6 +65,6 @@ For more details about the ``GPS`` algorithm, please check out our `publication 
     install
     tutorials
     data
-    release
     api
+    release
 

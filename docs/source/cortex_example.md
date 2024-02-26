@@ -1,6 +1,6 @@
 
-# Mouse Cortex Example
-This is an example of running GPS on the human cortex data from [Nature Neuroscience 2021](https://www.nature.com/articles/s41593-021-00850-3).
+# Human Cortex Example
+
 
 ## 1. Preparation
 
@@ -24,26 +24,31 @@ tar -xvzf GPS_example_data.tar.gz
 
 Directory structure
 ```bash
-tree -L 3
+tree -L 2
 ```
 
 ```
-.
-├── example_data
-│   └── ST
-│       └── Cortex_151507.h5ad
-└── GPS_resource
-    ├── genome_annotation
-    │   ├── enhancer
-    │   └── gtf
-    ├── LD_Reference_Panel
-    │   └── 1000G_EUR_Phase3_plink
-    └── LDSC_resource
-        ├── hapmap3_snps
-        └── weights_hm3_no_hla
-
-11 directories, 1 file
-
+example_data
+├── GWAS
+│   ├── GIANT_EUR_Height_2022_Nature.sumstats.gz
+│   ├── gwas_config.yaml
+│   ├── IQ_NG_2018.sumstats.gz
+│   └── PGC3_SCZ_wave3_public_INFO80.sumstats.gz
+└── ST
+    ├── Cortex_151507.h5ad
+    └── E16.5_E1S1.MOSTA.h5ad
+GPS_resource
+├── genome_annotation
+│   ├── enhancer
+│   └── gtf
+├── homologs
+│   ├── macaque_human_homologs.txt
+│   └── mouse_human_homologs.txt
+├── LD_Reference_Panel
+│   └── 1000G_EUR_Phase3_plink
+└── LDSC_resource
+    ├── hapmap3_snps
+    └── weights_hm3_no_hla
 ```
 
 
@@ -57,8 +62,8 @@ SAMPLE_NAME="Cortex_151507" # This should be the name of the sample
 
 # Input data
 HDF5_PATH="example_data/ST/Cortex_151507.h5ad"
-ANNOTATION="layer_guess" # This should be the cell type annotation of each spot
-DATA_TYPE='count' # This should be the type of ST data, either 'count' or 'log1p'
+ANNOTATION="layer_guess" # This should be the annotation layer in the ST data
+DATA_TYPE='count' # This should be the gene expression layer in the ST data, e.g. 'count' or 'log1p'
 
 # Running Dependencies and Resources
 GTFFILE="GPS_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf"

@@ -1,5 +1,5 @@
 
-# Mouse Cortex Example
+# Mouse Embryo Example
 
 ## 1. Preparation
 
@@ -23,26 +23,30 @@ tar -xvzf GPS_example_data.tar.gz
 
 Directory structure
 ```bash
-tree -L 3
+tree -L 2
 ```
 
 ```
-.
-├── example_data
-│   └── ST
-│       └── Cortex_151507.h5ad
-└── GPS_resource
-    ├── genome_annotation
-    │   ├── enhancer
-    │   └── gtf
-    ├── LD_Reference_Panel
-    │   └── 1000G_EUR_Phase3_plink
-    └── LDSC_resource
-        ├── hapmap3_snps
-        └── weights_hm3_no_hla
+example_data
+├── GWAS
+│   ├── GIANT_EUR_Height_2022_Nature.sumstats.gz
+│   ├── gwas_config.yaml
+│   ├── IQ_NG_2018.sumstats.gz
+│   └── PGC3_SCZ_wave3_public_INFO80.sumstats.gz
+└── ST
+    ├── Cortex_151507.h5ad
+    └── E16.5_E1S1.MOSTA.h5ad
+GPS_resource
+├── genome_annotation
+│   ├── enhancer
+│   └── gtf
+├── LD_Reference_Panel
+│   └── 1000G_EUR_Phase3_plink
+└── LDSC_resource
+    ├── hapmap3_snps
+    └── weights_hm3_no_hla
 
-11 directories, 1 file
-
+10 directories, 6 files
 ```
 
 
@@ -51,17 +55,17 @@ tree -L 3
 
 ```shell
 # Constants and configuration
-WORKDIR='./example/Human_Cortex' # This should be the directory where the GPS output will be saved
-SAMPLE_NAME="Cortex_151507" # This should be the name of the sample
+WORKDIR='./example/Mouse_Embryo' # This should be the directory where the GPS output will be saved
+SAMPLE_NAME="E16.5_E1S1" # This should be the name of the sample
 
 # Input data
-HDF5_PATH="example_data/ST/Cortex_151507.h5ad"
-ANNOTATION="layer_guess" # This should be the cell type annotation of each spot
+HDF5_PATH="example_data/ST/E16.5_E1S1.MOSTA.h5ad"
+ANNOTATION="annotation" # This should be the cell type annotation of each spot
 DATA_TYPE='count' # This should be the type of ST data, either 'count' or 'log1p'
 
 # Running Dependencies and Resources
 GTFFILE="GPS_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf"
-BRAIN_ENHANCER_FILE="GPS_resource/genome_annotation/enhancer/by_tissue/BRN/ABC_roadmap_merged.bed"
+ALL_ENHANCER_FILE="GPS_resource/genome_annotation/enhancer/by_tissue/ALL/ABC_roadmap_merged.bed"
 BFILE_ROOT="GPS_resource/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC"
 KEEP_SNP_ROOT="GPS_resource/LDSC_resource/hapmap3_snps/hm"
 W_FILE="GPS_resource/LDSC_resource/weights_hm3_no_hla/weights."
@@ -90,8 +94,8 @@ GPS run_find_latent_representations \
     --annotation $ANNOTATION \
     --type $DATA_TYPE
 ```
-
-### 2.2 latent_to_gene
+(latent_to_gene_mouse)=
+### 2.2 latent_to_gene (Mouse)
 
 **Objective**: Building on the latent representations, this step leverages the latent representations of the spot and its neighbors to generate gene marker scores.
 
@@ -114,7 +118,9 @@ GPS run_latent_to_gene \
     --num_neighbour 51 \
     --num_neighbour_spatial 201 \
     --annotation $ANNOTATION \
-    --type $DATA_TYPE
+    --type $DATA_TYPE \
+    --species MOUSE_GENE_SYM \
+    --gs_species "homologs/mouse_human_homologs.txt"
 ```
 
 
@@ -167,7 +173,7 @@ done
 
 When a SNP mapped to multiple enhancers, the gene specificity score of the SNP will be set by the `--snp_multiple_enhancer_strategy` parameter. The default value is `max_mkscore`, which means the gene specificity score of the SNP will be set to the maximum gene specificity score of the enhancers that the SNP mapped to. Possible choices: max_mkscore, nearest_TSS
 
-In this example we choose the brain tissue enhancer annotation file (`ENHANCER_ANNOTATION_FILE`).
+In this example we choose the all tissue enhancer annotation file (`ENHANCER_ANNOTATION_FILE`).
 
 **Execution**:
 
@@ -315,45 +321,40 @@ You will get a csv file with the aggregated P values for each region or cell typ
 
 `````{tab} Height
 
-| p_cauchy           | p_median           | annotation |
-|--------------------|--------------------|------------|
-| 2.20e-06           | 6.72e-04           | Layer1     |
-| 4.60e-02           | 2.80e-01           | Layer2     |
-| 8.64e-03           | 2.18e-01           | Layer3     |
-| 5.75e-03           | 2.05e-01           | Layer4     |
-| 5.92e-04           | 1.34e-01           | Layer5     |
-| 1.42e-02           | 1.34e-01           | Layer6     |
-| 1.95e-09           | 1.26e-04           | WM         |
-
+| annotation           | p_cauchy               | p_median            |
+|----------------------|------------------------|---------------------|
+| Adipose tissue       | 7.99e-15               | 1.11e-08            |
+| Adrenal gland        | 2.69e-13               | 2.20e-08            |
+| Bone                 | 0.0148                 | 0.0583              |
+| Brain                | 1.00                   | 0.999               |
+| Cartilage            | 5.49e-20               | 6.49e-09            |
+| ...                  | ...                    | ...                 |
 `````
 
 
 `````{tab} IQ
 
-| p_cauchy           | p_median            | annotation |
-|--------------------|---------------------|------------|
-| 1.00e+00           | 9.91e-01            | Layer1     |
-| 5.77e-15           | 3.00e-10            | Layer2     |
-| 2.09e-16           | 3.15e-07            | Layer3     |
-| 6.77e-10           | 5.26e-06            | Layer4     |
-| 3.33e-15           | 3.73e-08            | Layer5     |
-| 1.04e-12           | 1.70e-06            | Layer6     |
-| 1.00e+00           | 9.73e-01            | WM         |
+| annotation           | p_cauchy               | p_median            |
+|----------------------|------------------------|---------------------|
+| Adipose tissue       | 0.0277                 | 0.4878              |
+| Adrenal gland        | 0.0171                 | 0.1874              |
+| Bone                 | 0.9357                 | 0.4892              |
+| Brain                | 1.86e-19               | 1.60e-12            |
+| Cartilage            | 0.00016                | 0.1277              |
+| ...                  | ...                    | ...                 |
 
 `````
 
 `````{tab} SCZ
 
-
-| p_cauchy           | p_median           | annotation |
-|--------------------|--------------------|------------|
-| 1.00e+00           | 9.65e-01           | Layer1     |
-| 6.52e-23           | 3.39e-13           | Layer2     |
-| 6.85e-25           | 2.29e-11           | Layer3     |
-| 3.18e-18           | 1.97e-10           | Layer4     |
-| 4.22e-19           | 1.28e-09           | Layer5     |
-| 4.57e-17           | 5.11e-08           | Layer6     |
-| 1.00e+00           | 9.44e-01           | WM         |
+| annotation           | p_cauchy               | p_median            |
+|----------------------|------------------------|---------------------|
+| Adipose tissue       | 3.82e-05               | 0.04098             |
+| Adrenal gland        | 3.44e-06               | 0.00540             |
+| Bone                 | 0.9840                 | 0.5473              |
+| Brain                | 8.20e-21               | 7.06e-12            |
+| Cartilage            | 1.12e-06               | 0.02025             |
+| ...                  | ...                    | ...                 |
 
 
 `````

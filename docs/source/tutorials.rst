@@ -33,7 +33,7 @@ For the full dataset used in the paper, refer to the following documentation:
 Tutorials
 ---------------
 
-The GPS workflow is generally consistent across both datasets. However, for the Mouse Embryo ST data, homologs conversion is need in `latent_to_gene` step.
+The GPS workflow is generally same across both datasets. However, for the Mouse Embryo ST data, homologs conversion is need in :ref:`latent_to_gene (Mouse) <latent_to_gene_mouse>`.
 
 The tutorials for each dataset are provided in separate documents for detailed, step-by-step guidance:
 

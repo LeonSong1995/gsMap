@@ -5,28 +5,26 @@
 
 .. tab:: Height
 
-    .. chart:: charts/cortex/Cortex_151507_Height.json
+    .. chart:: charts/mouse_embryo/E16.5_E1S1_Height.json
 
-        Visualize the spatial heterogeneity of the height of the human cortex.
-
+        Visualize the spatial heterogeneity of the height of the mouse embryo at E16.5.
 
 
 .. tab:: IQ
 
-    .. chart:: charts/cortex/Cortex_151507_IQ.json
+    .. chart:: charts/mouse_embryo/E16.5_E1S1_IQ.json
 
-        Visualize the spatial heterogeneity of IQ in the human cortex.
+        Visualize the spatial heterogeneity of IQ in the mouse embryo at E16.5.
 
-    `Download IQ Data <example_data/GWAS/IQ_NG_2018.sumstats.gz>`_
 
     .. chart:: charts/cortex/test.json
 
 .. tab:: SCZ
 
-    .. chart:: charts/cortex/Cortex_151507_SCZ.json
+    .. chart:: charts/mouse_embryo/E16.5_E1S1_SCZ.json
 
 
-        Visualize the spatial heterogeneity of schizophrenia (SCZ) in the human cortex.
+        Visualize the spatial heterogeneity of schizophrenia (SCZ) in the mouse embryo at E16.5.
 
-    `Download SCZ Data <example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz>`_
+
 
