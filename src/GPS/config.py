@@ -162,9 +162,9 @@ def add_latent_to_gene_args(parser):
                         help='Number of neighbours to consider. Default is 21.')
     parser.add_argument('--num_neighbour_spatial', type=int, default=101,
                         help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
-    parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None, )
+    parser.add_argument('--species', type=str, default=None, help='Species name, which is the column name in the homolog gene conversion file.')
+    parser.add_argument('--gs_species', type=str, default=None, help='Homologous gene conversion file path, if applicable.')
+    parser.add_argument('--gM_slices', type=str, default=None, help='The mean Gene marker scores path across multiple slices.')
 
 
 def add_spatial_ldsc_args(parser):

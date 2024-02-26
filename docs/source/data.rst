@@ -30,7 +30,7 @@ You can download the necessary resources for running GPS from the following link
 .. note::
    These data are curated to ensure compatibility and ease of use. You can use your own reference panel and gene annotation data, but it is important to ensure that the data is compatible with the GPS pipeline.
 
-
+.. _download-example-data:
 
 Download Example Data
 -----------------------------------

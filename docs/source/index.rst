@@ -1,6 +1,7 @@
 Welcome to GPS's documentation!
 ===============================
 
+
 Introduction
 ------------
 
@@ -58,13 +59,12 @@ User could upload their own GWAS summary statistics data to perform the analysis
 For more details about the ``GPS`` algorithm, please check out our `publication <https://..>`__.
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+    :maxdepth: 2
+    :caption: Contents:
 
-   install
-   tutorials
-   data
-   release
-
-
+    install
+    tutorials
+    data
+    release
+    api
 
