@@ -39,6 +39,8 @@ To illustrate how to use GPS, we provide some example GWAS and ST data. You can 
 
 `GPS Example Data <http://cnsgenomics.com/data/GPS/GPS_example_data.tar.gz>`_
 
+.. _data-availability:
+
 Data Available
 ----------------
 .. list-table::

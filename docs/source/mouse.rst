@@ -1,4 +1,4 @@
-.. include:: cortex_example.md
+.. include:: mouse_example.md
    :parser: myst_parser.sphinx_
 
 
@@ -17,6 +17,7 @@
 
         Visualize the spatial heterogeneity of IQ in the human cortex.
 
+    `Download IQ Data <example_data/GWAS/IQ_NG_2018.sumstats.gz>`_
 
     .. chart:: charts/cortex/test.json
 
@@ -26,4 +27,6 @@
 
 
         Visualize the spatial heterogeneity of schizophrenia (SCZ) in the human cortex.
+
+    `Download SCZ Data <example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz>`_
 
