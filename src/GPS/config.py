@@ -216,7 +216,7 @@ def add_Visualization_args(parser):
     # Arguments with defaults
     parser.add_argument('--fig_title', type=str, default=None, help='Title of figure')
     parser.add_argument('--fig_height', type=float, default=6, help='Height of figure')
-    parser.add_argument('--fig_wdith', type=float, default=7, help='Width of figure')
+    parser.add_argument('--fig_width', type=float, default=7, help='Width of figure')
     parser.add_argument('--fig_dpi', type=float, default=300, help='Dpi of figure')
     parser.add_argument('--text_size', type=float, default=10, help='Text size of figure')
     parser.add_argument('--font_size', type=float, default=12, help='Title size of figure')
@@ -561,7 +561,7 @@ class VisualizeConfig:
 
     fig_title: str = None
     fig_height: float = 6
-    fig_wdith: float = 7
+    fig_width: float = 7
     fig_dpi: float = 300
     text_size: float = 10
     font_size: float = 12

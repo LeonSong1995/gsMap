@@ -89,7 +89,7 @@ def run_Visualize(config:VisualizeConfig):
               plt_pth=output_file,
               title=fig_title,
               height=config.fig_height,
-              wdith=config.fig_wdith,
+              wdith=config.fig_width,
               dpi=config.fig_dpi,
               text_size=config.text_size,
               font_size=config.font_size,
