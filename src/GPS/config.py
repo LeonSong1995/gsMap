@@ -47,10 +47,10 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
     parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
-
+    parser.add_argument('--type', default=None, type=str, help="The gene expression layer of the input data (e.g., 'count', 'counts', 'log1p').")
     parser.add_argument('--epochs', default=300, type=int,
                         help="Number of training epochs for the GNN-VAE model. Default is 300.")
+
     parser.add_argument('--feat_hidden1', default=256, type=int,
                         help="Number of neurons in the first hidden layer of the feature extraction network. Default is 256.")
     parser.add_argument('--feat_hidden2', default=128, type=int,
@@ -232,7 +232,7 @@ def add_all_mode_args(parser):
     # parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
     parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
+    parser.add_argument('--type', default=None, type=str, help="The gene expression layer of the input data (e.g., 'count', 'counts', 'log1p').")
 
     # latent_to_gene
     # input
@@ -256,9 +256,10 @@ def add_all_mode_args(parser):
                         help='Number of neighbours to consider. Default is 21.')
     parser.add_argument('--num_neighbour_spatial', type=int, default=101,
                         help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--species', type=str, default=None, help='Species name, if applicable.')
-    parser.add_argument('--gs_species', type=str, default=None, help='Gene species file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None, )
+    parser.add_argument('--species', type=str, default=None, help='Species name, which is the column name in the homolog gene conversion file.')
+    parser.add_argument('--gs_species', type=str, default=None, help='Homologous gene conversion file path, if applicable.')
+    parser.add_argument('--gM_slices', type=str, default=None, help='The mean Gene marker scores path across multiple slices.')
+
 
     # generate_ldscore
     # parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
