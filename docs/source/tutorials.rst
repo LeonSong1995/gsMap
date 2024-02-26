@@ -22,12 +22,11 @@ Datasets Used in the Tutorials
 
      1. Height - (https://www.nature.com/articles/s41586-022-05275-y)
      2. IQ - (https://www.nature.com/articles/s41588-018-0152-6)
-     3. Schizophrenia - (https://www.nature.com/articles/s41586-022-04434-5)
+     3. Mean Corpuscular Hemoglobin Concentration (MCHC) - (https://doi.org/10.1016/j.cell.2020.08.008)
 
 For the full dataset used in the paper, refer to the following documentation:
 
 - :ref:`data-availability`
-
 
 
 Tutorials

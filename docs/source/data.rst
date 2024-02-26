@@ -49,7 +49,7 @@ Data Available
    * - Category
      - Description
    * - GWAS Data
-     - - The 114 GWAS summary statistics used in the paper in in Supplementary Table.1
+     - - The 110 GWAS summary statistics used in the paper in in Supplementary Table.1
        - You could download the GWAS summary statistics from the GWAS catalog: `https://www.ebi.ac.uk/gwas/ <https://www.ebi.ac.uk/gwas/>`_
    * - ST Data
      - - Mouse embryo and brain ST datasets: `https://db.cngb.org/search/project/CNP0001543/ <https://db.cngb.org/search/project/CNP0001543/>`_

@@ -10,20 +10,15 @@
         Visualize the spatial heterogeneity of the height of the human cortex.
 
 
-
 .. tab:: IQ
 
     .. chart:: charts/cortex/Cortex_151507_IQ.json
 
         Visualize the spatial heterogeneity of IQ in the human cortex.
 
+.. tab:: MCHC
 
-    .. chart:: charts/cortex/test.json
+    .. chart:: charts/cortex/Cortex_151507_MCHC.json
 
-.. tab:: SCZ
-
-    .. chart:: charts/cortex/Cortex_151507_SCZ.json
-
-
-        Visualize the spatial heterogeneity of schizophrenia (SCZ) in the human cortex.
+        Visualize the spatial heterogeneity of MCHC in the human cortex.
 

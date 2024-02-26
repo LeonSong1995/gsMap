@@ -16,15 +16,11 @@
 
         Visualize the spatial heterogeneity of IQ in the mouse embryo at E16.5.
 
+.. tab:: MCHC
 
-    .. chart:: charts/cortex/test.json
-
-.. tab:: SCZ
-
-    .. chart:: charts/mouse_embryo/E16.5_E1S1_SCZ.json
+    .. chart:: charts/mouse_embryo/E16.5_E1S1_MCHC.json
 
 
-        Visualize the spatial heterogeneity of schizophrenia (SCZ) in the mouse embryo at E16.5.
-
+        Visualize the spatial heterogeneity of Mean Corpuscular Hemoglobin Concentration (MCHC) in the mouse embryo at E16.5.
 
 

@@ -32,6 +32,8 @@ dependencies = [
     "torch-geometric",
     "pyranges",
     "pyfiglet",
+    'plotly',
+    'kaleido',
 ]
 
 

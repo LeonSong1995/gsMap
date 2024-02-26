@@ -283,7 +283,7 @@ You could run multiple traits in batch by providing a YAML file with the `--sums
 ```yaml
 Height: example_data/GWAS/GIANT_EUR_Height_2022_Nature.sumstats.gz
 IQ: example_data/GWAS/IQ_NG_2018.sumstats.gz
-SCZ: example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
+MCHC: example_data/GWAS/BCX2_MCHC_EA_GWAMA.sumstats.gz
 ```
 
 ```shell
@@ -299,7 +299,10 @@ GPS run_spatial_ldsc \
 ```
 `````
 
-### 2.5 cauchy_combination (optional)
+
+## 3. Post-processing
+
+### 3.1 cauchy_combination (optional)
 
 **Objective**: Use the Cauchy Combination Test to aggregate P values of individual spots within specific spatial regions or cell types to evaluate the association of these regions with complex traits.
 
@@ -348,21 +351,33 @@ You will get a csv file with the aggregated P values for each region or cell typ
 
 `````
 
-`````{tab} SCZ
+`````{tab} MCHC
 
 
 | p_cauchy           | p_median           | annotation |
 |--------------------|--------------------|------------|
-| 1.00e+00           | 9.65e-01           | Layer1     |
-| 6.52e-23           | 3.39e-13           | Layer2     |
-| 6.85e-25           | 2.29e-11           | Layer3     |
-| 3.18e-18           | 1.97e-10           | Layer4     |
-| 4.22e-19           | 1.28e-09           | Layer5     |
-| 4.57e-17           | 5.11e-08           | Layer6     |
-| 1.00e+00           | 9.44e-01           | WM         |
+| 2.14e-04           | 0.0641             | Layer1     |
+| 0.0293             | 0.170              | Layer2     |
+| 0.00183            | 0.0422             | Layer3     |
+| 0.00105            | 0.0133             | Layer4     |
+| 0.000244           | 0.0158             | Layer5     |
+| 0.00064            | 0.0169             | Layer6     |
+| 3.54e-05           | 0.00696            | WM         |
 
 
 `````
 
+### 3.2 visualization
 
-## 3. Visualization
+```shell
+GPS run_visualize \
+    --input_hdf5_path $HDF5_PATH \
+    --input_ldsc_dir $LDSC_DIR \
+    --output_figure_dir $WORKDIR/$SAMPLE_NAME/figures \
+    --sample_name $SAMPLE_NAME \
+    --trait_name $TRAIT_NAME \
+    --fig_title $TRAIT_NAME \
+    --annotation $ANNOTATION \
+    --point_size 7
+    
+```

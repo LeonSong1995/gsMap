@@ -1,126 +1,149 @@
 import argparse
 from pathlib import Path
+from typing import Literal
 
 import scanpy as sc
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import matplotlib.colors as mcolors
-
+import plotly.express as px
 from GPS.config import VisualizeConfig, add_Visualization_args
 
-# The fun of visualization
-def visualize(space_coord,plt_pth,title,height,wdith,dpi,text_size,font_size,point_size,fig_facecolor,fig_style):
 
-    fig, ax = plt.subplots(figsize=(height,wdith),dpi=dpi)
-    
-    if(fig_style=='dark'):
-        facecolor = 'black'
-        text_color = 'white'
-    else:
-        facecolor = 'white'
-        text_color = 'black'
-    
-    # Set the background color to black
-    fig.set_facecolor(facecolor)
-    ax.set_facecolor(fig_facecolor)
-    
-    # Set the Pvalue color
-    custom_colors = ['#313695','#4575b4','#74add1','#abd9e9','#e0f3f8',
-                     '#fee090','#fdae61','#f46d43','#d73027','#a50026']
-    cmap_custom = mcolors.ListedColormap(custom_colors)
-
-    # Plot the results
-    scatter = plt.scatter(space_coord.sx, space_coord.sy, c = space_coord.logp, 
-                          cmap = cmap_custom,marker='.',edgecolor='none',lw=0, s=point_size)
-    
-    # Adjust the cbar
-    cbar = plt.colorbar(shrink=0.60,location = 'left')
-    cbar.set_label(r"$-\log_{10}({P-value})$",labelpad=2,size=text_size,color=text_color)
-    cbar.ax.tick_params(labelsize=text_size, colors=text_color)
-    
-    # Add labels and title
-    # plt.xlabel('Sx')
-    # plt.ylabel('Sy')
-    plt.title(title,fontsize = font_size,color=text_color)
-
-    # Remove other elements
-    ax.set_xticks([])
-    ax.set_yticks([])
-    ax.set_xticklabels([])
-    ax.set_yticklabels([])
-    ax.set_xlabel('')
-    ax.set_ylabel('')
-
-    # Save the plot
-    plt.savefig(plt_pth)
-    return 1
-
-def run_Visualize(config:VisualizeConfig):
-    # Load the ldsc results
-    print(f'------Loading LDSC results of {config.input_ldsc_dir}...')
-    ldsc_input_file= Path(config.input_ldsc_dir)/f'{config.sample_name}_{config.trait_name}.csv.gz'
+def load_ldsc(ldsc_input_file):
     ldsc = pd.read_csv(ldsc_input_file, compression='gzip')
     ldsc.spot = ldsc.spot.astype(str).replace('\.0', '', regex=True)
     ldsc.index = ldsc.spot
     ldsc['logp'] = -np.log10(ldsc.p)
+    return ldsc
 
-    # Load the ST data
+
+# %%
+def load_st_coord(adata, ldsc, annotation):
+    spot_name = adata.obs_names.to_list()
+    space_coord = pd.DataFrame(adata.obsm['spatial'], columns=['sx', 'sy'], index=spot_name)
+    space_coord = space_coord[space_coord.index.isin(ldsc.spot)]
+    space_coord_concat = pd.concat([space_coord.loc[ldsc.spot], ldsc.logp], axis=1)
+    space_coord_concat.head()
+    annotation = pd.Series(adata.obs[annotation].values, index=adata.obs_names, name='annotation')
+    space_coord_concat = pd.concat([space_coord_concat, annotation], axis=1)
+    return space_coord_concat
+
+
+# %%
+def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'light'] = 'light',
+                 point_size: int = None, symbol=None, width=800, height=600):
+    # change theme to plotly_white
+    if fig_style == 'dark':
+        px.defaults.template = "plotly_dark"
+    else:
+        px.defaults.template = "plotly_white"
+
+    custom_color_scale = [
+    (1, '#d73027'),  # Red
+    (7 / 8, '#f46d43'),  # Red-Orange
+    (6 / 8, '#fdae61'),  # Orange
+    (5 / 8, '#fee090'),  # Light Orange
+    (4 / 8, '#e0f3f8'),  # Light Blue
+    (3 / 8, '#abd9e9'),  # Sky Blue
+    (2 / 8, '#74add1'),  # Medium Blue
+    (1 / 8, '#4575b4'),  # Dark Blue
+    (0, '#313695')  # Deep Blue
+]
+    # custom_color_scale = px.colors.diverging.balance
+    custom_color_scale.reverse()
+    fig = px.scatter(
+        space_coord_concat,
+        x='sx',
+        y='sy',
+        color='logp',  # Color the points by the 'logp' column
+        symbol=symbol,
+        title=title,
+        color_continuous_scale=custom_color_scale,
+    )
+
+    if point_size is not None:
+        fig.update_traces(marker=dict(size=point_size))
+
+    fig.update_layout(legend_title_text='Annotation')
+
+    fig.update_layout(
+        autosize=False,
+        width=width,
+        height=height,
+    )
+
+    # Adjusting the legend
+    fig.update_layout(
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=-0.39,
+            font=dict(
+                size=10,
+            )
+        )
+    )
+    # change color bar title
+    fig.update_layout(coloraxis_colorbar_title='-log10(p)')
+
+    return fig
+
+def run_Visualize(config: VisualizeConfig):
+    print(f'------Loading LDSC results of {config.input_ldsc_dir}...')
+    ldsc = load_ldsc(ldsc_input_file=Path(config.input_ldsc_dir) / f'{config.sample_name}_{config.trait_name}.csv.gz')
+
     print(f'------Loading ST data of {config.sample_name}...')
     adata = sc.read_h5ad(f'{config.input_hdf5_path}')
 
-    # Process the ldsc results
-    spot_name = adata.obs_names.to_list()
-    space_coord = pd.DataFrame(adata.obsm['spatial'],columns=['sx','sy'],index=spot_name)
-    space_coord = space_coord[space_coord.index.isin(ldsc.spot)]
-    space_coord = pd.concat([space_coord.loc[ldsc.spot],ldsc.logp],axis=1)
+    space_coord_concat = load_st_coord(adata, ldsc, annotation=config.annotation)
+    fig = draw_scatter(space_coord_concat,
+                       title=config.fig_title,
+                       fig_style=config.fig_style,
+                       point_size=config.point_size,
+                       symbol='annotation',
+                       width=config.fig_width,
+                       height=config.fig_height
+    )
+
+    # save the figure to html
 
     # Visualization
     output_dir = Path(config.output_figure_dir)
     output_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
-    output_file = output_dir / f'{config.sample_name}_{config.trait_name}.png'
-    
-    if config.fig_title is None:
-        fig_title = config.trait_name
-    else:
-        fig_title = config.fig_title
+    output_file_html = output_dir / f'{config.sample_name}_{config.trait_name}.html'
+    output_file_pdf = output_dir / f'{config.sample_name}_{config.trait_name}.pdf'
 
-    visualize(space_coord,
-              plt_pth=output_file,
-              title=fig_title,
-              height=config.fig_height,
-              wdith=config.fig_width,
-              dpi=config.fig_dpi,
-              text_size=config.text_size,
-              font_size=config.font_size,
-              point_size=config.point_size,
-              fig_facecolor=config.fig_facecolor,
-              fig_style=config.fig_style)
-    
+    fig.write_html(str(output_file_html))
+    fig.write_image(str(output_file_pdf))
+
+    print(f'------The visualization result is saved in a html file: {output_file_html} which can interactively viewed in a web browser and a pdf file: {output_file_pdf}.')
 
 if __name__ == '__main__':
     TEST = True
     if TEST:
         test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
-        name = 'Cortex_151507'
+        name = 'E16.5_E1S1'
 
         config = VisualizeConfig(
-            input_hdf5_path= f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
-            input_ldsc_dir=
-            f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/ldsc/',
-            output_figure_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/cauchy/',
-            sample_name=name,
-            trait_name='adult1_adult2_onset_asthma',
-            fig_title='Adult Asthma',
-            fig_height=6,fig_wdith=7,fig_dpi=300,
-            text_size=10,font_size=12,point_size=1,
-            fig_facecolor='black',
-            fig_style='dark'
+            input_hdf5_path = f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
+            input_ldsc_dir =
+        f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/ldsc_enrichment_frac/E16.5_E1S1/',
+        output_figure_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/figure/',
+        sample_name = name,
+        trait_name = 'GIANT_EUR_Height_2022_Nature',
+        fig_title = 'GIANT_EUR_Height_2022_Nature',
+        fig_height = 800,
+        fig_width = 800,
+        fig_style = 'light',
+        point_size = 2,
+        annotation = 'annotation',
         )
+        run_Visualize(config)
     else:
         parser = argparse.ArgumentParser(description="Visualization the results")
         add_Visualization_args(parser)
         args = parser.parse_args()
         config = VisualizeConfig(**vars(args))
-        
-    run_Visualize(config)
+
+        run_Visualize(config)

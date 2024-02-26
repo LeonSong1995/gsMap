@@ -299,6 +299,10 @@ GPS run_spatial_ldsc \
 ```
 `````
 
+
+## 3. Post-processing
+
+
 ### 2.5 cauchy_combination (optional)
 
 **Objective**: Use the Cauchy Combination Test to aggregate P values of individual spots within specific spatial regions or cell types to evaluate the association of these regions with complex traits.
@@ -325,11 +329,12 @@ You will get a csv file with the aggregated P values for each region or cell typ
 |----------------------|------------------------|---------------------|
 | Adipose tissue       | 7.99e-15               | 1.11e-08            |
 | Adrenal gland        | 2.69e-13               | 2.20e-08            |
-| Bone                 | 0.0148                 | 0.0583              |
 | Brain                | 1.00                   | 0.999               |
 | Cartilage            | 5.49e-20               | 6.49e-09            |
+| Connective tissue    | 1.74e-16               | 6.94e-09            |
 | ...                  | ...                    | ...                 |
 `````
+
 
 
 `````{tab} IQ
@@ -338,26 +343,38 @@ You will get a csv file with the aggregated P values for each region or cell typ
 |----------------------|------------------------|---------------------|
 | Adipose tissue       | 0.0277                 | 0.4878              |
 | Adrenal gland        | 0.0171                 | 0.1874              |
-| Bone                 | 0.9357                 | 0.4892              |
 | Brain                | 1.86e-19               | 1.60e-12            |
 | Cartilage            | 0.00016                | 0.1277              |
+| Connective tissue    | 8.97e-05               | 0.201               |
 | ...                  | ...                    | ...                 |
 
 `````
 
-`````{tab} SCZ
+`````{tab} MCHC
 
 | annotation           | p_cauchy               | p_median            |
 |----------------------|------------------------|---------------------|
-| Adipose tissue       | 3.82e-05               | 0.04098             |
-| Adrenal gland        | 3.44e-06               | 0.00540             |
-| Bone                 | 0.9840                 | 0.5473              |
-| Brain                | 8.20e-21               | 7.06e-12            |
-| Cartilage            | 1.12e-06               | 0.02025             |
+| Adipose tissue       | 2.73e-08               | 0.0361              |
+| Adrenal gland        | 1.54e-06               | 4.85e-05            |
+| Brain                | 1.00                   | 1.00                |
+| Cartilage            | 0.00155                | 0.158               |
+| Connective tissue    | 4.11e-07               | 0.0143              |
 | ...                  | ...                    | ...                 |
 
 
 `````
 
+### 3.2 visualization
 
-## 3. Visualization
+```shell
+GPS run_visualize \
+    --input_hdf5_path $HDF5_PATH \
+    --input_ldsc_dir $LDSC_DIR \
+    --output_figure_dir $WORKDIR/$SAMPLE_NAME/figures \
+    --sample_name $SAMPLE_NAME \
+    --trait_name $TRAIT_NAME \
+    --fig_title $TRAIT_NAME \
+    --annotation $ANNOTATION \
+    --point_size 7
+    
+```

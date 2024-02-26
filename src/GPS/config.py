@@ -224,6 +224,22 @@ def add_Visualization_args(parser):
     parser.add_argument('--fig_facecolor', type=str, default='black', help='Facecolor of figure')
     parser.add_argument('--fig_style', type=str, default='dark', help='Plot style of figure')
 
+def add_Visualization_args(parser):
+    # Required arguments
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
+    parser.add_argument('--input_ldsc_dir', required=True, type=str, help='Directory containing LDSC results')
+    parser.add_argument('--output_figure_dir', required=True, type=str, help='Output directory for figures')
+    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample')
+    parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
+    parser.add_argument('--annotation', required=True, type=str, help='Annotation layer name')
+
+
+    # Arguments with defaults
+    parser.add_argument('--fig_title', type=str, default=None, help='Title of figure')
+    parser.add_argument('--fig_height', type=int, default=600, help='Height of figure in pixels')
+    parser.add_argument('--fig_width', type=int, default=800, help='Width of figure in pixels')
+    parser.add_argument('--point_size', type=int, default=None, help='Point size of figure')
+    parser.add_argument('--fig_style', type=str, default='light', choices=['dark', 'light'], help='Plot style of figure')
 
 def add_all_mode_args(parser):
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
@@ -558,16 +574,13 @@ class VisualizeConfig:
     output_figure_dir: str
     sample_name: str
     trait_name: str
+    annotation: str
 
     fig_title: str = None
-    fig_height: float = 6
-    fig_width: float = 7
-    fig_dpi: float = 300
-    text_size: float = 10
-    font_size: float = 12
-    point_size: float = 1
-    fig_facecolor: str = 'black'
-    fig_style: str = 'dark'
+    fig_height: int = 600
+    fig_width: int = 800
+    point_size: int = None
+    fig_style: Literal['dark', 'light'] = 'light'
 
 
 @dataclass
