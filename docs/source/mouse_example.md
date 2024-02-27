@@ -32,7 +32,7 @@ example_data
 │   ├── GIANT_EUR_Height_2022_Nature.sumstats.gz
 │   ├── gwas_config.yaml
 │   ├── IQ_NG_2018.sumstats.gz
-│   └── PGC3_SCZ_wave3_public_INFO80.sumstats.gz
+│   └── BCX2_MCHC_EA_GWAMA.sumstats.gz
 └── ST
     ├── Cortex_151507.h5ad
     └── E16.5_E1S1.MOSTA.h5ad
@@ -303,7 +303,7 @@ GPS run_spatial_ldsc \
 ## 3. Post-processing
 
 
-### 2.5 cauchy_combination (optional)
+### 3.1 cauchy_combination (optional)
 
 **Objective**: Use the Cauchy Combination Test to aggregate P values of individual spots within specific spatial regions or cell types to evaluate the association of these regions with complex traits.
 
@@ -365,6 +365,11 @@ You will get a csv file with the aggregated P values for each region or cell typ
 `````
 
 ### 3.2 visualization
+You could use below command to visualize the spatial LDSC results. You will get a scatter plot with the -log10(p-value) of each spot.
+
+**Output**
+- A pdf file.
+- A html file which could be opened in a web browser to interactively explore the spatial LDSC results.
 
 ```shell
 GPS run_visualize \
