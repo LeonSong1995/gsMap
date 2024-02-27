@@ -4,10 +4,10 @@ build-backend = "flit_core.buildapi"
 
 [project]
 name = "GPS-mapping"
-authors = [{name = "liyang", email = "songliyang@westlake.edu.cn"},
-             {name = "wenhao", email = "chenwenhao@westlake.edu.cn"}]
+authors = [{ name = "liyang", email = "songliyang@westlake.edu.cn" },
+    { name = "wenhao", email = "chenwenhao@westlake.edu.cn" }]
 readme = "README.md"
-license = {file = "LICENSE"}
+license = { file = "LICENSE" }
 requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -34,6 +34,30 @@ dependencies = [
     "pyfiglet",
     'plotly',
     'kaleido',
+]
+
+[project.optional-dependencies]
+doc = [
+    "sphinx",
+    'sphinx-argparse',
+    'sphinx-autobuild',
+    'sphinx-autodoc-typehints',
+    'sphinx-basic-ng',
+    'sphinx-charts',
+    'sphinx-copybutton',
+    'sphinx_inline_tabs',
+    'sphinx-markdown-tables',
+    'sphinx-rtd-theme',
+    'sphinxcontrib-applehelp',
+    'sphinxcontrib-devhelp',
+    'sphinxcontrib-htmlhelp',
+    'sphinxcontrib-jquery',
+    'sphinxcontrib-jsmath',
+    'sphinxcontrib-qthelp',
+    'sphinxcontrib-serializinghtml',
+    'furo',
+    'myst-parser',
+    'nbsphinx',
 ]
 
 

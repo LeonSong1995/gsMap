@@ -1,5 +1,5 @@
 Step 5: cauchy_combination (optional)
-==========================
+=====================================
 
 .. argparse::
    :module: GPS.main
