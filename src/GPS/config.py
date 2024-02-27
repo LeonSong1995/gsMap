@@ -602,7 +602,7 @@ def run_find_latent_representation_from_cli(args: argparse.Namespace):
 
 
 @register_cli(name='run_latent_to_gene',
-              description='Run Latent_to_gene \nFind gene marker gene scores for each spot by using latent representations from nearby spots',
+              description='Run Latent_to_gene \nEstimate gene marker gene scores for each spot by using latent representations from nearby spots',
               add_args_function=add_latent_to_gene_args)
 def run_latent_to_gene_from_cli(args: argparse.Namespace):
     from GPS.latent_to_gene import run_latent_to_gene

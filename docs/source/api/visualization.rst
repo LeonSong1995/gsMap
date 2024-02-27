@@ -1,4 +1,4 @@
-visualization
+Step 6: visualization
 =====================
 
 .. argparse::

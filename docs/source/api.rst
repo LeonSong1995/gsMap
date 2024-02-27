@@ -1,7 +1,7 @@
 .. _api-documentation:
 
-GPS Command Line Tool
-=====================
+GPS Command Line Alphabets
+===========================
 
 
 .. program:: GPS
@@ -40,7 +40,7 @@ Subcommands
 .. option:: run_latent_to_gene
 
     Run Latent_to_gene.
-    Find gene marker gene scores for each spot by using latent representations from nearby spots.
+    Estimate gene marker gene scores for each spot by using latent representations from nearby spots.
 
 .. option:: run_generate_ldscore
 

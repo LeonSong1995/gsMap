@@ -5,33 +5,34 @@ Welcome to GPS's documentation!
 Introduction
 ------------
 
-``GPS`` (Genetics-informed Pathogenic Spatial Mapping) is an innovative method which integrating genome-wide association studies (GWAS) data with spatial transcriptomics (ST) data, providing insights into the association of cellular spatial heterogeneity with diseases in the context of complex traits.
-
+``GPS`` (Genetics-informed Pathogenic Spatial Mapping) is introduced to integrate spatial transcriptomics (ST) data with summary statistics of genome-wide association studies (GWAS), aiming to identify complex trait (disease)-associated cells and map their spatial distributions.
 
 Key Features
 ------------
 
-- **GWAS and ST Data Integration**: Combines genetic and spatial gene expression data for comprehensive analysis.
-- **Deal with Technical Noise and Sparsity**: Addresses technical noise and gene expression sparsity in ST data by using GNN.
-- **High-Resolution Trait Mapping**: Single spot resolution trait mapping, providing insights into the association of cellular spatial heterogeneity with diseases.
-- **Therapeutic Potential**: Offers insights into the therapeutic potential of spatial regions by identifying the cell types and genes that are associated with complex traits.
+- **GWAS and ST Data Integration**: Combines trait--genetic variant association signals and spatial gene expression data for comprehensive analysis.
+- **Addressing Technical Noise and Sparsity**: Deals with technical noise and gene expression sparsity in ST data by using GNN.
+- **Spatially-aware High-Resolution Trait Mapping**: Maps trait-associated cells at a spatially resolved single-cell resolution, providing insights into their spatial organizations.
+- **Spatial Region Identification**: Aggregates trait-cell association statistics into spatial regions, prioritizing spatial-regions related to traits.
 
 Overview of ``GPS`` Method
 --------------------------
 
 ``GPS`` operates on a four-step process:
 
-1. **Gene Specificity Assessment in Spatial Contexts**: ``GPS`` begins by addressing technical noise and gene expression sparsity in ST data. It employs graph neuron networks (GNN) to aggregate gene expression information from neighboring spots, thus measuring the gene specificity of individual spots.
+1. **Gene Specificity Assessment in Spatial Contexts**: To address technical noise and capture spatial correlations of gene expression profiles in ST data, ``GPS`` leverages GNN to identify neighboring spots for each spot and estimates the gene specificity score by aggregating information from neighboring spots.
 
-2. **Linking SNPs to Gene Specificity**: The method then assigns gene specificity scores to single nucleotide polymorphisms (SNPs), based on their proximity to gene transcription start sites (TSS) and enhancer-gene linking maps. ``GPS`` utilizes stratified LD scores correlated with GWAS summary statistics to establish these associations.
+2. **Linking Gene Specificity to SNPs**: ``GPS`` assigns gene specificity scores to single nucleotide polymorphisms (SNPs), based on their proximity to gene transcription start sites (TSS) and SNP-to-gene epigenetic linking maps. Using SNP annotations from individual spots, ``GPS`` generates stratified linkage disequilibrium (LD) scores for each spot.
 
-3. **Spatial S-LDSC**: ``GPS`` uses the spatial S-LDSC method to identify spots that are associated with complex traits. This method uses the gene specificity scores of SNPs to calculate the association between individual spots and complex traits.
+3. **Spatial S-LDSC**: To estimate the relevance of spots to traits, ``GPS`` associates stratified LD scores of spots with GWAS summary statistics of traits using the framework of S-LDSC.
 
-4. **Spatial Region Significance Test**: Finally, ``GPS`` uses the Cauchy combination test to aggregate P values of individual spots within specific spatial regions. This step is critical in evaluating the association of specific spatial regions with complex traits.
+4. **Spatial Region Identification**: To evaluate the association of a specific spatial region with traits, ``GPS`` employs the Cauchy combination test to aggregate P values of individual spots within that spatial region.
 
 .. image:: _static/architecture.svg
    :width: 600
    :alt: Model architecture
+
+For more details about the ``GPS`` algorithm, please check out our `publication <URL>`__.
 
 Installation
 ------------
@@ -52,11 +53,13 @@ You could visit our `GPS website <https://gps.yanglab.westlake.edu.cn/>`__ to se
 
 Online Analysis Service
 +++++++++++++++++++++++
-Please check out our `GPS online application <https://gps.yanglab.westlake.edu.cn/>`__ for a user-friendly online analysis.
 
-User could upload their own GWAS summary statistics data to perform the analysis.
+Please check out our `GPS online application <not available yet>`__ for a user-friendly online analysis. Users could upload their own GWAS summary statistics data to perform the analysis.
 
-For more details about the ``GPS`` algorithm, please check out our `publication <https://..>`__.
+How to Cite
+-----------
+
+If you use ``GPS`` in your studies, please cite `[URL] <URL>`__.
 
 .. toctree::
     :maxdepth: 2
