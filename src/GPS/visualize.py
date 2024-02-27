@@ -59,6 +59,7 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
         symbol=symbol,
         title=title,
         color_continuous_scale=custom_color_scale,
+        range_color=[0, max(space_coord_concat.logp)],
     )
 
     if point_size is not None:
@@ -103,7 +104,7 @@ def run_Visualize(config: VisualizeConfig):
                        point_size=config.point_size,
                        symbol='annotation',
                        width=config.fig_width,
-                       height=config.fig_height
+                       height=config.fig_height,
     )
 
     # save the figure to html

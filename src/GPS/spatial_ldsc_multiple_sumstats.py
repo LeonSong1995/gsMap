@@ -83,7 +83,12 @@ def jackknife_for_processmap(spot_id):
     # run the jackknife
     x_focal = np.concatenate((spatial_annotation_spot,
                               baseline_annotation_spot), axis=1)
-    jknife = jk.LstsqJackknifeFast(x_focal, y, n_blocks)
+    try:
+        jknife = jk.LstsqJackknifeFast(x_focal, y, n_blocks)
+        # LinAlgError
+    except np.linalg.LinAlgError as e:
+        logger.warning(f'LinAlgError: {e}')
+        return np.nan, np.nan
     return _coef_new(jknife)
 
 
@@ -223,6 +228,12 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             out_chunk = pd.DataFrame.from_records(out_chunk,
                                                   columns=['beta', 'se', ],
                                                   index=spatial_annotation_cnames)
+            # get the spots with nan
+            nan_spots = out_chunk[out_chunk.isna().any(axis=1)].index
+            logger.info(f'Nan spots: {nan_spots} in chunk-{chunk_index} for {trait_name}. They are removed.')
+            # drop the nan
+            out_chunk = out_chunk.dropna()
+
             out_chunk['z'] = out_chunk.beta / out_chunk.se
             out_chunk['p'] = norm.sf(out_chunk['z'])
             output_dict[trait_name].append(out_chunk)
