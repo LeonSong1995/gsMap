@@ -205,24 +205,6 @@ def add_Cauchy_combination_args(parser):
     parser.add_argument('--slide', default=None, type=str, )
 
 
-def add_Visualization_args(parser):
-    # Required arguments
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
-    parser.add_argument('--input_ldsc_dir', required=True, type=str, help='Directory containing LDSC results')
-    parser.add_argument('--output_figure_dir', required=True, type=str, help='Output directory for figures')
-    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample')
-    parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
-
-    # Arguments with defaults
-    parser.add_argument('--fig_title', type=str, default=None, help='Title of figure')
-    parser.add_argument('--fig_height', type=float, default=6, help='Height of figure')
-    parser.add_argument('--fig_width', type=float, default=7, help='Width of figure')
-    parser.add_argument('--fig_dpi', type=float, default=300, help='Dpi of figure')
-    parser.add_argument('--text_size', type=float, default=10, help='Text size of figure')
-    parser.add_argument('--font_size', type=float, default=12, help='Title size of figure')
-    parser.add_argument('--point_size', type=float, default=1, help='Point size of figure')
-    parser.add_argument('--fig_facecolor', type=str, default='black', help='Facecolor of figure')
-    parser.add_argument('--fig_style', type=str, default='dark', help='Plot style of figure')
 
 def add_Visualization_args(parser):
     # Required arguments
@@ -231,7 +213,7 @@ def add_Visualization_args(parser):
     parser.add_argument('--output_figure_dir', required=True, type=str, help='Output directory for figures')
     parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample')
     parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
-    parser.add_argument('--annotation', required=True, type=str, help='Annotation layer name')
+    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
 
 
     # Arguments with defaults
@@ -574,8 +556,8 @@ class VisualizeConfig:
     output_figure_dir: str
     sample_name: str
     trait_name: str
-    annotation: str
 
+    annotation: str = None
     fig_title: str = None
     fig_height: int = 600
     fig_width: int = 800

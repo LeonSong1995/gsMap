@@ -50,7 +50,6 @@ GPS_resource
 ```
 
 
-
 ## 2. Run GPS
 
 ```shell
@@ -74,6 +73,7 @@ W_FILE="GPS_resource/LDSC_resource/weights_hm3_no_hla/weights."
 
 After setting up the constants and configuration, execute the following steps in order to run the GPS analysis on the human cortex data:
 
+(find_latent_representations_mouse)=
 ### 2.1 find_latent_representations
 
 **Objective**: This initial step is for addressing technical noise and sparsity in spatial transcriptomics data. By employing the GNN model, the GPS finds latent representations for each spot.
