@@ -331,6 +331,59 @@ def get_runall_mode_config(args: argparse.Namespace):
                             ldsc_config=ldsc_config, cauchy_config=cauchy_config)
 
 
+def add_format_sumstats_args(parser):
+    # Required arguments
+    parser.add_argument('--sumstats', required=True, type=str, 
+                        help='Path to gwas summary data')
+    parser.add_argument('--out', required=True, type=str, 
+                        help='Path to save the formatted gwas data')
+    
+    # Arguments for specify column name
+    parser.add_argument('--snp', default=None,type=str, 
+                        help="Name of snp column (if not a name that GPS understands)")
+    parser.add_argument('--a1', default=None,type=str,
+                        help="Name of effect allele column (if not a name that GPS understands)")
+    parser.add_argument('--a2', default=None,type=str,
+                        help="Name of none-effect allele column (if not a name that GPS understands)")
+    parser.add_argument('--info', default=None,type=str,
+                        help="Name of info column (if not a name that GPS understands)")
+    parser.add_argument('--beta', default=None,type=str,
+                        help="Name of gwas beta column (if not a name that GPS understands).")
+    parser.add_argument('--se', default=None,type=str,
+                        help="Name of gwas standar error of beta column (if not a name that GPS understands)")
+    parser.add_argument('--p', default=None,type=str,
+                        help="Name of p-value column (if not a name that GPS understands)")
+    parser.add_argument('--frq', default=None,type=str,
+                        help="Name of A1 ferquency column (if not a name that GPS understands)")
+    parser.add_argument('--n', default=None,type=str,
+                        help="Name of sample size column (if not a name that GPS understands)")
+    parser.add_argument('--z', default=None,type=str,
+                        help="Name of gwas Z-statistics column (if not a name that GPS understands)")
+    parser.add_argument('--OR', default=None,type=str,
+                        help="Name of gwas OR column (if not a name that GPS understands)")
+    parser.add_argument('--se_OR', default=None,type=str,
+                        help="Name of standar error of OR column (if not a name that GPS understands)")
+    
+    # Arguments for convert SNP (chr, pos) to rsid
+    parser.add_argument('--chr', default="Chr",type=str,
+                        help="Name of SNP chromosome column (if not a name that GPS understands)")
+    parser.add_argument('--pos', default="Pos",type=str,
+                        help="Name of SNP positions column (if not a name that GPS understands)")
+    parser.add_argument('--dbsnp', default=None,type=str,
+                        help='Path to reference dnsnp file')
+    parser.add_argument('--chunksize', default=1e+6,type=int,
+                        help='Chunk size for loading dbsnp file')
+    
+    # Arguments for output format and quality
+    parser.add_argument('--format',default='GPS', type=str, 
+                        help='Format of output data',choices=['GPS', 'COJO'])
+    parser.add_argument('--info_min', default=0.9,type=float,
+                        help='Minimum INFO score.')
+    parser.add_argument('--maf_min', default=0.01,type=float,
+                        help='Minimum MAF.')
+    parser.add_argument('--keep_chr_pos', action='store_true', default=False,
+                    help='Keep SNP chromosome and position columns in the output data')
+
 @dataclass
 class FindLatentRepresentationsConfig:
     input_hdf5_path: str
@@ -536,7 +589,7 @@ class SpatialLDSCConfig:
                         f'baseline.{chrom}.annot.gz is not found in {additional_baseline_annotation_dir_path}.')
 
 
-
+logger
 @dataclass
 class CauchyCombinationConfig:
     input_hdf5_path: str
@@ -572,6 +625,32 @@ class RunAllModeConfig:
     gls_config: GenerateLDScoreConfig
     ldsc_config: SpatialLDSCConfig
     cauchy_config: CauchyCombinationConfig
+
+
+@dataclass
+class FormatSumstatsConfig:
+    sumstats: str
+    out: str
+    dbsnp: str
+    snp: str = None
+    a1: str = None
+    a2: str = None
+    info: str = None
+    beta: str = None
+    se: str = None
+    p: str = None
+    frq: str = None
+    n: str = None
+    z: str = None
+    OR: str = None
+    se_OR: str = None
+    format: str = None
+    chr: str = None
+    pos: str = None
+    chunksize: int = 1e+7
+    info_min: float = 0.9
+    maf_min: float = 0.01
+    keep_chr_pos:bool = False
 
 
 @register_cli(name='run_find_latent_representations',
@@ -629,7 +708,7 @@ def run_Visualize_from_cli(args: argparse.Namespace):
 
 
 @register_cli(name='run_all_mode',
-              description='Run GPS Pipeline \nGSP Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order',
+              description='Run GPS method (the full process)',
               add_args_function=add_all_mode_args)
 def run_all_mode_from_cli(args: argparse.Namespace):
     from GPS.find_latent_representation import run_find_latent_representation
@@ -645,3 +724,11 @@ def run_all_mode_from_cli(args: argparse.Namespace):
     if args.annotation is not None:
         config.cauchy_config.annotation = args.annotation
         run_Cauchy_combination(config.cauchy_config)
+
+@register_cli(name='format_sumstats',
+              description='Format gwas summary statistics',
+              add_args_function=add_format_sumstats_args)
+def gwas_format_from_cli(args: argparse.Namespace):
+    from GPS.format_sumstats import gwas_format
+    config = get_dataclass_from_parser(args, FormatSumstatsConfig)
+    gwas_format(config)
