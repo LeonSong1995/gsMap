@@ -1,5 +1,7 @@
 GPS-mapping
 sphinx==5
+jinja2==3.0
+sphinx_autodoc_typehints
 markupsafe==2.0
 nbsphinx
 sphinx_gallery
