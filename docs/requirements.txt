@@ -1,4 +1,4 @@
-GPS
+GPS-mapping
 sphinx==5
 markupsafe==2.0
 nbsphinx
