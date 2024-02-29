@@ -1,2 +1,1 @@
-GPS-mapping
-GPS-mapping[doc]
+'GPS-mapping[doc]'
