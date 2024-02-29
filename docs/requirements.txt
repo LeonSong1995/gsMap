@@ -1,4 +1,6 @@
 GPS
+sphinx==5
+markupsafe==2.0
 nbsphinx
 sphinx_gallery
 sphinx_rtd_theme
