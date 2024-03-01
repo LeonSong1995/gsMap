@@ -1,0 +1,2 @@
+sphinx==6
+GPS-mapping[doc]
