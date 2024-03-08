@@ -102,8 +102,24 @@ def run_Cauchy_combination(config:CauchyCombinationConfig):
     p_median = []
     for ct in np.unique(ldsc.annotation):
         p_temp = ldsc.loc[ldsc['annotation'] == ct, 'p']
-        # Cauchy test is sensitive to very small p-values, so consider removing the minimum p-value for robustness
-        p_cauchy_temp = acat_test(p_temp[p_temp != np.min(p_temp)])
+        
+        # The Cauchy test is sensitive to very small p-values, so extreme outliers should be considered for removal...
+        # to enhance robustness, particularly in cases where spot annotations may be incorrect. 
+        # p_cauchy_temp = acat_test(p_temp[p_temp != np.min(p_temp)])
+        p_temp_log = -np.log10(p_temp)
+        median_log = np.median(p_temp_log)
+        IQR_log = np.percentile(p_temp_log, 75) - np.percentile(p_temp_log, 25)
+        
+        p_use = p_temp[p_temp_log < median_log + 3*IQR_log]
+        n_remove = len(p_temp) - len(p_use)
+        
+        # Outlier: -log10(p) < median + 3IQR && len(outlier set) < 20
+        if ( 0 < n_remove < 20):
+            print(f'Remove {n_remove}/{len(p_temp)} outliers (median + 3IQR) for {ct}.')
+            p_cauchy_temp = acat_test(p_use)
+        else:
+             p_cauchy_temp = acat_test(p_temp)
+                
         p_median_temp = np.median(p_temp)
 
         p_cauchy.append(p_cauchy_temp)
