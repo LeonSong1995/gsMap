@@ -114,7 +114,7 @@ def run_Cauchy_combination(config:CauchyCombinationConfig):
         n_remove = len(p_temp) - len(p_use)
         
         # Outlier: -log10(p) < median + 3IQR && len(outlier set) < 20
-        if ( 0 < n_remove < 20):
+        if (0 < n_remove < 20):
             print(f'Remove {n_remove}/{len(p_temp)} outliers (median + 3IQR) for {ct}.')
             p_cauchy_temp = acat_test(p_use)
         else:
