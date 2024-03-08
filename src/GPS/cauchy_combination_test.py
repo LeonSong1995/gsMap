@@ -102,7 +102,8 @@ def run_Cauchy_combination(config:CauchyCombinationConfig):
     p_median = []
     for ct in np.unique(ldsc.annotation):
         p_temp = ldsc.loc[ldsc['annotation'] == ct, 'p']
-        p_cauchy_temp = acat_test(p_temp)
+        # Cauchy test is sensitive to very small p-values, so consider removing the minimum p-value for robustness
+        p_cauchy_temp = acat_test(p_temp[p_temp != np.min(p_temp)])
         p_median_temp = np.median(p_temp)
 
         p_cauchy.append(p_cauchy_temp)
