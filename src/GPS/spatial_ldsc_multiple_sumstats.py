@@ -265,6 +265,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         out_file_name = out_dir / f'{sample_name}_{trait_name}.csv.gz'
         out_all['spot'] = out_all.index
         out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
+        out_all['logp'] = -np.log10(out_all.p)
         out_all = load_st_coord(adata, out_all, annotation=config.annotation)
         out_all.to_csv(out_file_name, compression='gzip', index=False)
         logger.info(f'Output saved to {out_file_name} for {trait_name}')
