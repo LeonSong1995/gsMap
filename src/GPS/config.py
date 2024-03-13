@@ -170,6 +170,9 @@ def add_latent_to_gene_args(parser):
 def add_spatial_ldsc_args(parser):
     # Group for GWAS input data
     parser.add_argument('--sample_name', required=True, help="Name of the spatial transcriptomic dataset.")
+    # additional args for GPS Web
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
+    parser.add_argument('--annotation', default=None, type=str, help='Annotation layer name')
 
     parser.add_argument('--sumstats_file', default=None, help="Path to GWAS summary statistics file.")
     parser.add_argument('--sumstats_config_file', default=None, help="Path to GWAS summary statistics config file.")
@@ -186,9 +189,6 @@ def add_spatial_ldsc_args(parser):
     parser.add_argument('--disable_additional_baseline_annotation', action='store_true', default=False,)
     parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
 
-    # additional args for GPS Web
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
-    parser.add_argument('--annotation', required=True, type=str, help='Annotation layer name')
 
     return parser
 
@@ -514,6 +514,8 @@ class GenerateLDScoreConfig:
 @dataclass
 class SpatialLDSCConfig:
     sample_name: str
+    input_hdf5_path: str
+    annotation: str = None
     w_file: str
     ldscore_input_dir: str
     ldsc_save_dir: str
@@ -526,8 +528,6 @@ class SpatialLDSCConfig:
     n_blocks: int = 200
     chisq_max: int = None
     all_chunk: int = None
-    input_hdf5_path: str
-    annotation: str = None
 
     def __post_init__(self):
         if self.sumstats_file is None and self.sumstats_config_file is None:
