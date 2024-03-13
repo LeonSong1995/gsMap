@@ -515,7 +515,6 @@ class GenerateLDScoreConfig:
 class SpatialLDSCConfig:
     sample_name: str
     input_hdf5_path: str
-    annotation: str = None
     w_file: str
     ldscore_input_dir: str
     ldsc_save_dir: str
@@ -528,7 +527,8 @@ class SpatialLDSCConfig:
     n_blocks: int = 200
     chisq_max: int = None
     all_chunk: int = None
-
+    annotation: str = None
+    
     def __post_init__(self):
         if self.sumstats_file is None and self.sumstats_config_file is None:
             raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
