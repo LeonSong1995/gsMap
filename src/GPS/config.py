@@ -184,8 +184,11 @@ def add_spatial_ldsc_args(parser):
 
     # if use additional baseline annotation
     parser.add_argument('--disable_additional_baseline_annotation', action='store_true', default=False,)
-
     parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
+
+    # additional args for GPS Web
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
+    parser.add_argument('--annotation', required=True, type=str, help='Annotation layer name')
 
     return parser
 
@@ -523,6 +526,8 @@ class SpatialLDSCConfig:
     n_blocks: int = 200
     chisq_max: int = None
     all_chunk: int = None
+    input_hdf5_path: str
+    annotation: str = None
 
     def __post_init__(self):
         if self.sumstats_file is None and self.sumstats_config_file is None:

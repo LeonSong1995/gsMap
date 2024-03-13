@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import pandas as pd
+import scanpy as sc
 
 import argparse
 import logging
@@ -16,6 +17,18 @@ from GPS.config import add_spatial_ldsc_args, SpatialLDSCConfig
 from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2, _read_M_v2
 
 logger = logging.getLogger(__name__)
+
+
+def load_st_coord(adata, ldsc, annotation):
+    spot_name = adata.obs_names.to_list()
+    space_coord = pd.DataFrame(adata.obsm['spatial'], columns=['sx', 'sy'], index=spot_name)
+    space_coord = space_coord[space_coord.index.isin(ldsc.spot)]
+    space_coord_concat = pd.concat([space_coord.loc[ldsc.spot], ldsc.logp], axis=1)
+    space_coord_concat.head()
+    if annotation is not None:
+        annotation = pd.Series(adata.obs[annotation].values, index=adata.obs_names, name='annotation')
+        space_coord_concat = pd.concat([space_coord_concat, annotation], axis=1)
+    return space_coord_concat
 
 
 # %%
@@ -241,6 +254,9 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             # garbage collection
             del spatial_annotation
 
+    # Load the spe data
+    adata = sc.read_h5ad(f'{config.input_hdf5_path}')
+    
     # Save the results
     out_dir = Path(config.ldsc_save_dir)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
@@ -249,6 +265,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         out_file_name = out_dir / f'{sample_name}_{trait_name}.csv.gz'
         out_all['spot'] = out_all.index
         out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
+        out_all = load_st_coord(adata, out_all, annotation=config.annotation)
         out_all.to_csv(out_file_name, compression='gzip', index=False)
         logger.info(f'Output saved to {out_file_name} for {trait_name}')
     logger.info(f'------Spatial LDSC for {sample_name} finished!')
