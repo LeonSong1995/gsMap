@@ -23,7 +23,7 @@ def load_st_coord(adata, ldsc, annotation):
     spot_name = adata.obs_names.to_list()
     space_coord = pd.DataFrame(adata.obsm['spatial'], columns=['sx', 'sy'], index=spot_name)
     space_coord = space_coord[space_coord.index.isin(ldsc.spot)]
-    space_coord_concat = pd.concat([space_coord.loc[ldsc.spot], ldsc.logp], axis=1)
+    space_coord_concat = pd.concat([space_coord.loc[ldsc.spot], ldsc.logp,ldsc.spot], axis=1)
     space_coord_concat.head()
     if annotation is not None:
         annotation = pd.Series(adata.obs[annotation].values, index=adata.obs_names, name='annotation')
