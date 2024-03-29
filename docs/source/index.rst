@@ -5,7 +5,7 @@ Welcome to gsMap's documentation!
 Introduction
 ------------
 
-``gsMap`` (Genetics-informed Pathogenic Spatial Mapping) is introduced to integrate spatial transcriptomics (ST) data with summary statistics of genome-wide association studies (GWAS), aiming to identify complex trait (disease)-associated cells and map their spatial distributions.
+``gsMap`` (genetically informed spatial mapping of cells for complex traits) is introduced to integrate spatial transcriptomics (ST) data with summary statistics of genome-wide association studies (GWAS), aiming to identify complex trait (disease)-associated cells and map their spatial distributions.
 
 Key Features
 ------------

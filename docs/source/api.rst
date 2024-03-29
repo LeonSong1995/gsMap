@@ -4,19 +4,19 @@ gsMap Command Line Alphabets
 ===========================
 
 
-.. program:: gsMap
+.. program:: gsmap
 
 Synopsis
 --------
 
 .. code-block:: shell
 
-    usage: gsMap [-h] [--version] {run_find_latent_representations,run_latent_to_gene,run_generate_ldscore,run_spatial_ldsc,run_cauchy_combination,run_visualize,run_all_mode} ...
+    usage: gsmap [-h] [--version] {run_find_latent_representations,run_latent_to_gene,run_generate_ldscore,run_spatial_ldsc,run_cauchy_combination,run_visualize,run_all_mode} ...
 
 Description
 -----------
 
-gsMap: Genetics-informed pathogenic spatial mapping.
+gsmap: genetically informed spatial mapping of cells for complex traits.
 
 Options
 -------
