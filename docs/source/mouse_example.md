@@ -3,11 +3,11 @@
 
 ## Preparation
 
-Please do not forget to [install](install) the GPS package before you start.
+Please do not forget to [install](install) the gsMap package before you start.
 
 ### 1. Download dependencies
 
-GPS requires reference files, which include:
+gsMap requires reference files, which include:
 - **Gene transfer format (GTF) file**, to provide gene coordinates on the genome.
 - **LD reference panel (PLINK bfile)**, to compute LD scores.
 - **SNP weight file**, to ameliorate correlations between SNP association statistics.
@@ -16,14 +16,14 @@ GPS requires reference files, which include:
 
 We've packaged these resources, and you can download them as follows:
 ```bash
-wget http://cnsgenomics.com/data/GPS/GPS_running_dependencies.tar.gz
-tar -xvzf GPS_running_dependencies.tar.gz
+wget http://cnsgenomics.com/data/gsMap/gsMap_running_dependencies.tar.gz
+tar -xvzf gsMap_running_dependencies.tar.gz
 ```
 The directory structure should be looks like this:
 ```bash
 tree -L 2
 
-GPS_resource
+gsMap_resource
 ├── genome_annotation
 │   ├── enhancer
 │   └── gtf
@@ -41,8 +41,8 @@ If you want to use your own reference files, please ensure that the versions of 
 You can download the example data used in this tutorial as follows:
 
 ```bash
-wget http://cnsgenomics.com/data/GPS/GPS_example_data.tar.gz
-tar -xvzf GPS_example_data.tar.gz
+wget http://cnsgenomics.com/data/gsMap/gsMap_example_data.tar.gz
+tar -xvzf gsMap_example_data.tar.gz
 ```
 
 The directory structure should be looks like this:
@@ -60,11 +60,11 @@ example_data
 ```
 
 
-## Run GPS
+## Run gsMap
 First, let us set up the working directory, the input data, and the output files.
 ```shell
 # Constants and configuration
-WORKDIR='./example/Mouse_Embryo' # The directory where the GPS output will be saved
+WORKDIR='./example/Mouse_Embryo' # The directory where the gsMap output will be saved
 SAMPLE_NAME="E16.5_E1S1.MOSTA" # The sample name of ST data
 
 # Input data
@@ -73,17 +73,17 @@ ANNOTATION="annotation" # The column names where spot annotations are stored
 DATA_TYPE='counts' # The layer of the gene expression matrix that is being used
 
 # Running Dependencies and Resources
-GTFFILE="GPS_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf" # The GTF file
-ALL_ENHANCER_FILE="GPS_resource/genome_annotation/enhancer/by_tissue/ALL/ABC_roadmap_merged.bed" # The enhancer-gene mapping file
-BFILE_ROOT="GPS_resource/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC" # The LD reference panel
-KEEP_SNP_ROOT="GPS_resource/LDSC_resource/hapmap3_snps/hm" # Only use the hapmap3 snps
-W_FILE="GPS_resource/LDSC_resource/weights_hm3_no_hla/weights." # The SNP regression weight file
+GTFFILE="gsMap_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf" # The GTF file
+ALL_ENHANCER_FILE="gsMap_resource/genome_annotation/enhancer/by_tissue/ALL/ABC_roadmap_merged.bed" # The enhancer-gene mapping file
+BFILE_ROOT="gsMap_resource/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC" # The LD reference panel
+KEEP_SNP_ROOT="gsMap_resource/LDSC_resource/hapmap3_snps/hm" # Only use the hapmap3 snps
+W_FILE="gsMap_resource/LDSC_resource/weights_hm3_no_hla/weights." # The SNP regression weight file
 ```
 
 (find_latent_representations_mouse)=
 ### 1. find_latent_representations
 
-**Objective**: This step addresses technical noise and models spatial correlations of gene expression profiles in ST data. By employing the GNN model, GPS finds latent representations for each spot.
+**Objective**: This step addresses technical noise and models spatial correlations of gene expression profiles in ST data. By employing the GNN model, gsMap finds latent representations for each spot.
 
 
 **Input**: 
@@ -94,7 +94,7 @@ W_FILE="GPS_resource/LDSC_resource/weights_hm3_no_hla/weights." # The SNP regres
 **Execution**:
 ```shell
 HDF5_WITH_LATENT_PATH="$WORKDIR/$SAMPLE_NAME/find_latent_representations/${SAMPLE_NAME}_add_latent.h5ad"
-GPS run_find_latent_representations \
+gsMap run_find_latent_representations \
     --input_hdf5_path $HDF5_PATH \
     --sample_name $SAMPLE_NAME \
     --output_hdf5_path $HDF5_OUTPUT \
@@ -116,7 +116,7 @@ GPS run_find_latent_representations \
 **Execution**:
 ```shell
 MKSCORE_FEATHER_PATH="$WORKDIR/$SAMPLE_NAME/latent_to_gene/${SAMPLE_NAME}_gene_marker_score.feather"
-GPS run_latent_to_gene \
+gsMap run_latent_to_gene \
     --input_hdf5_with_latent_path $HDF5_WITH_LATENT_PATH \
     --sample_name $SAMPLE_NAME \
     --output_feather_path $MKSCORE_FEATHER_PATH \
@@ -132,7 +132,7 @@ GPS run_latent_to_gene \
 
 ### 3. generate_ldscore
 
-**Objective**: By using the gene marker scores from the previous step, GPS assigns a gene specificity score to SNPs by referencing the GTF data. Specifically, SNPs are mapped to genes based on their distances to the transcription start site (TSS) and, optionally, SNP-to-gene epigenetic linking maps. GPS then uses the specificity scores of SNPs to generate stratified LD scores (S-LD score) for each spot in the ST data.
+**Objective**: By using the gene marker scores from the previous step, gsMap assigns a gene specificity score to SNPs by referencing the GTF data. Specifically, SNPs are mapped to genes based on their distances to the transcription start site (TSS) and, optionally, SNP-to-gene epigenetic linking maps. gsMap then uses the specificity scores of SNPs to generate stratified LD scores (S-LD score) for each spot in the ST data.
 
 
 **Input**:
@@ -160,7 +160,7 @@ If a SNP is within the gene window, it will be assigned the gene specificity sco
 ```shell
 LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
 for CHROM in {1..22}; do
-    GPS run_generate_ldscore \
+    gsMap run_generate_ldscore \
         --sample_name $SAMPLE_NAME \
         --chrom $CHROM \
         --ldscore_save_dir $LDScoreDir \
@@ -188,7 +188,7 @@ In this example we choose the all tissue enhancer annotation file (`ENHANCER_ANN
 ```shell
 LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
 for CHROM in {1..22}; do
-    GPS run_generate_ldscore \
+    gsMap run_generate_ldscore \
         --sample_name $SAMPLE_NAME \
         --chrom $CHROM \
         --ldscore_save_dir $LDScoreDir \
@@ -218,7 +218,7 @@ This will use both the TSS and enhancer-gene linking to map SNPs to genes. In ca
 ```shell
 LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
 for CHROM in {1..22}; do
-    GPS run_generate_ldscore \
+    gsMap run_generate_ldscore \
         --sample_name $SAMPLE_NAME \
         --chrom $CHROM \
         --ldscore_save_dir $LDScoreDir \
@@ -267,7 +267,7 @@ LDSC_DIR="$WORKDIR/$SAMPLE_NAME/spatial_ldsc"
 SUMSTATS_FILE="example_data/GWAS/IQ_NG_2018.sumstats.gz"
 TRAIT_NAME="IQ"
 
-GPS run_spatial_ldsc \
+gsMap run_spatial_ldsc \
     --sumstats_file $SUMSTATS_FILE \
     --trait_name $TRAIT_NAME \
     --w_file $W_FILE \
@@ -294,7 +294,7 @@ SCZ: example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
 ```shell
 LDSC_DIR="$WORKDIR/$SAMPLE_NAME/spatial_ldsc"
 SUMSTATS_CONFIG_FILE="example_data/GWAS/gwas_config.yaml"
-GPS run_spatial_ldsc \
+gsMap run_spatial_ldsc \
     --w_file $W_FILE \
     --sample_name $SAMPLE_NAME \
     --num_processes 4 \
@@ -314,7 +314,7 @@ GPS run_spatial_ldsc \
 ```shell
 CAUCHY_SAVE_DIR="$WORKDIR/$SAMPLE_NAME/cauchy_combination"
 TRAIT_NAME="IQ"
-GPS run_cauchy_combination \
+gsMap run_cauchy_combination \
     --input_hdf5_path $HDF5_PATH \
     --input_ldsc_dir $LDSC_DIR \
     --sample_name $SAMPLE_NAME \
@@ -367,16 +367,16 @@ You will get a csv file showing the association P values for spatial each region
 `````
 ### 6. visualization
 
-**Objective**: Visualize the results of GPS.
+**Objective**: Visualize the results of gsMap.
 
-You could use below command to visualize the GPS results. You will get a scatter plot with the -log10(p-value) of each spot.
+You could use below command to visualize the gsMap results. You will get a scatter plot with the -log10(p-value) of each spot.
 
 **Output**
 - A pdf file.
 - A html file which could be opened in a web browser to interactively explore the results.
 
 ```shell
-GPS run_visualize \
+gsMap run_visualize \
     --input_hdf5_path $HDF5_PATH \
     --input_ldsc_dir $LDSC_DIR \
     --output_figure_dir $WORKDIR/$SAMPLE_NAME/figures \

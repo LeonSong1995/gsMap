@@ -9,9 +9,9 @@ import pyranges as pr
 from scipy.sparse import csr_matrix
 from tqdm import trange
 
-from GPS.config import GenerateLDScoreConfig, add_generate_ldscore_args
+from gsMap.config import GenerateLDScoreConfig, add_generate_ldscore_args
 # %%
-from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
+from gsMap.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -517,15 +517,15 @@ if __name__ == '__main__':
         # %%
         sample_name = 'Cortex_151507'
         chrom = 'all'
-        save_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse'
+        save_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse'
         # %%
         gtf_file = '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf'
-        mkscore_feather_file = f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/{sample_name}/gene_markers/{sample_name}_rank.feather'
+        mkscore_feather_file = f'/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/{sample_name}/gene_markers/{sample_name}_rank.feather'
         bfile_root = '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC'
         window_size = 50000
         keep_snp_root = '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm'
         spots_per_chunk = 10_000
-        enhancer_annotation = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/epigenome/cleaned_data/by_tissue/BRN/ABC_roadmap_merged.bed'
+        enhancer_annotation = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/resource/epigenome/cleaned_data/by_tissue/BRN/ABC_roadmap_merged.bed'
         # %%
         config = GenerateLDScoreConfig(
             sample_name=sample_name,
@@ -539,7 +539,7 @@ if __name__ == '__main__':
             spots_per_chunk=spots_per_chunk,
             enhancer_annotation_file=enhancer_annotation,
             gene_window_enhancer_priority='enhancer_first',
-            additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'
+            additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/resource/ldsc/baseline_v1.2/remove_base'
         )
         # %%
         run_generate_ldscore(config)

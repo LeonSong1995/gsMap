@@ -11,9 +11,9 @@ import scanpy as sc
 import torch
 from sklearn import preprocessing
 
-from GPS.GNN_VAE.adjacency_matrix import Construct_Adjacency_Matrix
-from GPS.GNN_VAE.train import Model_Train
-from GPS.config import add_find_latent_representations_args, FindLatentRepresentationsConfig
+from gsMap.GNN_VAE.adjacency_matrix import Construct_Adjacency_Matrix
+from gsMap.GNN_VAE.train import Model_Train
+from gsMap.config import add_find_latent_representations_args, FindLatentRepresentationsConfig
 
 # seed all
 
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     add_find_latent_representations_args(parser)
     TEST=True
     if TEST:
-        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
+        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021'
         name = 'Cortex_151507'
 
 

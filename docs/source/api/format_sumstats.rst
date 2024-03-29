@@ -1,7 +1,7 @@
 format_sumstats (optional)
 ==================================
 .. argparse::
-   :module: GPS.main
+   :module: gsMap.main
    :func: create_parser
-   :prog: GPS
+   :prog: gsMap
    :path: format_sumstats

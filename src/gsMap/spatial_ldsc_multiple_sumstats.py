@@ -11,9 +11,9 @@ from pathlib import Path
 from scipy.stats import norm
 from tqdm.contrib.concurrent import process_map
 
-import GPS.jackknife as jk
-from GPS.config import add_spatial_ldsc_args, SpatialLDSCConfig
-from GPS.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2, _read_M_v2
+import gsMap.jackknife as jk
+from gsMap.config import add_spatial_ldsc_args, SpatialLDSCConfig
+from gsMap.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2, _read_M_v2
 
 logger = logging.getLogger(__name__)
 
@@ -270,8 +270,8 @@ if __name__ == '__main__':
         name = 'Cortex_151507'
         spe_name = name
         # ld_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{spe_name}/snp_annotation"
-        ld_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/{name}/generate_ldscore"
-        out_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/{name}/ldsc"
+        ld_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/snake_workdir/{name}/generate_ldscore"
+        out_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/snake_workdir/{name}/ldsc"
         gwas_file = "ADULT1_ADULT2_ONSET_ASTHMA"
         # Prepare the arguments list using f-strings
         args_list = [
@@ -287,7 +287,7 @@ if __name__ == '__main__':
     else:
         args = parser.parse_args()
 
-    os.chdir('/storage/yangjianLab/chenwenhao/tmp/GPS_Height_debug')
+    os.chdir('/storage/yangjianLab/chenwenhao/tmp/gsMap_Height_debug')
     TASK_ID = 16
     spe_name = f'E{TASK_ID}.5_E1S1'
     config = SpatialLDSCConfig(**{'all_chunk': None,
@@ -300,7 +300,7 @@ if __name__ == '__main__':
                                   'num_processes': 15,
                                   'sample_name': spe_name,
                                   # 'trait_name': 'GIANT_EUR_Height_2022_Nature',
-                                  'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
+                                  'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/src/gsMap/example/sumstats_config_sub.yaml',
                                   'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
                                   })
     # config = SpatialLDSCConfig(**vars(args))

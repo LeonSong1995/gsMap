@@ -3,7 +3,7 @@ requires = ["flit_core >=3.2,<4"]
 build-backend = "flit_core.buildapi"
 
 [project]
-name = "GPS-mapping"
+name = "gsMap"
 authors = [{ name = "liyang", email = "songliyang@westlake.edu.cn" },
     { name = "wenhao", email = "chenwenhao@westlake.edu.cn" }]
 readme = "README.md"
@@ -62,12 +62,12 @@ doc = [
 
 
 [project.urls]
-Home = "https://github.com/LeonSong1995/GPS"
+Home = "https://github.com/LeonSong1995/gsMap"
 Documentation = "https://..."
 Website = "https://..."
 
 [project.scripts]
-GPS = "GPS.main:main"
+gsMap = "gsMap.main:main"
 
 [tool.flit.module]
-name = "GPS"
+name = "gsMap"

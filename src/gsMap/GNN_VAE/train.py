@@ -10,7 +10,7 @@ import time
 import torch
 from progress.bar import Bar
 
-from GPS.GNN_VAE.model import GNN_VAE_Model
+from gsMap.GNN_VAE.model import GNN_VAE_Model
 
 
 def reconstruction_loss(decoded, x):

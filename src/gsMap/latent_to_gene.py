@@ -14,7 +14,7 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 
-from GPS.config import add_latent_to_gene_args, LatentToGeneConfig
+from gsMap.config import add_latent_to_gene_args, LatentToGeneConfig
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -214,7 +214,7 @@ if __name__ == '__main__':
     TEST = True
     if TEST:
         name = 'Cortex_151507'
-        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
+        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021'
 
         args = parser.parse_args([
             '--input_hdf5_with_latent_path', f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
@@ -234,12 +234,12 @@ if __name__ == '__main__':
         #        'fold': 1.0,
         #        'gM_slices': None,
         #        'gs_species': '/storage/yangjianLab/songliyang/SpatialData/homologs/macaque_human_homologs.txt',
-        #        'input_hdf5_with_latent_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/find_latent_representations/T121_macaque1_add_latent.h5ad',
+        #        'input_hdf5_with_latent_path': '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/macaque/T121_macaque1/find_latent_representations/T121_macaque1_add_latent.h5ad',
         #        'latent_representation': 'latent_GVAE',
         #        'method': 'rank',
         #        'num_neighbour': 51,
         #        'num_neighbour_spatial': 201,
-        #        'output_feather_path': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/macaque/T121_macaque1/latent_to_gene/T121_macaque1_gene_marker_score.feather',
+        #        'output_feather_path': '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/macaque/T121_macaque1/latent_to_gene/T121_macaque1_gene_marker_score.feather',
         #        'pst': 0.2,
         #        'sample_name': 'T121_macaque1',
         #        'species': 'MACAQUE_GENE_SYM',

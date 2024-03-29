@@ -13,7 +13,7 @@ adata = sc.read_h5ad(f'{HDF5_PATH}')
 
 ####  gene expression matrix
 The gene expression matrix should be stored in the `layers` attribute of the h5ad file.  
-The parameter `Type` of the `find_latent_representations` specifies which data layer to use. If you set `Type` to `counts`, GPS will use the gene count matrix and automatically normalize it. If `Type` is set to another value, GPS will use the data provided in the corresponding layer without any normalization.
+The parameter `Type` of the `find_latent_representations` specifies which data layer to use. If you set `Type` to `counts`, gsMap will use the gene count matrix and automatically normalize it. If `Type` is set to another value, gsMap will use the data provided in the corresponding layer without any normalization.
 
 ```python
 >>> adata.layers['counts']
@@ -53,7 +53,7 @@ Name: annotation, dtype: int64
 
 
 ## GWAS Data
-The input GWAS data is in a gzip text file, which should, at least, include SNP (rs number), Z (Z-statistics), and N (sample size). Columns A1 and A2 represent the effect allele and non-effect allele, respectively, but they are not necessary. The column orders can be customized, but headers are keywords and will be used by GPS.
+The input GWAS data is in a gzip text file, which should, at least, include SNP (rs number), Z (Z-statistics), and N (sample size). Columns A1 and A2 represent the effect allele and non-effect allele, respectively, but they are not necessary. The column orders can be customized, but headers are keywords and will be used by gsMap.
 ```shell
 zcat example_data/GWAS/IQ_NG_2018.sumstats.gz | head -n 5
 
@@ -65,7 +65,7 @@ rs116801199	T	G	0.300	226626
 ```
 
 ####  Tips for formatting the GWAS data
-You can convert the GWAS summary data into the required format using customized code. For ease of use, we've provided a command in GPS to do this. We'll demonstrate how to use this command with the human height GWAS data as an example.  
+You can convert the GWAS summary data into the required format using customized code. For ease of use, we've provided a command in gsMap to do this. We'll demonstrate how to use this command with the human height GWAS data as an example.  
 
 First, download the human height GWAS data and decompress it.
 ```bash
@@ -85,7 +85,7 @@ SNPID	RSID	CHR	POS	EFFECT_ALLELE	OTHER_ALLELE	EFFECT_ALLELE_FREQ	BETA	SE	P	N
 
 To convert the summary statistics, use the commands:
 ```bash
-GPS format_sumstats \
+gsMap format_sumstats \
 --sumstats GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_ALL 
 --out HEIGHT
 ```
@@ -101,7 +101,7 @@ rs4040617	G	A	-0.463	1602016.000
 ```
 In most cases, this command can automatically recognize different column names of GWAS data, but you can also specify the column names to ensure correctness.
 ```bash
-GPS format_sumstats \
+gsMap format_sumstats \
 --sumstats GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_ALL 
 --out HEIGHT \
 --a1 EFFECT_ALLELE \
@@ -116,5 +116,5 @@ GPS format_sumstats \
 
 For more usage options, please see:
 ```bash
-GPS format_sumstats -h
+gsMap format_sumstats -h
 ```

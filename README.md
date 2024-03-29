@@ -12,25 +12,25 @@
 install use pip:
 
 ```bash
-pip install GPS-mapping
+pip install gsMap-mapping
 ```
 
 install from source:
 
 ```bash
 git clone
-cd GPS-mapping
+cd gsMap-mapping
 pip install -e .
 ```
 
 ## Usage
 
-To use GPS, navigate to the command line and enter `GPS` followed by the subcommand that corresponds to the desired operation. Each subcommand may require specific arguments to run.
+To use gsMap, navigate to the command line and enter `gsMap` followed by the subcommand that corresponds to the desired operation. Each subcommand may require specific arguments to run.
 
 ### Basic Command Structure
 
 ```bash
-GPS subcommand [arguments...]
+gsMap subcommand [arguments...]
 ```
 
 - `subcommand`: The specific operation you wish to perform.
@@ -54,7 +54,7 @@ To run a specific functionality, you need to provide the appropriate subcommand 
 
 
 ```bash
-GPS run_find_latent_representations --input_hdf5_path <path> --output_hdf5_path <path> --sample_name <name>
+gsMap run_find_latent_representations --input_hdf5_path <path> --output_hdf5_path <path> --sample_name <name>
 ```
 
 This command initiates the process of finding latent representations based on the given HDF5 input and output paths and sample name.

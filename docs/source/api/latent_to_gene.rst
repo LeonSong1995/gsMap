@@ -2,7 +2,7 @@ Step 2: latent_to_gene
 ======================
 
 .. argparse::
-   :module: GPS.main
+   :module: gsMap.main
    :func: create_parser
-   :prog: GPS
+   :prog: gsMap
    :path: run_latent_to_gene

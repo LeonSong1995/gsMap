@@ -1,22 +1,22 @@
 .. _api-documentation:
 
-GPS Command Line Alphabets
+gsMap Command Line Alphabets
 ===========================
 
 
-.. program:: GPS
+.. program:: gsMap
 
 Synopsis
 --------
 
 .. code-block:: shell
 
-    usage: GPS [-h] [--version] {run_find_latent_representations,run_latent_to_gene,run_generate_ldscore,run_spatial_ldsc,run_cauchy_combination,run_visualize,run_all_mode} ...
+    usage: gsMap [-h] [--version] {run_find_latent_representations,run_latent_to_gene,run_generate_ldscore,run_spatial_ldsc,run_cauchy_combination,run_visualize,run_all_mode} ...
 
 Description
 -----------
 
-GPS: Genetics-informed pathogenic spatial mapping.
+gsMap: Genetics-informed pathogenic spatial mapping.
 
 Options
 -------
@@ -35,7 +35,7 @@ Subcommands
 .. option:: format_sumstats
 
     Run Format_sumstats.
-    Convert GWAS summary statistics into the format that GPS can recognize.
+    Convert GWAS summary statistics into the format that gsMap can recognize.
 
 .. option:: run_find_latent_representations
 
@@ -63,12 +63,12 @@ Subcommands
 
 .. option:: run_visualize
 
-    Visualize the GPS results.
+    Visualize the gsMap results.
 
 .. option:: run_all_mode
 
-    Run GPS Pipeline.
-    GPS Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order.
+    Run gsMap Pipeline.
+    gsMap Pipeline (Run Find_latent_representations, Latent_to_gene, and Generate_ldscore) in order.
 
 -----
 

@@ -6,7 +6,7 @@ import scanpy as sc
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from GPS.config import VisualizeConfig, add_Visualization_args
+from gsMap.config import VisualizeConfig, add_Visualization_args
 
 
 def load_ldsc(ldsc_input_file):
@@ -127,14 +127,14 @@ def run_Visualize(config: VisualizeConfig):
 if __name__ == '__main__':
     TEST = True
     if TEST:
-        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
+        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021'
         name = 'E16.5_E1S1'
 
         config = VisualizeConfig(
             input_hdf5_path=f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
             input_ldsc_dir=
             f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/ldsc_enrichment_frac/E16.5_E1S1/',
-            output_figure_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/figure/',
+            output_figure_dir='/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/figure/',
             sample_name=name,
             trait_name='GIANT_EUR_Height_2022_Nature',
             fig_title='GIANT_EUR_Height_2022_Nature',

@@ -6,7 +6,7 @@ import pandas as pd
 import scanpy as sc
 import scipy as sp
 
-from GPS.config import CauchyCombinationConfig, add_Cauchy_combination_args
+from gsMap.config import CauchyCombinationConfig, add_Cauchy_combination_args
 
 # The fun of cauchy combination
 def acat_test(pvalues, weights=None):
@@ -142,16 +142,16 @@ def run_Cauchy_combination(config:CauchyCombinationConfig):
 if __name__ == '__main__':
     TEST = True
     if TEST:
-        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
+        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021'
         name = 'Cortex_151507'
 
         config = CauchyCombinationConfig(
             input_hdf5_path= f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
             input_ldsc_dir=
-            f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/ldsc/',
+            f'/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/ldsc/',
             sample_name=name,
             annotation='layer_guess',
-            output_cauchy_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/cauchy/',
+            output_cauchy_dir='/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/cauchy/',
             trait_name='adult1_adult2_onset_asthma',
         )
     else:

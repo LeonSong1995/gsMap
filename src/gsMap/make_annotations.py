@@ -11,7 +11,7 @@ import pandas as pd
 import pyranges as pr
 from progress.bar import IncrementalBar
 
-from GPS.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
+from gsMap.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
 
 logger = logging.getLogger(__name__)
@@ -476,7 +476,7 @@ class LDscore_Generator:
 
 
 def add_make_annotation_args(parser):
-    parser.add_argument('--input_feather_file', required=True, type=str, help='Input feather file for marker genes score (output of GPS latent_to_gene)')
+    parser.add_argument('--input_feather_file', required=True, type=str, help='Input feather file for marker genes score (output of gsMap latent_to_gene)')
     parser.add_argument('--output_dir', required=True, type=str, help='Output directory to save the SNP annotation files')
     parser.add_argument('--sample_name', type=str, help='Name of the sample', required=True)
     parser.add_argument('--gtf_annotation_file', default=None, type=str, help='Path to the GTF file', required=True)
@@ -529,7 +529,7 @@ if __name__ == '__main__':
     if TEST:
         name = 'Cortex_151507'
         TASK_ID = 2
-        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021'
+        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021'
         config = MakeAnnotationConfig(
             input_feather_file=f'{test_dir}/{name}/gene_markers/{name}_rank.feather',
             sample_name=name,
@@ -543,7 +543,7 @@ if __name__ == '__main__':
             cells_per_chunk=500,
             ld_wind=1,
             ld_wind_unit='CM',
-            r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/r2_matrix',
+            r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/r2_matrix',
             use_gpu=True,
             snps_per_chunk=100_000
         )

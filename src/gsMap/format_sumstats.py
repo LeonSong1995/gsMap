@@ -8,7 +8,7 @@ import argparse
 import logging
 from scipy.stats import chi2
 
-from GPS.config import FormatSumstatsConfig, add_format_sumstats_args
+from gsMap.config import FormatSumstatsConfig, add_format_sumstats_args
 
 
 VALID_SNPS = set(['AC', 'AG', 'CA', 'CT', 'GA', 'GT', 'TC', 'TG']) 
@@ -158,11 +158,11 @@ def gwas_checkformat(gwas,config):
     '''
     Check column names required for different format
     '''
-    if config.format=='GPS':
+    if config.format=='gsMap':
         condition1 = np.any(np.isin(['P', 'Z'],gwas.columns))
         condition2 = np.all(np.isin(['BETA', 'SE'],gwas.columns))
         if not (condition1 or condition2):
-            raise ValueError('To munge GWAS data into GPS format, either P or Z values, or both BETA and SE values, are required.')
+            raise ValueError('To munge GWAS data into gsMap format, either P or Z values, or both BETA and SE values, are required.')
         else:
             if 'Z' in gwas.columns:
                 pass
@@ -387,7 +387,7 @@ def gwas_format(config:FormatSumstatsConfig):
     if config.format=='COJO':
         keep = ['SNP','A1','A2','FRQ','BETA','SE','P','N']
         appendix = '.cojo'
-    elif config.format=='GPS':
+    elif config.format=='gsMap':
         keep = ["A1","A2","Z","N","SNP"]
         appendix = '.sumstats'
 

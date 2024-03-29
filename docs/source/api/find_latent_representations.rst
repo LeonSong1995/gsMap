@@ -2,7 +2,7 @@ Step 1: find_latent_representation
 ==================================
 
 .. argparse::
-   :module: GPS.main
+   :module: gsMap.main
    :func: create_parser
-   :prog: GPS
+   :prog: gsMap
    :path: run_find_latent_representations

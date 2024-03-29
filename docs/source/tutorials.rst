@@ -1,8 +1,8 @@
-GPS Tutorials
+gsMap Tutorials
 =============
 
 
-Welcome to the GPS Tutorials. In this section, we present detailed examples and guides to help you understand and utilize GPS effectively. Our tutorials provide Mouse Embryo ST data, alongside three cleaned GWAS summary statistics to demonstrate the application of GPS in spatially mapping trait-associated cells (spots).
+Welcome to the gsMap Tutorials. In this section, we present detailed examples and guides to help you understand and utilize gsMap effectively. Our tutorials provide Mouse Embryo ST data, alongside three cleaned GWAS summary statistics to demonstrate the application of gsMap in spatially mapping trait-associated cells (spots).
 
 Datasets used in the tutorials
 -------------------------------

@@ -7,7 +7,7 @@ from pathlib import Path
 
 from collections import OrderedDict, namedtuple
 from typing import Callable
-from GPS.__init__ import __version__
+from gsMap.__init__ import __version__
 import pyfiglet
 
 # Global registry to hold functions
@@ -26,8 +26,8 @@ def register_cli(name: str, description: str, add_args_function: Callable) -> Ca
     def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):
             name.replace('_', ' ')
-            GPS_main_logo = pyfiglet.figlet_format("GPS", font='doom', width=80, justify='center', ).rstrip()
-            print(GPS_main_logo, )
+            gsMap_main_logo = pyfiglet.figlet_format("gsMap", font='doom', width=80, justify='center', ).rstrip()
+            print(gsMap_main_logo, )
             version_number = 'Version: ' + __version__
             print(version_number.center(80))
             print('=' * 80)
@@ -340,43 +340,43 @@ def add_format_sumstats_args(parser):
     
     # Arguments for specify column name
     parser.add_argument('--snp', default=None,type=str, 
-                        help="Name of snp column (if not a name that GPS understands)")
+                        help="Name of snp column (if not a name that gsMap understands)")
     parser.add_argument('--a1', default=None,type=str,
-                        help="Name of effect allele column (if not a name that GPS understands)")
+                        help="Name of effect allele column (if not a name that gsMap understands)")
     parser.add_argument('--a2', default=None,type=str,
-                        help="Name of none-effect allele column (if not a name that GPS understands)")
+                        help="Name of none-effect allele column (if not a name that gsMap understands)")
     parser.add_argument('--info', default=None,type=str,
-                        help="Name of info column (if not a name that GPS understands)")
+                        help="Name of info column (if not a name that gsMap understands)")
     parser.add_argument('--beta', default=None,type=str,
-                        help="Name of gwas beta column (if not a name that GPS understands).")
+                        help="Name of gwas beta column (if not a name that gsMap understands).")
     parser.add_argument('--se', default=None,type=str,
-                        help="Name of gwas standar error of beta column (if not a name that GPS understands)")
+                        help="Name of gwas standar error of beta column (if not a name that gsMap understands)")
     parser.add_argument('--p', default=None,type=str,
-                        help="Name of p-value column (if not a name that GPS understands)")
+                        help="Name of p-value column (if not a name that gsMap understands)")
     parser.add_argument('--frq', default=None,type=str,
-                        help="Name of A1 ferquency column (if not a name that GPS understands)")
+                        help="Name of A1 ferquency column (if not a name that gsMap understands)")
     parser.add_argument('--n', default=None,type=str,
-                        help="Name of sample size column (if not a name that GPS understands)")
+                        help="Name of sample size column (if not a name that gsMap understands)")
     parser.add_argument('--z', default=None,type=str,
-                        help="Name of gwas Z-statistics column (if not a name that GPS understands)")
+                        help="Name of gwas Z-statistics column (if not a name that gsMap understands)")
     parser.add_argument('--OR', default=None,type=str,
-                        help="Name of gwas OR column (if not a name that GPS understands)")
+                        help="Name of gwas OR column (if not a name that gsMap understands)")
     parser.add_argument('--se_OR', default=None,type=str,
-                        help="Name of standar error of OR column (if not a name that GPS understands)")
+                        help="Name of standar error of OR column (if not a name that gsMap understands)")
     
     # Arguments for convert SNP (chr, pos) to rsid
     parser.add_argument('--chr', default="Chr",type=str,
-                        help="Name of SNP chromosome column (if not a name that GPS understands)")
+                        help="Name of SNP chromosome column (if not a name that gsMap understands)")
     parser.add_argument('--pos', default="Pos",type=str,
-                        help="Name of SNP positions column (if not a name that GPS understands)")
+                        help="Name of SNP positions column (if not a name that gsMap understands)")
     parser.add_argument('--dbsnp', default=None,type=str,
                         help='Path to reference dnsnp file')
     parser.add_argument('--chunksize', default=1e+6,type=int,
                         help='Chunk size for loading dbsnp file')
     
     # Arguments for output format and quality
-    parser.add_argument('--format',default='GPS', type=str, 
-                        help='Format of output data',choices=['GPS', 'COJO'])
+    parser.add_argument('--format',default='gsMap', type=str, 
+                        help='Format of output data',choices=['gsMap', 'COJO'])
     parser.add_argument('--info_min', default=0.9,type=float,
                         help='Minimum INFO score.')
     parser.add_argument('--maf_min', default=0.01,type=float,
@@ -657,7 +657,7 @@ class FormatSumstatsConfig:
               description='Run Find_latent_representations \nFind the latent representations of each spot by running GNN-VAE',
               add_args_function=add_find_latent_representations_args)
 def run_find_latent_representation_from_cli(args: argparse.Namespace):
-    from GPS.find_latent_representation import run_find_latent_representation
+    from gsMap.find_latent_representation import run_find_latent_representation
     config = get_dataclass_from_parser(args, FindLatentRepresentationsConfig)
     run_find_latent_representation(config)
 
@@ -666,7 +666,7 @@ def run_find_latent_representation_from_cli(args: argparse.Namespace):
               description='Run Latent_to_gene \nEstimate gene marker gene scores for each spot by using latent representations from nearby spots',
               add_args_function=add_latent_to_gene_args)
 def run_latent_to_gene_from_cli(args: argparse.Namespace):
-    from GPS.latent_to_gene import run_latent_to_gene
+    from gsMap.latent_to_gene import run_latent_to_gene
     config = get_dataclass_from_parser(args, LatentToGeneConfig)
     run_latent_to_gene(config)
 
@@ -675,7 +675,7 @@ def run_latent_to_gene_from_cli(args: argparse.Namespace):
               description='Run Generate_ldscore \nGenerate LD scores for each spot',
               add_args_function=add_generate_ldscore_args)
 def run_generate_ldscore_from_cli(args: argparse.Namespace):
-    from GPS.generate_ldscore import run_generate_ldscore
+    from gsMap.generate_ldscore import run_generate_ldscore
     config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
     run_generate_ldscore(config)
 
@@ -684,7 +684,7 @@ def run_generate_ldscore_from_cli(args: argparse.Namespace):
               description='Run Spatial_ldsc \nRun spatial LDSC for each spot',
               add_args_function=add_spatial_ldsc_args)
 def run_spatial_ldsc_from_cli(args: argparse.Namespace):
-    from GPS.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
+    from gsMap.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
     config = get_dataclass_from_parser(args, SpatialLDSCConfig)
     run_spatial_ldsc(config)
 
@@ -693,29 +693,29 @@ def run_spatial_ldsc_from_cli(args: argparse.Namespace):
               description='Run Cauchy_combination for each annotation',
               add_args_function=add_Cauchy_combination_args)
 def run_Cauchy_combination_from_cli(args: argparse.Namespace):
-    from GPS.cauchy_combination_test import run_Cauchy_combination
+    from gsMap.cauchy_combination_test import run_Cauchy_combination
     config = get_dataclass_from_parser(args, CauchyCombinationConfig)
     run_Cauchy_combination(config)
 
 
 @register_cli(name='run_visualize',
-              description='Visualize the GPS results',
+              description='Visualize the gsMap results',
               add_args_function=add_Visualization_args)
 def run_Visualize_from_cli(args: argparse.Namespace):
-    from GPS.visualize import run_Visualize
+    from gsMap.visualize import run_Visualize
     config = get_dataclass_from_parser(args, VisualizeConfig)
     run_Visualize(config)
 
 
 @register_cli(name='run_all_mode',
-              description='Run GPS method (the full process)',
+              description='Run gsMap method (the full process)',
               add_args_function=add_all_mode_args)
 def run_all_mode_from_cli(args: argparse.Namespace):
-    from GPS.find_latent_representation import run_find_latent_representation
-    from GPS.latent_to_gene import run_latent_to_gene
-    from GPS.generate_ldscore import run_generate_ldscore
-    from GPS.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
-    from GPS.cauchy_combination_test import run_Cauchy_combination
+    from gsMap.find_latent_representation import run_find_latent_representation
+    from gsMap.latent_to_gene import run_latent_to_gene
+    from gsMap.generate_ldscore import run_generate_ldscore
+    from gsMap.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
+    from gsMap.cauchy_combination_test import run_Cauchy_combination
     config = get_runall_mode_config(args)
     run_find_latent_representation(config.flr_config)
     run_latent_to_gene(config.ltg_config)
@@ -729,6 +729,6 @@ def run_all_mode_from_cli(args: argparse.Namespace):
               description='Format gwas summary statistics',
               add_args_function=add_format_sumstats_args)
 def gwas_format_from_cli(args: argparse.Namespace):
-    from GPS.format_sumstats import gwas_format
+    from gsMap.format_sumstats import gwas_format
     config = get_dataclass_from_parser(args, FormatSumstatsConfig)
     gwas_format(config)

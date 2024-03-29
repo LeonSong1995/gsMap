@@ -1,8 +1,8 @@
-import GPS
-project = 'GPS'
+import gsMap
+project = 'gsMap'
 copyright = '2024, Liyang, Wenhao'
 author = 'Liyang, Wenhao'
-release = GPS.__version__
+release = gsMap.__version__
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration

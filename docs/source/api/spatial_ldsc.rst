@@ -2,7 +2,7 @@ Step 4: spatial_ldsc
 ====================
 
 .. argparse::
-   :module: GPS.main
+   :module: gsMap.main
    :func: create_parser
-   :prog: GPS
+   :prog: gsMap
    :path: run_spatial_ldsc

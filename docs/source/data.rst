@@ -1,14 +1,14 @@
-GPS Resources Download
+gsMap Resources Download
 ======================
 
-Download GPS Running Resources
+Download gsMap Running Resources
 ------------------------------
 
-You can download the necessary resources for running GPS from the following link:
+You can download the necessary resources for running gsMap from the following link:
 
-.. _GPS running dependencies: http://cnsgenomics.com/data/GPS/GPS_running_dependencies.tar.gz
+.. _gsMap running dependencies: http://cnsgenomics.com/data/gsMap/gsMap_running_dependencies.tar.gz
 
-`GPS running dependencies <http://cnsgenomics.com/data/GPS/GPS_running_dependencies.tar.gz>`_
+`gsMap running dependencies <http://cnsgenomics.com/data/gsMap/gsMap_running_dependencies.tar.gz>`_
 
 
 - **LD Reference Panel**:
@@ -28,16 +28,16 @@ You can download the necessary resources for running GPS from the following link
   - Derived from the biomaRt (V3.18) R package, this data is used to transform gene names across species.
 
 .. note::
-   These data are curated to ensure compatibility and ease of use. You can use your own reference panel and gene annotation data, but it is important to ensure that the data is compatible with the GPS pipeline.
+   These data are curated to ensure compatibility and ease of use. You can use your own reference panel and gene annotation data, but it is important to ensure that the data is compatible with the gsMap pipeline.
 
 .. _download-example-data:
 
 Download Example Data
 -----------------------------------
 
-To illustrate how to use GPS, we provide some example GWAS and ST data. You can download the example data from the following link:
+To illustrate how to use gsMap, we provide some example GWAS and ST data. You can download the example data from the following link:
 
-`GPS Example Data <http://cnsgenomics.com/data/GPS/GPS_example_data.tar.gz>`_
+`gsMap Example Data <http://cnsgenomics.com/data/gsMap/gsMap_example_data.tar.gz>`_
 
 .. _data-availability:
 

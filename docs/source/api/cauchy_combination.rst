@@ -2,7 +2,7 @@ Step 5: cauchy_combination (optional)
 =====================================
 
 .. argparse::
-   :module: GPS.main
+   :module: gsMap.main
    :func: create_parser
-   :prog: GPS
+   :prog: gsMap
    :path: run_cauchy_combination
