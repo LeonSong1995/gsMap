@@ -4,9 +4,7 @@
 [![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
-## Overview
-
-gsMap (genetically informed spatial mapping of cells for complex traits)
+## gsMap (genetically informed spatial mapping of cells for complex traits)
 
 ## Features
 
