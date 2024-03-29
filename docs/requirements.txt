@@ -1,2 +1,2 @@
 sphinx==6
-gsMap-mapping[doc]
+gsMap[doc]
