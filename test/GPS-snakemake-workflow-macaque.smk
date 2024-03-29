@@ -84,7 +84,7 @@ rule find_latent_representations:
         qos=QOS
     run:
         command = f"""
-gsMap run_find_latent_representations \
+gsmap run_find_latent_representations \
     --input_hdf5_path {input.hdf5_path} \
     --sample_name {wildcards.sample_name} \
     --output_hdf5_path {output.hdf5_output} \
@@ -136,7 +136,7 @@ rule latent_to_gene:
     benchmark: '{sample_name}/latent_to_gene/{sample_name}_gene_marker_score.feather.benchmark'
     run:
         command = f"""
-gsMap run_latent_to_gene \
+gsmap run_latent_to_gene \
     --input_hdf5_with_latent_path {input.hdf5_with_latent_path} \
     --sample_name {wildcards.sample_name} \
     --output_feather_path {output.feather_path} \
@@ -181,7 +181,7 @@ rule generate_ldscore:
         qos=QOS
     run:
         command = f"""
-        gsMap run_generate_ldscore \
+        gsmap run_generate_ldscore \
             --sample_name {wildcards.sample_name} \
             --chrom {wildcards.chrom} \
             --ldscore_save_dir {params.ld_score_save_dir} \
@@ -238,7 +238,7 @@ rule spatial_ldsc:
         partition='intel-sc3,amd-ep2'
     run:
        command = f"""
-        gsMap run_spatial_ldsc --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --sumstats_config_file {params.sumstats_config_file} {f'--all_chunk {params.all_chunk}' if params.all_chunk else ''}
+        gsmap run_spatial_ldsc --w_file {params.w_file} --sample_name {wildcards.sample_name} --num_processes {threads} --ldscore_input_dir {params.ldscore_input_dir} --ldsc_save_dir {params.ldsc_save_dir} --sumstats_config_file {params.sumstats_config_file} {f'--all_chunk {params.all_chunk}' if params.all_chunk else ''}
         """
        shell(
            f'{command}'
@@ -264,5 +264,5 @@ rule cauchy_combination:
         mem_mb_per_cpu=25_000
     shell:
         """
-        gsMap run_cauchy_combination --input_hdf5_path {input.hdf5_path} --input_ldsc_dir {params.ldsc_dir} --sample_name {wildcards.sample_name} --output_cauchy_dir {params.cauchy_save_dir} --trait_name {wildcards.trait_name} --annotation {params.annotation}
+        gsmap run_cauchy_combination --input_hdf5_path {input.hdf5_path} --input_ldsc_dir {params.ldsc_dir} --sample_name {wildcards.sample_name} --output_cauchy_dir {params.cauchy_save_dir} --trait_name {wildcards.trait_name} --annotation {params.annotation}
         """

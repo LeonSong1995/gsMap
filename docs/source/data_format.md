@@ -85,7 +85,7 @@ SNPID	RSID	CHR	POS	EFFECT_ALLELE	OTHER_ALLELE	EFFECT_ALLELE_FREQ	BETA	SE	P	N
 
 To convert the summary statistics, use the commands:
 ```bash
-gsMap format_sumstats \
+gsmap format_sumstats \
 --sumstats GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_ALL 
 --out HEIGHT
 ```
@@ -101,7 +101,7 @@ rs4040617	G	A	-0.463	1602016.000
 ```
 In most cases, this command can automatically recognize different column names of GWAS data, but you can also specify the column names to ensure correctness.
 ```bash
-gsMap format_sumstats \
+gsmap format_sumstats \
 --sumstats GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_ALL 
 --out HEIGHT \
 --a1 EFFECT_ALLELE \

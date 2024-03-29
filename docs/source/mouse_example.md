@@ -94,7 +94,7 @@ W_FILE="gsMap_resource/LDSC_resource/weights_hm3_no_hla/weights." # The SNP regr
 **Execution**:
 ```shell
 HDF5_WITH_LATENT_PATH="$WORKDIR/$SAMPLE_NAME/find_latent_representations/${SAMPLE_NAME}_add_latent.h5ad"
-gsMap run_find_latent_representations \
+gsmap run_find_latent_representations \
     --input_hdf5_path $HDF5_PATH \
     --sample_name $SAMPLE_NAME \
     --output_hdf5_path $HDF5_OUTPUT \
@@ -116,7 +116,7 @@ gsMap run_find_latent_representations \
 **Execution**:
 ```shell
 MKSCORE_FEATHER_PATH="$WORKDIR/$SAMPLE_NAME/latent_to_gene/${SAMPLE_NAME}_gene_marker_score.feather"
-gsMap run_latent_to_gene \
+gsmap run_latent_to_gene \
     --input_hdf5_with_latent_path $HDF5_WITH_LATENT_PATH \
     --sample_name $SAMPLE_NAME \
     --output_feather_path $MKSCORE_FEATHER_PATH \
@@ -160,7 +160,7 @@ If a SNP is within the gene window, it will be assigned the gene specificity sco
 ```shell
 LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
 for CHROM in {1..22}; do
-    gsMap run_generate_ldscore \
+    gsmap run_generate_ldscore \
         --sample_name $SAMPLE_NAME \
         --chrom $CHROM \
         --ldscore_save_dir $LDScoreDir \
@@ -188,7 +188,7 @@ In this example we choose the all tissue enhancer annotation file (`ENHANCER_ANN
 ```shell
 LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
 for CHROM in {1..22}; do
-    gsMap run_generate_ldscore \
+    gsmap run_generate_ldscore \
         --sample_name $SAMPLE_NAME \
         --chrom $CHROM \
         --ldscore_save_dir $LDScoreDir \
@@ -218,7 +218,7 @@ This will use both the TSS and enhancer-gene linking to map SNPs to genes. In ca
 ```shell
 LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
 for CHROM in {1..22}; do
-    gsMap run_generate_ldscore \
+    gsmap run_generate_ldscore \
         --sample_name $SAMPLE_NAME \
         --chrom $CHROM \
         --ldscore_save_dir $LDScoreDir \
@@ -267,7 +267,7 @@ LDSC_DIR="$WORKDIR/$SAMPLE_NAME/spatial_ldsc"
 SUMSTATS_FILE="example_data/GWAS/IQ_NG_2018.sumstats.gz"
 TRAIT_NAME="IQ"
 
-gsMap run_spatial_ldsc \
+gsmap run_spatial_ldsc \
     --sumstats_file $SUMSTATS_FILE \
     --trait_name $TRAIT_NAME \
     --w_file $W_FILE \
@@ -294,7 +294,7 @@ SCZ: example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
 ```shell
 LDSC_DIR="$WORKDIR/$SAMPLE_NAME/spatial_ldsc"
 SUMSTATS_CONFIG_FILE="example_data/GWAS/gwas_config.yaml"
-gsMap run_spatial_ldsc \
+gsmap run_spatial_ldsc \
     --w_file $W_FILE \
     --sample_name $SAMPLE_NAME \
     --num_processes 4 \
@@ -314,7 +314,7 @@ gsMap run_spatial_ldsc \
 ```shell
 CAUCHY_SAVE_DIR="$WORKDIR/$SAMPLE_NAME/cauchy_combination"
 TRAIT_NAME="IQ"
-gsMap run_cauchy_combination \
+gsmap run_cauchy_combination \
     --input_hdf5_path $HDF5_PATH \
     --input_ldsc_dir $LDSC_DIR \
     --sample_name $SAMPLE_NAME \
@@ -376,7 +376,7 @@ You could use below command to visualize the gsMap results. You will get a scatt
 - A html file which could be opened in a web browser to interactively explore the results.
 
 ```shell
-gsMap run_visualize \
+gsmap run_visualize \
     --input_hdf5_path $HDF5_PATH \
     --input_ldsc_dir $LDSC_DIR \
     --output_figure_dir $WORKDIR/$SAMPLE_NAME/figures \
