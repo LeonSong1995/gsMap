@@ -1,5 +1,3 @@
-![image](https://github.com/LeonSong1995/gsMap/assets/49676857/a576207d-6ee0-4ed9-bab4-d897e86fbc40)# GPS: Genetics-informed Pathogenic Spatial Mapping Program
-
 [![stars-badge](https://img.shields.io/github/stars/LeonSong1995/MeDuSA?logo=GitHub&color=yellow)](https://github.com/LeonSong1995/gsMap/stargazers)
 [![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
