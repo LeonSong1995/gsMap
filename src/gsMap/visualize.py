@@ -116,13 +116,14 @@ def run_Visualize(config: VisualizeConfig):
     output_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
     output_file_html = output_dir / f'{config.sample_name}_{config.trait_name}.html'
     output_file_pdf = output_dir / f'{config.sample_name}_{config.trait_name}.pdf'
+    output_file_csv = output_dir / f'{config.sample_name}_{config.trait_name}.csv'
 
     fig.write_html(str(output_file_html))
     fig.write_image(str(output_file_pdf))
+    space_coord_concat.to_csv(str(output_file_csv))
 
-    print(
-        f'------The visualization result is saved in a html file: {output_file_html} which can interactively viewed in a web browser and a pdf file: {output_file_pdf}.')
-
+    print(f'------The visualization result is saved in a html file: {output_file_html} which can interactively viewed in a web browser and a pdf file: {output_file_pdf}.')
+    print(f'------The visualization data is saved in a csv file: {output_file_csv}.')
 
 if __name__ == '__main__':
     TEST = True
