@@ -67,7 +67,7 @@ Documentation = "https://..."
 Website = "https://..."
 
 [project.scripts]
-gsMap = "gsMap.main:main"
+gsmap = "gsMap.main:main"
 
 [tool.flit.module]
 name = "gsMap"

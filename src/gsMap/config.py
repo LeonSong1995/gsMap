@@ -589,7 +589,6 @@ class SpatialLDSCConfig:
                         f'baseline.{chrom}.annot.gz is not found in {additional_baseline_annotation_dir_path}.')
 
 
-logger
 @dataclass
 class CauchyCombinationConfig:
     input_hdf5_path: str
