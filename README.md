@@ -1,13 +1,11 @@
 # gsMap (genetically informed spatial mapping of cells for complex traits)
 [![stars-badge](https://img.shields.io/github/stars/LeonSong1995/MeDuSA?logo=GitHub&color=yellow)](https://github.com/LeonSong1995/gsMap/stargazers)
 [![pypi-badge](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/p/gsMap)
-[![docs-badge](https://readthedocs.org/projects/gps-mapping/badge/?version=latest)](https://gps-mapping.readthedocs.io/en/latest/)
+[![docs-badge](https://yanglab.westlake.edu.cn/gsmap/document)](https://yanglab.westlake.edu.cn/gsmap/document/)
 [![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
-## Features
 
-....
 
 ## Installation
 
@@ -25,11 +23,15 @@ cd gsMap
 pip install -e .
 ```
 
-## Contributing
+## Usage
 
-...
+Please checkout the documentations and tutorials at
+[gsmap.docs](https://yanglab.westlake.edu.cn/gsmap/document).
 
-## License
+
+## Online visualization
+
+To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsmap.visualization (https://yanglab.westlake.edu.cn/gsmap/document).
 
 ....
 
