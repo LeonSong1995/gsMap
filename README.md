@@ -3,7 +3,7 @@
 [![pypi-badge](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/p/gsMap)
 [![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-
+![Model architecture](gsMap_schmatic.png)
 
 
 ## Installation
