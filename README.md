@@ -25,12 +25,12 @@ pip install -e .
 ## Usage
 
 Please checkout the documentations and tutorials at
-[gsmap.docs](https://yanglab.westlake.edu.cn/gsmap/document).
+[gsMap.docs](https://yanglab.westlake.edu.cn/gsmap/document).
 
 
 ## Online visualization
 
-To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsmap.visualization](https://yanglab.westlake.edu.cn/gsmap/document).
+To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsmap.visualization](https://yanglab.westlake.edu.cn/gsMap/document).
 
 ....
 
