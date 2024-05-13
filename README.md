@@ -1,7 +1,6 @@
 # gsMap (genetically informed spatial mapping of cells for complex traits)
 [![stars-badge](https://img.shields.io/github/stars/LeonSong1995/MeDuSA?logo=GitHub&color=yellow)](https://github.com/LeonSong1995/gsMap/stargazers)
 [![pypi-badge](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/p/gsMap)
-[![docs-badge](https://yanglab.westlake.edu.cn/gsmap/document)](https://yanglab.westlake.edu.cn/gsmap/document/)
 [![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 
