@@ -30,7 +30,7 @@ Please checkout the documentations and tutorials at
 
 ## Online visualization
 
-To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsmap.visualization] (https://yanglab.westlake.edu.cn/gsmap/document).
+To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsmap.visualization](https://yanglab.westlake.edu.cn/gsmap/document).
 
 ....
 
