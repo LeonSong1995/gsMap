@@ -1,7 +1,7 @@
 import argparse
 import logging
 from pathlib import Path
-
+import zarr
 import numpy as np
 # %%
 import pandas as pd
@@ -353,6 +353,25 @@ class S_LDSC_Boost:
                           )
         df.index.name = 'SNP'
         df.reset_index().to_feather(save_file_name)
+    #
+    # def save_ldscore(self, ldscore_chr_chunk: np.ndarray, column_names, save_file_name):
+    #     save_dir = Path(save_file_name).parent
+    #     save_dir.mkdir(parents=True, exist_ok=True)
+    #
+    #     ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
+    #     # avoid overflow of float16, if inf, set to max of float16
+    #     ldscore_chr_chunk[np.isinf(ldscore_chr_chunk)] = np.finfo(np.float16).max
+    #     ldscore_chr_chunk = ldscore_chr_chunk if self.keep_snp_mask is None else ldscore_chr_chunk[self.keep_snp_mask]
+    #
+    #     # Create a Zarr group and dataset
+    #     zarr_save_file = f"{save_file_name}.zarr"
+    #     root = zarr.open(zarr_save_file, mode='a')
+    #     ds = root.create_dataset('ldscore', data=ldscore_chr_chunk, dtype=np.float32, chunks=(1000, len(column_names)))
+    #
+    #     # Store column names and SNP names
+    #     ds.attrs['columns'] = list(column_names)
+    #     ds.attrs['snp_names'] = list(self.snp_name if self.keep_snp_mask is None else self.snp_name[self.keep_snp_mask])
+
 
     def calculate_M_use_SNP_gene_pair_dummy_by_chunk(self,
                                                      mk_score_chunk,
@@ -517,15 +536,15 @@ if __name__ == '__main__':
         # %%
         sample_name = 'Cortex_151507'
         chrom = 'all'
-        save_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse'
+        save_dir = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse'
         # %%
         gtf_file = '/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf'
-        mkscore_feather_file = f'/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/{sample_name}/gene_markers/{sample_name}_rank.feather'
+        mkscore_feather_file = f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/{sample_name}/gene_markers/{sample_name}_rank.feather'
         bfile_root = '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC'
         window_size = 50000
         keep_snp_root = '/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm'
-        spots_per_chunk = 10_000
-        enhancer_annotation = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/resource/epigenome/cleaned_data/by_tissue/BRN/ABC_roadmap_merged.bed'
+        spots_per_chunk = 3_000
+        enhancer_annotation = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/epigenome/cleaned_data/by_tissue/BRN/ABC_roadmap_merged.bed'
         # %%
         config = GenerateLDScoreConfig(
             sample_name=sample_name,
@@ -537,9 +556,9 @@ if __name__ == '__main__':
             keep_snp_root=keep_snp_root,
             gene_window_size=window_size,
             spots_per_chunk=spots_per_chunk,
-            enhancer_annotation_file=enhancer_annotation,
-            gene_window_enhancer_priority='enhancer_first',
-            additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/resource/ldsc/baseline_v1.2/remove_base'
+            # enhancer_annotation_file=enhancer_annotation,
+            # gene_window_enhancer_priority='enhancer_first',
+            # additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'
         )
         # %%
         run_generate_ldscore(config)

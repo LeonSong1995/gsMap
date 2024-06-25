@@ -69,7 +69,7 @@ def ID_List_Factory(colnames, keepcol, fname_end, header=None, usecols=None):
                 raise ValueError('{f} filename must end in {f}'.format(f=end))
             comp = get_compression(fname)
             self.df = pd.read_csv(fname, header=self.header, usecols=self.usecols,
-                                  delim_whitespace=True, compression=comp)
+                                  sep='\s+', compression=comp)
             if self.colnames:
                 self.df.columns = self.colnames
             if self.keepcol is not None:

@@ -60,7 +60,7 @@ def read_csv(fh, **kwargs):
     '''
     Read the csv data
     '''
-    return pd.read_csv(fh, delim_whitespace=True, na_values='.', **kwargs)
+    return pd.read_csv(fh, sep='\s+', na_values='.', **kwargs)
 
 
 # Fun for reading loading LD scores 

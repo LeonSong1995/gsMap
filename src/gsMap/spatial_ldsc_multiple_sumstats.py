@@ -113,6 +113,9 @@ def _preprocess_sumstats(trait_name, sumstat_file_path, baseline_and_w_ld_common
         logger.warning(f'WARNING: number of SNPs less than 200k; for {trait_name} this is almost always bad.')
 
     sumstats = sumstats.loc[common_snp]
+
+    # get the common index position of baseline_and_w_ld_common_snp for quick access
+    sumstats['common_index_pos'] = pd.Index(baseline_and_w_ld_common_snp).get_indexer(sumstats.index)
     return sumstats
 
 
@@ -152,6 +155,8 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
     # common snp between baseline and w_ld
     baseline_and_w_ld_common_snp = ref_ld_baseline.index.intersection(w_ld.index)
+    baseline_and_w_ld_common_snp_pos = pd.Index(ref_ld_baseline.index).get_indexer(baseline_and_w_ld_common_snp)
+
     if len(baseline_and_w_ld_common_snp) < 200000:
         logger.warning(f'WARNING: number of SNPs less than 200k; for {sample_name} this is almost always bad.')
     ref_ld_baseline = ref_ld_baseline.loc[baseline_and_w_ld_common_snp]
@@ -194,7 +199,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         # Load the spatial annotations for this chunk
         ld_file_spatial = f'{config.ldscore_input_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.'
         ref_ld_spatial = _read_ref_ld_v2(ld_file_spatial)
-        ref_ld_spatial = ref_ld_spatial.loc[baseline_and_w_ld_common_snp]
+        ref_ld_spatial = ref_ld_spatial.iloc[baseline_and_w_ld_common_snp_pos]
         ref_ld_spatial = ref_ld_spatial.astype(np.float32, copy=False)
 
         # get the x_tot_precomputed matrix by adding baseline and spatial annotation
@@ -205,11 +210,12 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
             # filter ldscore by common snp
             common_snp = sumstats.index
-            spatial_annotation = ref_ld_spatial.loc[common_snp].astype(np.float32, copy=False)
+            common_index_pos = sumstats.common_index_pos.values
+            spatial_annotation = ref_ld_spatial.iloc[common_index_pos].astype(np.float32, copy=False)
             spatial_annotation_cnames = spatial_annotation.columns
-            baseline_annotation = ref_ld_baseline.loc[common_snp].astype(np.float32, copy=False)
-            w_ld_common_snp = w_ld.loc[common_snp].astype(np.float32, copy=False)
-            x_tot_precomputed_common_snp = x_tot_precomputed.loc[common_snp].values
+            baseline_annotation = ref_ld_baseline.iloc[common_index_pos].astype(np.float32, copy=False)
+            w_ld_common_snp = w_ld.iloc[common_index_pos].astype(np.float32, copy=False)
+            x_tot_precomputed_common_snp = x_tot_precomputed.iloc[common_index_pos].values
 
             # weight the baseline annotation by N
             baseline_annotation = baseline_annotation * sumstats.N.values.reshape((-1, 1)) / sumstats.N.mean()
@@ -290,7 +296,7 @@ if __name__ == '__main__':
     os.chdir('/storage/yangjianLab/chenwenhao/tmp/gsMap_Height_debug')
     TASK_ID = 16
     spe_name = f'E{TASK_ID}.5_E1S1'
-    config = SpatialLDSCConfig(**{'all_chunk': None,
+    config = SpatialLDSCConfig(**{'all_chunk': 1,
                                   'chisq_max': None,
                                   # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/GIANT_EUR_Height_2022_Nature.sumstats.gz',
                                   'ldsc_save_dir': f'{spe_name}/ldsc_results_three_row_sum_sub_config_traits',
@@ -300,7 +306,7 @@ if __name__ == '__main__':
                                   'num_processes': 15,
                                   'sample_name': spe_name,
                                   # 'trait_name': 'GIANT_EUR_Height_2022_Nature',
-                                  'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/src/gsMap/example/sumstats_config_sub.yaml',
+                                  'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
                                   'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
                                   })
     # config = SpatialLDSCConfig(**vars(args))
