@@ -8,11 +8,12 @@ import pandas as pd
 import pyranges as pr
 from scipy.sparse import csr_matrix
 from tqdm import trange
-
+import warnings
 from gsMap.config import GenerateLDScoreConfig, add_generate_ldscore_args
 # %%
 from gsMap.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
+warnings.filterwarnings("ignore", category=FutureWarning)
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler()
@@ -82,7 +83,6 @@ def load_bim(bfile_root, chrom):
     """
     Load the bim file.
     """
-    print("Loading bim data")
     bim = pd.read_csv(f'{bfile_root}.{chrom}.bim', sep='\t', header=None)
     bim.columns = ["CHR", "SNP", "CM", "BP", "A1", "A2"]
     #
@@ -110,6 +110,38 @@ def Overlaps_gtf_bim(gtf_pr, bim_pr):
 
 
 # %%
+def filter_snps_by_keep_snp(bim_df, keep_snp_file):
+    # Load the keep_snp file and filter the BIM DataFrame
+    keep_snp = pd.read_csv(keep_snp_file, header=None)[0].to_list()
+    filtered_bim_df = bim_df[bim_df['SNP'].isin(keep_snp)]
+    return filtered_bim_df
+
+
+def get_snp_counts(config):
+    snp_counts = {}
+    total_snp = 0
+
+    for chrom in range(1, 23):
+        bim_df, _ = load_bim(config.bfile_root, chrom)
+
+        if config.keep_snp_root:
+            keep_snp_file = f'{config.keep_snp_root}.{chrom}.snp'
+            filtered_bim_df = filter_snps_by_keep_snp(bim_df, keep_snp_file)
+        else:
+            filtered_bim_df = bim_df
+
+        snp_counts[chrom] = filtered_bim_df.shape[0]
+        total_snp += snp_counts[chrom]
+
+    snp_counts['total'] = total_snp
+
+    chrom_snp_length_array = np.array([snp_counts[chrom] for chrom in range(1, 23)]).cumsum()
+
+    snp_counts['chrom_snp_start_point'] = [0] + chrom_snp_length_array.tolist()
+
+    return snp_counts
+
+
 
 
 # %%
@@ -237,6 +269,22 @@ class S_LDSC_Boost:
         else:
             self.enhancer_pr = None
 
+        # create tha zarr file
+        if config.ldscore_save_format == 'zarr':
+            zarr_path = Path(config.ldscore_save_dir)/f'{config.sample_name}.ldscore.zarr'
+
+            if not zarr_path.exists():
+                zarr_path.mkdir(parents=True, exist_ok=True)
+
+                self.chrom_snp_length_dict = get_snp_counts(config)
+                self.zarr_file = zarr.open(zarr_path.as_posix(), mode='a', dtype=np.float16, chunks=config.zarr_chunk_size,
+                                           shape=(self.chrom_snp_length_dict['total'], self.mk_score_common.shape[1]))
+
+                # save spot names
+                self.zarr_file.attrs['spot_names'] = self.mk_score_common.columns.to_list()
+            else:
+                self.zarr_file = zarr.open(zarr_path.as_posix(), mode='a')
+
     def process_chromosome(self, chrom: int):
         self.snp_pass_maf = get_snp_pass_maf(self.config.bfile_root, chrom, maf_min=0.05)
 
@@ -288,16 +336,16 @@ class S_LDSC_Boost:
             M_5_file_path = f'{self.config.ldscore_save_dir}/additional_baseline/baseline.{chrom}.l2.M_5_50'
 
             # save additional baseline annotation ldscore
-            self.save_ldscore(additional_baseline_annotation_ldscore.values,
-                              column_names=additional_baseline_annotation_ldscore.columns,
-                              save_file_name=ld_score_file,
-                              )
+            self.save_ldscore_to_feather(additional_baseline_annotation_ldscore.values,
+                                         column_names=additional_baseline_annotation_ldscore.columns,
+                                         save_file_name=ld_score_file,
+                                         )
 
             # caculate the M and save
             save_dir = Path(M_file_path).parent
             save_dir.mkdir(parents=True, exist_ok=True)
             M_chr_chunk = additional_baseline_annotation_df.values.sum(axis=0, keepdims=True)
-            M_5_chr_chunk = additional_baseline_annotation_df.loc[self.snp_pass_maf].values.sum(axis=0,keepdims=True)
+            M_5_chr_chunk = additional_baseline_annotation_df.loc[self.snp_pass_maf].values.sum(axis=0, keepdims=True)
             np.savetxt(M_file_path, M_chr_chunk, delimiter='\t', )
             np.savetxt(M_5_file_path, M_5_chr_chunk, delimiter='\t', )
 
@@ -307,6 +355,10 @@ class S_LDSC_Boost:
                                                                             self.config.bfile_root,
                                                                             ld_wind=self.config.ld_wind,
                                                                             ld_unit=self.config.ld_unit)
+        # only keep the snp in keep_snp_root
+        if self.keep_snp_mask is not None:
+            self.snp_gene_weight_matrix = self.snp_gene_weight_matrix[self.keep_snp_mask]
+
         # convert to sparse
         self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
 
@@ -323,7 +375,6 @@ class S_LDSC_Boost:
 
     def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(self,
                                                               mk_score_chunk,
-                                                              save_file_name,
                                                               drop_dummy_na=True,
                                                               ):
 
@@ -332,20 +383,18 @@ class S_LDSC_Boost:
         else:
             ldscore_chr_chunk = self.snp_gene_weight_matrix @ mk_score_chunk
 
-        self.save_ldscore(ldscore_chr_chunk,
-                          column_names=mk_score_chunk.columns,
-                          save_file_name=save_file_name,
-                          )
+        return ldscore_chr_chunk
 
-    def save_ldscore(self, ldscore_chr_chunk: np.ndarray, column_names, save_file_name):
+    def save_ldscore_to_feather(self, ldscore_chr_chunk: np.ndarray, column_names, save_file_name):
         save_dir = Path(save_file_name).parent
         save_dir.mkdir(parents=True, exist_ok=True)
 
         ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
         # avoid overflow of float16, if inf, set to max of float16
         ldscore_chr_chunk[np.isinf(ldscore_chr_chunk)] = np.finfo(np.float16).max
-        ldscore_chr_chunk = ldscore_chr_chunk if self.config.keep_snp_root is None else ldscore_chr_chunk[
-            self.keep_snp_mask]
+        # ldscore_chr_chunk = ldscore_chr_chunk if self.config.keep_snp_root is None else ldscore_chr_chunk[
+        #     self.keep_snp_mask]
+
         # save for each chunk
         df = pd.DataFrame(ldscore_chr_chunk,
                           index=self.snp_name,
@@ -353,25 +402,19 @@ class S_LDSC_Boost:
                           )
         df.index.name = 'SNP'
         df.reset_index().to_feather(save_file_name)
-    #
-    # def save_ldscore(self, ldscore_chr_chunk: np.ndarray, column_names, save_file_name):
-    #     save_dir = Path(save_file_name).parent
-    #     save_dir.mkdir(parents=True, exist_ok=True)
-    #
-    #     ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
-    #     # avoid overflow of float16, if inf, set to max of float16
-    #     ldscore_chr_chunk[np.isinf(ldscore_chr_chunk)] = np.finfo(np.float16).max
-    #     ldscore_chr_chunk = ldscore_chr_chunk if self.keep_snp_mask is None else ldscore_chr_chunk[self.keep_snp_mask]
-    #
-    #     # Create a Zarr group and dataset
-    #     zarr_save_file = f"{save_file_name}.zarr"
-    #     root = zarr.open(zarr_save_file, mode='a')
-    #     ds = root.create_dataset('ldscore', data=ldscore_chr_chunk, dtype=np.float32, chunks=(1000, len(column_names)))
-    #
-    #     # Store column names and SNP names
-    #     ds.attrs['columns'] = list(column_names)
-    #     ds.attrs['snp_names'] = list(self.snp_name if self.keep_snp_mask is None else self.snp_name[self.keep_snp_mask])
 
+    def save_ldscore_chunk_to_zarr(self, ldscore_chr_chunk: np.ndarray,
+                                   chrom:int, start_col_index,
+                                   ):
+        ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
+        # avoid overflow of float16, if inf, set to max of float16
+        ldscore_chr_chunk[np.isinf(ldscore_chr_chunk)] = np.finfo(np.float16).max
+
+        # save for each chunk
+        chrom_snp_start_point = self.chrom_snp_length_dict['chrom_snp_start_point'][chrom - 1]
+        chrom_snp_end_point = self.chrom_snp_length_dict['chrom_snp_start_point'][chrom]
+
+        self.zarr_file[chrom_snp_start_point:chrom_snp_end_point, start_col_index:start_col_index + ldscore_chr_chunk.shape[1]] = ldscore_chr_chunk
 
     def calculate_M_use_SNP_gene_pair_dummy_by_chunk(self,
                                                      mk_score_chunk,
@@ -396,7 +439,6 @@ class S_LDSC_Boost:
         np.savetxt(M_file_path, M_chr_chunk, delimiter='\t', )
         np.savetxt(M_5_file_path, M_5_chr_chunk, delimiter='\t', )
 
-
     def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(self, mk_score_common, chrom, sample_name, save_dir):
         """
         Calculate the LD score using the SNP-gene weight matrix.
@@ -412,11 +454,23 @@ class S_LDSC_Boost:
             M_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.M'
             M_5_file = f'{save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.{chrom}.l2.M_5_50'
 
-            self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(
+            ldscore_chr_chunk = self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(
                 mk_score_chunk,
-                save_file_name=ld_score_file,
                 drop_dummy_na=True,
             )
+            if self.config.ldscore_save_format == 'feather':
+                self.save_ldscore_to_feather(ldscore_chr_chunk,
+                                             column_names=mk_score_chunk.columns,
+                                             save_file_name=ld_score_file,
+                                             )
+            elif self.config.ldscore_save_format == 'zarr':
+                self.save_ldscore_chunk_to_zarr(ldscore_chr_chunk,
+                                                chrom=chrom,
+                                                start_col_index=i,
+                                                )
+            else:
+                raise ValueError(f'Invalid ldscore_save_format: {self.config.ldscore_save_format}')
+
             self.calculate_M_use_SNP_gene_pair_dummy_by_chunk(
                 mk_score_chunk,
                 M_file,
@@ -436,11 +490,15 @@ class S_LDSC_Boost:
         M_file = f'{save_dir}/baseline/baseline.{chrom}.l2.M'
         M_5_file = f'{save_dir}/baseline/baseline.{chrom}.l2.M_5_50'
 
-        self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(
+        ldscore_chr_chunk = self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(
             baseline_mk_score_df,
-            save_file_name=ld_score_file,
             drop_dummy_na=False,
         )
+
+        self.save_ldscore_to_feather(ldscore_chr_chunk,
+                                     column_names=baseline_mk_score_df.columns,
+                                     save_file_name=ld_score_file,
+                                     )
         # save baseline M
         self.calculate_M_use_SNP_gene_pair_dummy_by_chunk(
             baseline_mk_score_df,
@@ -454,6 +512,7 @@ class S_LDSC_Boost:
         Get the dummy matrix of SNP-gene pairs.
         """
         # Load the bim file
+        print("Loading bim data")
         bim, bim_pr = load_bim(self.config.bfile_root, chrom)
 
         if self.config.gene_window_enhancer_priority in ['gene_window_first', 'enhancer_first']:
@@ -556,6 +615,7 @@ if __name__ == '__main__':
             keep_snp_root=keep_snp_root,
             gene_window_size=window_size,
             spots_per_chunk=spots_per_chunk,
+            ldscore_save_format='feather',
             # enhancer_annotation_file=enhancer_annotation,
             # gene_window_enhancer_priority='enhancer_first',
             # additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'

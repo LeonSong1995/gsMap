@@ -2,7 +2,7 @@ import argparse
 import logging
 from dataclasses import dataclass, field
 from pprint import pprint
-from typing import Union, Literal
+from typing import Union, Literal, Tuple
 from pathlib import Path
 
 from collections import OrderedDict, namedtuple
@@ -466,6 +466,10 @@ class GenerateLDScoreConfig:
     spots_per_chunk: int = 5_000
     ld_wind: int = 1
     ld_unit: str = 'CM'
+
+    # zarr config
+    ldscore_save_format:Literal['feather', 'zarr'] = 'zarr'
+    zarr_chunk_size: Tuple[int, int] = (10_000, 3000)
 
     def __post_init__(self):
         if self.enhancer_annotation_file is not None and self.gene_window_enhancer_priority is None:
