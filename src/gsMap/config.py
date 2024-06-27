@@ -2,7 +2,7 @@ import argparse
 import logging
 from dataclasses import dataclass, field
 from pprint import pprint
-from typing import Union, Literal, Tuple
+from typing import Union, Literal, Tuple, Optional
 from pathlib import Path
 
 from collections import OrderedDict, namedtuple
@@ -333,13 +333,13 @@ def get_runall_mode_config(args: argparse.Namespace):
 
 def add_format_sumstats_args(parser):
     # Required arguments
-    parser.add_argument('--sumstats', required=True, type=str, 
+    parser.add_argument('--sumstats', required=True, type=str,
                         help='Path to gwas summary data')
-    parser.add_argument('--out', required=True, type=str, 
+    parser.add_argument('--out', required=True, type=str,
                         help='Path to save the formatted gwas data')
-    
+
     # Arguments for specify column name
-    parser.add_argument('--snp', default=None,type=str, 
+    parser.add_argument('--snp', default=None,type=str,
                         help="Name of snp column (if not a name that gsMap understands)")
     parser.add_argument('--a1', default=None,type=str,
                         help="Name of effect allele column (if not a name that gsMap understands)")
@@ -363,7 +363,7 @@ def add_format_sumstats_args(parser):
                         help="Name of gwas OR column (if not a name that gsMap understands)")
     parser.add_argument('--se_OR', default=None,type=str,
                         help="Name of standar error of OR column (if not a name that gsMap understands)")
-    
+
     # Arguments for convert SNP (chr, pos) to rsid
     parser.add_argument('--chr', default="Chr",type=str,
                         help="Name of SNP chromosome column (if not a name that gsMap understands)")
@@ -373,9 +373,9 @@ def add_format_sumstats_args(parser):
                         help='Path to reference dnsnp file')
     parser.add_argument('--chunksize', default=1e+6,type=int,
                         help='Chunk size for loading dbsnp file')
-    
+
     # Arguments for output format and quality
-    parser.add_argument('--format',default='gsMap', type=str, 
+    parser.add_argument('--format',default='gsMap', type=str,
                         help='Format of output data',choices=['gsMap', 'COJO'])
     parser.add_argument('--info_min', default=0.9,type=float,
                         help='Minimum INFO score.')
@@ -469,7 +469,7 @@ class GenerateLDScoreConfig:
 
     # zarr config
     ldscore_save_format:Literal['feather', 'zarr'] = 'zarr'
-    zarr_chunk_size: Tuple[int, int] = (10_000, 3000)
+    zarr_chunk_size: Tuple[int, int] = None
 
     def __post_init__(self):
         if self.enhancer_annotation_file is not None and self.gene_window_enhancer_priority is None:
@@ -510,6 +510,9 @@ class GenerateLDScoreConfig:
                 if not baseline_annotation_path.exists():
                     raise FileNotFoundError(f'baseline.{self.chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
 
+        # set the default zarr chunk size
+        if self.ldscore_save_format == 'zarr' and self.zarr_chunk_size is None:
+            self.zarr_chunk_size = (10_000, self.spots_per_chunk)
 
 
 @dataclass
@@ -519,14 +522,17 @@ class SpatialLDSCConfig:
     ldscore_input_dir: str
     ldsc_save_dir: str
     disable_additional_baseline_annotation: bool = False
-    trait_name: str = None
-    sumstats_file: str = None
-    sumstats_config_file: str = None
+    trait_name: Optional[str] = None
+    sumstats_file: Optional[str] = None
+    sumstats_config_file: Optional[str] = None
     num_processes: int = 4
     not_M_5_50: bool = False
     n_blocks: int = 200
-    chisq_max: int = None
-    all_chunk: int = None
+    chisq_max: Optional[int] = None
+    all_chunk: Optional[int] = None
+    chunk_range: Optional[Tuple[int, int]] = None
+    ldscore_save_format:Literal['feather', 'zarr'] = 'zarr'
+
 
     def __post_init__(self):
         if self.sumstats_file is None and self.sumstats_config_file is None:

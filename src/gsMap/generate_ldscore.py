@@ -605,21 +605,41 @@ if __name__ == '__main__':
         spots_per_chunk = 3_000
         enhancer_annotation = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/epigenome/cleaned_data/by_tissue/BRN/ABC_roadmap_merged.bed'
         # %%
-        config = GenerateLDScoreConfig(
-            sample_name=sample_name,
-            chrom=chrom,
-            ldscore_save_dir=save_dir,
-            gtf_annotation_file=gtf_file,
-            mkscore_feather_file=mkscore_feather_file,
-            bfile_root=bfile_root,
-            keep_snp_root=keep_snp_root,
-            gene_window_size=window_size,
-            spots_per_chunk=spots_per_chunk,
-            ldscore_save_format='feather',
-            # enhancer_annotation_file=enhancer_annotation,
-            # gene_window_enhancer_priority='enhancer_first',
-            # additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'
-        )
+        import submitit
+        log_folder = "/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240605_without_denoise/mouse_embryo/submitit/log%j"
+        executor = submitit.AutoExecutor(folder=log_folder)
+        # executor = submitit.SlurmExecutor(folder=log_folder)
+        executor.update_parameters(slurm_partition='intel-sc3,amd-ep2,amd-ep2-short',
+                                   slurm_cpus_per_task=5,
+                                   slurm_mem='30G',
+                                   slurm_qos='normal',
+                                   slurm_time='1-00:00:00',
+                                   )
+        jobs = []
+        for chrom in range(1, 23):
+            config = GenerateLDScoreConfig(
+                sample_name=sample_name,
+                chrom=chrom,
+                ldscore_save_dir=save_dir,
+                gtf_annotation_file=gtf_file,
+                mkscore_feather_file=mkscore_feather_file,
+                bfile_root=bfile_root,
+                keep_snp_root=keep_snp_root,
+                gene_window_size=window_size,
+                spots_per_chunk=spots_per_chunk,
+                ldscore_save_format='feather',
+                # enhancer_annotation_file=enhancer_annotation,
+                # gene_window_enhancer_priority='enhancer_first',
+                # additional_baseline_annotation_dir_path='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/ldsc/baseline_v1.2/remove_base'
+            )
+            executor.update_parameters(job_name=f'ldsc_{sample_name}_{chrom}')
+            job = executor.submit(run_generate_ldscore, config)
+            jobs.append(job)
+        for job in submitit.helpers.as_completed(jobs):
+            try:
+                print(job.stdout())
+            except Exception as e:
+                print(e)
         # %%
         run_generate_ldscore(config)
     else:
