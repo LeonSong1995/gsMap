@@ -1,3 +1,4 @@
+import gc
 import os
 import zarr
 import numpy as np
@@ -312,6 +313,9 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             out_chunk['p'] = norm.sf(out_chunk['z'])
             output_dict[trait_name].append(out_chunk)
 
+        del ref_ld_spatial, spatial_annotation, baseline_annotation, w_ld_common_snp
+        gc.collect()
+
     # Save the results
     out_dir = Path(config.ldsc_save_dir)
     out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
@@ -391,6 +395,7 @@ if __name__ == '__main__':
     #                               'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
     #                               })
     import time
+
     start = time.time()
     ldscore_save_format = 'feather'
     config = SpatialLDSCConfig(sample_name='Cortex_151507',

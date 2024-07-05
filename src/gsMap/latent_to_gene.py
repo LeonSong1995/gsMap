@@ -117,7 +117,7 @@ def _compute_regional_mkscore(cell_tg, ):
         # Simultaneously consider the ratio of expression fractions and ranks
         gene_ranks_region = (gene_ranks_region * frac_region).values
 
-    mkscore = np.exp(gene_ranks_region ** 2) - 1
+    mkscore = np.exp(gene_ranks_region ** 1.5) - 1
     return mkscore.astype(np.float16, copy=False)
 
 
@@ -127,6 +127,13 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     # Load and process the spatial data
     print('------Loading the spatial data...')
     adata = sc.read_h5ad(config.input_hdf5_with_latent_path)
+
+    # Process the data
+    adata.X = adata.layers[config.type]
+
+    print('------Ranking the spatial data...')
+    adata.layers['rank'] = rankdata(adata.X.toarray().astype(np.float32), axis=1).astype(np.float32)
+
     if not config.annotation is None:
         print(f'------Cell annotations are provided as {config.annotation}...')
         adata = adata[~pd.isnull(adata.obs[config.annotation]), :]
@@ -138,15 +145,8 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         adata = adata[:, adata.var_names.isin(homologs[config.species])]
         print(f'{adata.shape[1]} genes left after homologs transformation.')
         adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM']
-    # Process the data
-    if config.type == 'count':
-        adata.X = adata.layers[config.type]
-        sc.pp.normalize_total(adata, target_sum=1e4)
-        sc.pp.log1p(adata)
-    else:
-        adata.X = adata.layers[config.type]
 
-        # Remove cells that do not express any genes after transformation, and genes that are not expressed in any cells.
+    # Remove cells that do not express any genes after transformation, and genes that are not expressed in any cells.
     print(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')
     adata = adata[adata.X.sum(axis=1) > 0, adata.X.sum(axis=0) > 0]
     print(f'Number of cells, genes after transformation: {adata.shape[0]},{adata.shape[1]}')
@@ -166,24 +166,28 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     if not config.gM_slices is None:
         print('Geometrical mean across multiple slices are provided.')
         gM = pd.read_parquet(config.gM_slices)
+
+        # Homologs transformation for gM
+        if  config.species is not None:
+            homologs = pd.read_csv(config.gs_species, sep='\t')
+            homologs.index = homologs[config.species]
+            gM = gM.loc[gM.index.isin(homologs[config.species])]
+            gM.index = homologs.loc[gM.index, 'HUMAN_GENE_SYM']
+
         # Select the common gene
         common_gene = np.intersect1d(adata.var_names, gM.index)
         gM = gM.loc[common_gene]
-        gM = gM['G_Mean'].to_list()
-        print('------Ranking the spatial data...')
+        gM = gM['G_Mean'].to_numpy()
         adata = adata[:, common_gene]
-        ranks = np.apply_along_axis(rankdata, 1, adata.X.toarray())
     else:
-        print('------Ranking the spatial data...')
-        ranks = rankdata(adata.X.toarray().astype(np.float32), axis=1).astype(np.float32)
-        gM = gmean(ranks, axis=0)
+        gM = gmean(adata.layers['rank'], axis=0)
 
     # Compute the fraction of each gene across cells
     expressed_mask = pd.DataFrame((adata.X > 0).toarray(), index=adata.obs.index, columns=adata.var.index)
-    # frac_whole = np.array((adata.X > 0).sum(axis=0))[0] / (adata.shape[0])
+    # frac_whole = np.array((adata_layer > 0).sum(axis=0))[0] / (adata.shape[0])
     frac_whole = np.array(expressed_mask.sum(axis=0)) / (adata.shape[0])
     # Normalize the geometrical mean
-    ranks = ranks / gM
+    ranks = adata.layers['rank'] / gM
     ranks = pd.DataFrame(ranks, index=adata.obs_names)
     ranks.columns = adata.var.index
     mk_score = [
