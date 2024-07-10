@@ -5,8 +5,10 @@
 
 ![Model architecture](gsMap_schmatic.png)
 
+## 1.Citation
+Liyang Song, Wenhao Chen, Junren Hou, Minmin Guo, Jian Yang (2024) Spatially resolved mapping of cells associated with human complex traits (Under review)
 
-## Installation
+## 2.Installation
 
 install use pip:
 
@@ -22,13 +24,13 @@ cd gsMap
 pip install -e .
 ```
 
-## Usage
+## 3.Usage
 
 Please checkout the documentations and tutorials at
 [gsMap.docs](https://yanglab.westlake.edu.cn/gsmap/document).
 
 
-## Online visualization
+## 4.Online visualization
 
 To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsmap.visualization](https://yanglab.westlake.edu.cn/gsmap/visualize).
 
