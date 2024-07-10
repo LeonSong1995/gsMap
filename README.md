@@ -6,7 +6,7 @@
 ![Model architecture](gsMap_schmatic.png)
 
 ## 1.Citation
-Liyang Song, Wenhao Chen, Junren Hou, Minmin Guo, Jian Yang (2024) Spatially resolved mapping of cells associated with human complex traits (Under review)
+Liyang Song, Wenhao Chen, Junren Hou, Minmin Guo, Jian Yang (2024) Spatially resolved mapping of cells associated with human complex traits. (Under review)
 
 ## 2.Installation
 
