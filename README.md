@@ -19,7 +19,7 @@ pip install gsMap
 install from source:
 
 ```bash
-git clone
+git clone https://github.com/LeonSong1995/gsMap.git
 cd gsMap
 pip install -e .
 ```
