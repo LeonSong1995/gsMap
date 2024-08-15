@@ -271,19 +271,23 @@ class S_LDSC_Boost:
 
         # create tha zarr file
         if config.ldscore_save_format == 'zarr':
+
+            chrom_snp_length_dict = get_snp_counts(config)
+            self.chrom_snp_start_point = chrom_snp_length_dict['chrom_snp_start_point']
+
             zarr_path = Path(config.ldscore_save_dir)/f'{config.sample_name}.ldscore.zarr'
-
             if not zarr_path.exists():
+                self.zarr_file = zarr.open(zarr_path.as_posix(), mode='a', dtype=np.float16,
+                                           chunks=config.zarr_chunk_size,
+                                           shape=(chrom_snp_length_dict['total'], self.mk_score_common.shape[1])) if
                 zarr_path.mkdir(parents=True, exist_ok=True)
-
-                self.chrom_snp_length_dict = get_snp_counts(config)
-                self.zarr_file = zarr.open(zarr_path.as_posix(), mode='a', dtype=np.float16, chunks=config.zarr_chunk_size,
-                                           shape=(self.chrom_snp_length_dict['total'], self.mk_score_common.shape[1]))
-
                 # save spot names
                 self.zarr_file.attrs['spot_names'] = self.mk_score_common.columns.to_list()
+                # save chrom_snp_length_dict
+                self.zarr_file.attrs['chrom_snp_start_point'] = self.chrom_snp_start_point
             else:
                 self.zarr_file = zarr.open(zarr_path.as_posix(), mode='a')
+
 
     def process_chromosome(self, chrom: int):
         self.snp_pass_maf = get_snp_pass_maf(self.config.bfile_root, chrom, maf_min=0.05)
@@ -411,8 +415,8 @@ class S_LDSC_Boost:
         ldscore_chr_chunk[np.isinf(ldscore_chr_chunk)] = np.finfo(np.float16).max
 
         # save for each chunk
-        chrom_snp_start_point = self.chrom_snp_length_dict['chrom_snp_start_point'][chrom - 1]
-        chrom_snp_end_point = self.chrom_snp_length_dict['chrom_snp_start_point'][chrom]
+        chrom_snp_start_point = self.chrom_snp_start_point[chrom - 1]
+        chrom_snp_end_point = self.chrom_snp_start_point[chrom]
 
         self.zarr_file[chrom_snp_start_point:chrom_snp_end_point, start_col_index:start_col_index + ldscore_chr_chunk.shape[1]] = ldscore_chr_chunk
 
