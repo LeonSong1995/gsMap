@@ -450,7 +450,7 @@ class GenerateLDScoreConfig:
     ldscore_save_dir: str
     mkscore_feather_file: str
     bfile_root: str
-    keep_snp_root: str
+    keep_snp_root: Optional[str]
 
     # annotation by gene distance
     gtf_annotation_file: str

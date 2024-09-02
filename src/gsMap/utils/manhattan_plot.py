@@ -1,5 +1,5 @@
 '''
-Modified from
+Modified from dash-bio ManhattanPlot (https://github.com/plotly/dash-bio/blob/master/dash_bio/component_factory/_manhattan.py)
 '''
 import numpy as np
 import pandas as pd
@@ -527,7 +527,7 @@ class _ManhattanPlot():
                         text=highlight_hover_text,
                         marker=dict(
                             color=highlight_color,
-                            size=point_size * 3,
+                            size=point_size * 5,
                         ),
                         name="SNP-Gene Pairs of interest"
                     )

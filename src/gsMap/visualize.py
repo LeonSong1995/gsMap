@@ -18,21 +18,28 @@ def load_ldsc(ldsc_input_file):
 
 
 # %%
-def load_st_coord(adata, ldsc, annotation):
+def load_st_coord(adata, feature_series: pd.Series, annotation):
     spot_name = adata.obs_names.to_list()
-    space_coord = pd.DataFrame(adata.obsm['spatial'], columns=['sx', 'sy'], index=spot_name)
-    space_coord = space_coord[space_coord.index.isin(ldsc.spot)]
-    space_coord_concat = pd.concat([space_coord.loc[ldsc.spot], ldsc.logp], axis=1)
+    assert 'spatial' in adata.obsm.keys(), 'spatial coordinates are not found in adata.obsm'
+
+    # to DataFrame
+    space_coord = adata.obsm['spatial']
+    if isinstance(space_coord, np.ndarray):
+        space_coord = pd.DataFrame(space_coord, columns=['sx', 'sy'], index=spot_name)
+    else:
+        space_coord = pd.DataFrame(space_coord.values, columns=['sx', 'sy'], index=spot_name)
+
+    space_coord = space_coord[space_coord.index.isin(feature_series.index)]
+    space_coord_concat = pd.concat([space_coord.loc[feature_series.index], feature_series], axis=1)
     space_coord_concat.head()
     if annotation is not None:
         annotation = pd.Series(adata.obs[annotation].values, index=adata.obs_names, name='annotation')
         space_coord_concat = pd.concat([space_coord_concat, annotation], axis=1)
     return space_coord_concat
 
-
 # %%
 def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'light'] = 'light',
-                 point_size: int = None, width=800, height=600, annotation=None):
+                 point_size: int = None, width=800, height=600, annotation=None, color_by='logp'):
     # change theme to plotly_white
     if fig_style == 'dark':
         px.defaults.template = "plotly_dark"
@@ -56,11 +63,11 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
         space_coord_concat,
         x='sx',
         y='sy',
-        color='logp',  # Color the points by the 'logp' column
+        color=color_by,
         symbol='annotation' if annotation is not None else None,
         title=title,
         color_continuous_scale=custom_color_scale,
-        range_color=[0, max(space_coord_concat.logp)],
+        range_color=[0, max(space_coord_concat[color_by])],
     )
 
     if point_size is not None:
@@ -87,7 +94,7 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
         )
     )
     # change color bar title
-    fig.update_layout(coloraxis_colorbar_title='-log10(p)')
+    fig.update_layout(coloraxis_colorbar_title='-log10(p)' if color_by == 'logp' else color_by)
 
     return fig
 
