@@ -3,7 +3,7 @@
 [![pypi-badge](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/p/gsMap)
 [![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![Model architecture](gsMap_schematic.png)
+![Model architecture](schematic.png)
 
 ## 1.Citation
 Liyang Song, Wenhao Chen, Junren Hou, Minmin Guo, Jian Yang (2024) Spatially resolved mapping of cells associated with human complex traits. (Under review)
