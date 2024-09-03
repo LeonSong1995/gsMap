@@ -137,6 +137,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     if not config.annotation is None:
         print(f'------Cell annotations are provided as {config.annotation}...')
         adata = adata[~pd.isnull(adata.obs[config.annotation]), :]
+
     # Homologs transformation
     if not config.species is None:
         print(f'------Transforming the {config.species} to HUMAN_GENE_SYM...')
@@ -203,6 +204,10 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     mask = ~mk_score.index.isin(set(mt_genes))
     mk_score = mk_score[mask]  # Apply the mask to mk_score
     print(mk_score.shape)
+
+    # save the modified adata
+    adata.write(config.input_hdf5_with_latent_path)
+
     # Save the marker scores
     print(f'------Saving marker scores ...')
     output_file_path = Path(config.output_feather_path)

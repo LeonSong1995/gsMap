@@ -45,17 +45,6 @@ class DiagnosisConfig:
     selected_genes: Optional[List[str]] = None
 
 
-def _get_hover_text(df, snpname=None, genename=None, annotationname=None):
-    hover_text = ''
-    if snpname is not None and snpname in df.columns:
-        hover_text = 'SNP: ' + df[snpname].astype(str)
-    if genename is not None and genename in df.columns:
-        hover_text += '<br>GENE: ' + df[genename].astype(str)
-    if annotationname is not None and annotationname in df.columns:
-        hover_text += '<br>' + df[annotationname].astype(str)
-    return hover_text
-
-
 def convert_z_to_p(gwas_data):
     gwas_data['P'] = norm.sf(abs(gwas_data['Z'])) * 2
     return gwas_data
@@ -218,7 +207,9 @@ def generate_GSS_distribution(config: DiagnosisConfig):
     plot_genes = config.selected_genes
 
     sub_fig_save_dir = save_dir / 'sub_figures'
-    sub_fig_save_dir.mkdir(parents=True, exist_ok=True)
+    sub_fig_save_dir.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+
+    html_files = []
 
     for selected_gene in plot_genes:
         logger.info(f'Generating GSS & Expression distribution plot for {selected_gene}...')
@@ -235,6 +226,7 @@ def generate_GSS_distribution(config: DiagnosisConfig):
                                  )
         save_sub_fig_1_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_Expression_Distribution.html'
         sub_fig_1.write_html(str(save_sub_fig_1_path))
+        html_files.append((selected_gene, 'Expression', Path(save_sub_fig_1_path).relative_to(save_dir)))
 
         # GSS distribution
         select_gene_GSS_with_space_coord = load_st_coord(adata, mk_score[selected_gene].rename('GSS'), 'annotation')
@@ -246,8 +238,47 @@ def generate_GSS_distribution(config: DiagnosisConfig):
                                  )
         save_sub_fig_2_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_GSS_Distribution.html'
         sub_fig_2.write_html(str(save_sub_fig_2_path))
+        html_files.append((selected_gene, 'GSS', Path(save_sub_fig_2_path).relative_to(save_dir)))
 
+    # After generating all figures, create a combined HTML report
+    combined_html = """
+    <html>
+    <head>
+        <title>GSS & Expression Distribution Report</title>
+        <style>
+            body {font-family: Arial, sans-serif; margin: 40px;}
+            h1 {color: #333;}
+            h2 {color: #555;}
+            .row {display: flex; flex-direction: row; justify-content: space-between; margin-bottom: 40px;}
+            iframe {border: none; width: 48%; height: 600px;}
+        </style>
+    </head>
+    <body>
+        <h1>GSS & Expression Distribution Report</h1>
+        <p>This report contains the GSS and Expression distribution plots for the selected genes. Each plot is interactive, allowing you to explore the data in detail.</p>
+    """
 
+    # Group the figures by gene and display them in rows
+    current_gene = None
+    for gene, plot_type, relative_path in html_files:
+        if gene != current_gene:
+            if current_gene is not None:
+                combined_html += "</div>"  # Close the previous row
+            combined_html += f"<h2>{gene}</h2><div class='row'>"  # Start a new row
+            current_gene = gene
+
+        combined_html += f"""
+        <iframe src="{relative_path}"></iframe>
+        """
+
+    combined_html += "</div></body></html>"  # Close the last row and the body
+
+    # Save the combined HTML report
+    final_report_path = save_dir / f'{config.sample_name}_GSS_Expression_Distribution_Report.html'
+    with open(final_report_path, "w") as file:
+        file.write(combined_html)
+
+    logger.info(f'Combined HTML report generated: {final_report_path}')
 
 # %%
 if __name__ == '__main__':

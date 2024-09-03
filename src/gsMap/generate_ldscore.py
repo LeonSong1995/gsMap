@@ -298,12 +298,6 @@ class S_LDSC_Boost:
         # Get SNP-Gene dummy pairs
         self.snp_gene_pair_dummy = self.get_snp_gene_dummy(chrom, )
 
-        # save snp_gene_pair_dummy
-        snp_gene_pair_dummy_out_path = Path(self.config.ldscore_save_dir) / 'snp_gene_pair_dummy'/f'{self.config.sample_name}.{chrom}.snp_gene_pair_dummy.feather'
-        snp_gene_pair_dummy_out_path.parent.mkdir(parents=True, exist_ok=True)
-        self.snp_gene_pair_dummy.reset_index().to_feather(snp_gene_pair_dummy_out_path)
-
-
         if self.config.keep_snp_root is not None:
             keep_snp = pd.read_csv(f'{self.config.keep_snp_root}.{chrom}.snp', header=None)[0].to_list()
             self.keep_snp_mask = self.snp_gene_pair_dummy.index.isin(keep_snp)
@@ -372,32 +366,19 @@ class S_LDSC_Boost:
         if self.keep_snp_mask is not None:
             self.snp_gene_weight_matrix = self.snp_gene_weight_matrix[self.keep_snp_mask]
 
-        # save snp_gene_pair_dummy after filter
-        snp_gene_pair_dummy_out_path = Path(self.config.ldscore_save_dir) / 'snp_gene_pair_dummy_after_filtering'/f'{self.config.sample_name}.{chrom}.snp_gene_pair_dummy.feather'
-        snp_gene_pair_dummy_out_path.parent.mkdir(parents=True, exist_ok=True)
-        self.snp_gene_pair_dummy[self.keep_snp_mask].reset_index().to_feather(snp_gene_pair_dummy_out_path)
+        # convert to sparse
+        self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
 
+        # calculate baseline ld score
+        self.calculate_ldscore_for_base_line(chrom, self.config.sample_name, self.config.ldscore_save_dir)
 
-
-        # save snp_gene_weight_matrix
-        snp_gene_weight_matrix_out_path= Path(self.config.ldscore_save_dir) / 'snp_gene_weight_matrix'/f'{self.config.sample_name}.{chrom}.snp_gene_weight_matrix.feather'
-        snp_gene_weight_matrix_out_path.parent.mkdir(parents=True, exist_ok=True)
-        self.snp_gene_weight_matrix.iloc[:,:-1].reset_index().to_feather(snp_gene_weight_matrix_out_path)
-
-        # # convert to sparse
-        # self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
-        # # self.snp_gene_weight_matrix = self.snp_gene_weight_matrix.values
-        #
-        # # calculate baseline ld score
-        # self.calculate_ldscore_for_base_line(chrom, self.config.sample_name, self.config.ldscore_save_dir)
-        #
-        # # calculate ld score for annotation
-        # self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(
-        #     self.mk_score_common.loc[self.snp_gene_pair_dummy.columns[:-1]],
-        #     chrom,
-        #     self.config.sample_name,
-        #     self.config.ldscore_save_dir,
-        # )
+        # calculate ld score for annotation
+        self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chr(
+            self.mk_score_common.loc[self.snp_gene_pair_dummy.columns[:-1]],
+            chrom,
+            self.config.sample_name,
+            self.config.ldscore_save_dir,
+        )
 
     def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(self,
                                                               mk_score_chunk,
@@ -674,4 +655,3 @@ if __name__ == '__main__':
         args = parser.parse_args()
         config = GenerateLDScoreConfig(**vars(args))
         run_generate_ldscore(config)
-
