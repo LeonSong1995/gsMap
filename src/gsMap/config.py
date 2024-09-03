@@ -2,7 +2,7 @@ import argparse
 import logging
 from dataclasses import dataclass, field
 from pprint import pprint
-from typing import Union, Literal, Tuple, Optional
+from typing import Union, Literal, Tuple, Optional, List
 from pathlib import Path
 
 from collections import OrderedDict, namedtuple
@@ -625,6 +625,27 @@ class VisualizeConfig:
     fig_width: int = 800
     point_size: int = None
     fig_style: Literal['dark', 'light'] = 'light'
+
+# %%
+@dataclass
+class DiagnosisConfig:
+    sample_name: str
+    input_hdf5_path: str
+    annotation: str
+    mkscore_feather_file: str
+
+    plot_type: Literal['manhattan', 'GSS']  # 'manhattan' for diagnostic manhattan plot, 'GSS' for GSS distribution plot
+    # for get SNP-gene pairs
+    ldscore_save_dir:str
+
+    input_ldsc_dir: str
+    trait_name: str
+    sumstats_file: str
+    diagnosis_save_dir: str
+
+    gene_window_size: int = 50000
+    top_corr_genes: int = 50
+    selected_genes: Optional[List[str]] = None
 
 
 @dataclass
