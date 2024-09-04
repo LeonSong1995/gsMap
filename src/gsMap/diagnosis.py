@@ -5,6 +5,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from plotly.subplots import make_subplots
+import plotly.io as pio
 from scipy.stats import norm
 
 from gsMap.config import DiagnosisConfig
@@ -236,6 +238,19 @@ def generate_GSS_distribution(config: DiagnosisConfig):
         save_sub_fig_2_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_GSS_Distribution.html'
         sub_fig_2.write_html(str(save_sub_fig_2_path))
 
+        combined_fig = make_subplots(rows=1, cols=2,
+                                     subplot_titles=(f'{selected_gene} (Expression)', f'{selected_gene} (GSS)'))
+
+        # Add both figures
+        combined_fig.add_trace(sub_fig_1.data[0], row=1, col=1)
+        combined_fig.add_trace(sub_fig_1.data[0], row=1, col=2)
+
+        # Update the layout for the combined figure
+        combined_fig.update_layout(height=pixel_height, width=pixel_width * 2, showlegend=False)
+
+        # Save the combined figure as PNG
+        combined_png_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_Combined.png'
+        pio.write_image(combined_fig, str(combined_png_path))
 
 def run_Diagnosis(config: DiagnosisConfig):
     if config.plot_type == 'manhattan':
@@ -264,6 +279,6 @@ if __name__ == '__main__':
         ldscore_save_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/generate_ldscore',
     )
 
-    generate_manhattan_plot(config)
+    # generate_manhattan_plot(config)
 
-    # generate_GSS_distribution(config)
+    generate_GSS_distribution(config)

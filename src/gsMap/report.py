@@ -1,7 +1,8 @@
+import json
 import os
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
-
+import html
 # Load the Jinja2 environment
 try:
     from importlib.resources import files
@@ -33,10 +34,17 @@ def load_gene_diagnostic_info(csv_file):
 
 
 def embed_html_content(file_path):
-    """Read the content of an HTML file and return it as a string."""
+    """Read the content of an HTML file, sanitize it, and return it as a string."""
     with open(file_path, 'r') as f:
-        return f.read()
+        content = f.read()
 
+    # Sanitize the content by removing unnecessary newlines
+    content = content.replace('\n', '').strip()
+
+    # Escape any special characters that might break the JSON
+    content = html.escape(content)
+
+    return content
 
 def generate_report(result_dir, sample_name, trait_name):
     """
@@ -88,7 +96,8 @@ def generate_report(result_dir, sample_name, trait_name):
         gene_plots=gene_plots,  # List of inlined gene plots
         gsmap_version=gsmap_version,
         parameters=parameters,
-        gene_diagnostic_info=gene_diagnostic_info  # Include top 50 gene diagnostic info rows
+        gene_diagnostic_info=gene_diagnostic_info,
+        gene_plots_json=json.dumps(gene_plots)  # Pass gene plots as JSON for JavaScript
     )
 
     # Save the generated HTML report
