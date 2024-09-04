@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+        }
+        .plot-container {
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+<body>
+    <h1>{{ title }}</h1>
+
+    <div class="plot-container">
+        <h2>Genetic Spatial Mapping Plot</h2>
+        <iframe src="{{ genetic_mapping_plot }}" width="100%" height="500px"></iframe>
+    </div>
+
+    <div class="plot-container">
+        <h2>Cauchy Combination Result</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Annotation</th>
+                    <th>P Cauchy</th>
+                    <th>P Median</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in cauchy_table %}
+                <tr>
+                    <td>{{ row.annotation }}</td>
+                    <td>{{ row.p_cauchy }}</td>
+                    <td>{{ row.p_median }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="plot-container">
+        <h2>Diagnosis Manhattan Plot</h2>
+        <iframe src="{{ manhattan_plot }}" width="100%" height="500px"></iframe>
+    </div>
+
+    <div class="plot-container">
+        <h2>Gene Expression and GSS Distribution</h2>
+        <label for="geneSelect">Select a gene:</label>
+        <select id="geneSelect" class="form-select">
+            {% for gene in gene_plots %}
+            <option value="{{ gene.name }}">{{ gene.name }}</option>
+            {% endfor %}
+        </select>
+
+        <div id="genePlots">
+            <iframe id="expressionPlot" src="{{ gene_plots[0].expression_plot }}" width="100%" height="500px"></iframe>
+            <iframe id="gssPlot" src="{{ gene_plots[0].gss_plot }}" width="100%" height="500px"></iframe>
+        </div>
+    </div>
+
+    <div class="plot-container">
+        <h2>Running Info</h2>
+        <p><strong>gsMap Version:</strong> {{ gsmap_version }}</p>
+        <p><strong>Parameters:</strong> {{ parameters }}</p>
+    </div>
+
+    <script>
+        const geneSelect = document.getElementById('geneSelect');
+        const expressionPlot = document.getElementById('expressionPlot');
+        const gssPlot = document.getElementById('gssPlot');
+
+        geneSelect.addEventListener('change', function() {
+            const selectedGene = this.value;
+            const selectedGenePlots = genePlots.find(g => g.name === selectedGene);
+            expressionPlot.src = selectedGenePlots.expression_plot;
+            gssPlot.src = selectedGenePlots.gss_plot;
+        });
+
+        const genePlots = {{ gene_plots_json | safe }};
+    </script>
+</body>
+</html>

@@ -71,3 +71,14 @@ gsmap = "gsMap.main:main"
 
 [tool.flit.module]
 name = "gsMap"
+
+[tool.flit.sdist]
+# Include the HTML template in the source distribution
+include = [
+    "src/gsMap/templates/*.html"
+]
+
+[tool.flit.wheel]
+include = [
+    "src/gsMap/templates/*.html"
+]
