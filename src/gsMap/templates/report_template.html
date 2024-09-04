@@ -17,11 +17,16 @@
 <body>
     <h1>{{ title }}</h1>
 
+    <!-- Genetic Spatial Mapping Plot -->
     <div class="plot-container">
         <h2>Genetic Spatial Mapping Plot</h2>
-        <iframe src="{{ genetic_mapping_plot }}" width="100%" height="500px"></iframe>
+        <!-- Embed the content of the trait.html file directly -->
+        <div>
+            {{ genetic_mapping_plot|safe }}
+        </div>
     </div>
 
+    <!-- Cauchy Combination Result Table -->
     <div class="plot-container">
         <h2>Cauchy Combination Result</h2>
         <table class="table table-striped">
@@ -44,11 +49,16 @@
         </table>
     </div>
 
+    <!-- Manhattan Plot -->
     <div class="plot-container">
         <h2>Diagnosis Manhattan Plot</h2>
-        <iframe src="{{ manhattan_plot }}" width="100%" height="500px"></iframe>
+        <!-- Embed the content of the manhattan_plot.html file directly -->
+        <div>
+            {{ manhattan_plot|safe }}
+        </div>
     </div>
 
+    <!-- Gene Expression and GSS Distribution -->
     <div class="plot-container">
         <h2>Gene Expression and GSS Distribution</h2>
         <label for="geneSelect">Select a gene:</label>
@@ -59,30 +69,61 @@
         </select>
 
         <div id="genePlots">
-            <iframe id="expressionPlot" src="{{ gene_plots[0].expression_plot }}" width="100%" height="500px"></iframe>
-            <iframe id="gssPlot" src="{{ gene_plots[0].gss_plot }}" width="100%" height="500px"></iframe>
+            <div id="expressionPlot">
+                {{ gene_plots[0].expression_plot|safe }}
+            </div>
+            <div id="gssPlot">
+                {{ gene_plots[0].gss_plot|safe }}
+            </div>
         </div>
     </div>
 
+    <!-- Gene Diagnostic Info Table -->
+    <div class="plot-container">
+        <h2>Top 50 Gene Diagnostic Info</h2>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Gene</th>
+                    <th>Annotation</th>
+                    <th>Median GSS</th>
+                    <th>PCC</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in gene_diagnostic_info %}
+                <tr>
+                    <td>{{ row.Gene }}</td>
+                    <td>{{ row.Annotation }}</td>
+                    <td>{{ row.Median_GSS }}</td>
+                    <td>{{ row.PCC }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Running Info -->
     <div class="plot-container">
         <h2>Running Info</h2>
         <p><strong>gsMap Version:</strong> {{ gsmap_version }}</p>
         <p><strong>Parameters:</strong> {{ parameters }}</p>
     </div>
 
+    <!-- JavaScript for Gene Plots -->
     <script>
         const geneSelect = document.getElementById('geneSelect');
-        const expressionPlot = document.getElementById('expressionPlot');
-        const gssPlot = document.getElementById('gssPlot');
+        const expressionPlotDiv = document.getElementById('expressionPlot');
+        const gssPlotDiv = document.getElementById('gssPlot');
+        const genePlots = {{ gene_plots_json | safe }};
 
         geneSelect.addEventListener('change', function() {
             const selectedGene = this.value;
             const selectedGenePlots = genePlots.find(g => g.name === selectedGene);
-            expressionPlot.src = selectedGenePlots.expression_plot;
-            gssPlot.src = selectedGenePlots.gss_plot;
+            expressionPlotDiv.innerHTML = selectedGenePlots.expression_plot;
+            gssPlotDiv.innerHTML = selectedGenePlots.gss_plot;
         });
-
-        const genePlots = {{ gene_plots_json | safe }};
     </script>
+
 </body>
 </html>

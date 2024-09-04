@@ -1,5 +1,3 @@
-import csv
-import json
 import os
 import pandas as pd
 from jinja2 import Environment, FileSystemLoader
@@ -34,10 +32,16 @@ def load_gene_diagnostic_info(csv_file):
     return top_50
 
 
+def embed_html_content(file_path):
+    """Read the content of an HTML file and return it as a string."""
+    with open(file_path, 'r') as f:
+        return f.read()
+
+
 def generate_report(result_dir, sample_name, trait_name):
     """
     Generate the report by dynamically loading data based on the result directory,
-    sample name, and trait name.
+    sample name, and trait name. Embed HTML plot contents directly into the report.
     """
 
     # Paths to different directories and files based on the provided result directory and sample/trait name
@@ -48,37 +52,43 @@ def generate_report(result_dir, sample_name, trait_name):
     # Load data
     cauchy_table = load_cauchy_table(cauchy_file)
 
-    # Load gene expression and GSS plots based on files in the diagnosis directory
+    # Load gene expression and GSS plots and embed their content
     gss_distribution_dir = os.path.join(diagnosis_dir, 'GSS_distribution')
-    gene_plots = [
-        {'name': gene_name,
-         'expression_plot': os.path.join(gss_distribution_dir,
-                                         f"{sample_name}_{gene_name}_Expression_Distribution.html"),
-         'gss_plot': os.path.join(gss_distribution_dir, f"{sample_name}_{gene_name}_GSS_Distribution.html")}
-        for gene_name in ['CELF4', 'COL11A1', 'INA', 'MAP2', 'MAPT', 'MECOM', 'RAB3C']  # Add more gene names as needed
-    ]
+    gene_plots = []
+    for gene_name in ['CELF4', 'COL11A1', 'INA', 'MAP2', 'MAPT', 'MECOM', 'RAB3C']:  # Add more gene names as needed
+        expression_html = embed_html_content(
+            os.path.join(gss_distribution_dir, f"{sample_name}_{gene_name}_Expression_Distribution.html"))
+        gss_html = embed_html_content(
+            os.path.join(gss_distribution_dir, f"{sample_name}_{gene_name}_GSS_Distribution.html"))
+        gene_plots.append({
+            'name': gene_name,
+            'expression_plot': expression_html,
+            'gss_plot': gss_html
+        })
 
     # Load the top 50 rows of gene diagnostic info
     gene_diagnostic_info = load_gene_diagnostic_info(gene_diagnostic_info_file)
 
     # Sample data for other report components
     title = f"{sample_name} Genetic Spatial Mapping Report"
-    genetic_mapping_plot = "trait.html"  # Update this with the actual path if needed
-    manhattan_plot = "manhattan_plot.html"  # Update this with the actual path if needed
+
+    # Embed the genetic mapping plot and Manhattan plot directly into the report
+    genetic_mapping_plot = embed_html_content(os.path.join(result_dir, 'visualize', f'{sample_name}_{trait_name}.html'))
+    manhattan_plot = embed_html_content(os.path.join(result_dir, 'diagnosis', f'{sample_name}_{trait_name}_Diagnostic_Manhattan_Plot.html'))
+
     gsmap_version = "1.0.0"
     parameters = "param1=value1, param2=value2"
 
     # Render the template with dynamic content
     output_html = template.render(
         title=title,
-        genetic_mapping_plot=genetic_mapping_plot,
-        manhattan_plot=manhattan_plot,
+        genetic_mapping_plot=genetic_mapping_plot,  # Inlined genetic mapping plot
+        manhattan_plot=manhattan_plot,  # Inlined Manhattan plot
         cauchy_table=cauchy_table,
-        gene_plots=gene_plots,
+        gene_plots=gene_plots,  # List of inlined gene plots
         gsmap_version=gsmap_version,
         parameters=parameters,
-        gene_diagnostic_info=gene_diagnostic_info,  # Include top 50 gene diagnostic info rows
-        gene_plots_json=json.dumps(gene_plots)  # Pass gene plots as JSON for JavaScript
+        gene_diagnostic_info=gene_diagnostic_info  # Include top 50 gene diagnostic info rows
     )
 
     # Save the generated HTML report

@@ -264,6 +264,6 @@ if __name__ == '__main__':
         ldscore_save_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/generate_ldscore',
     )
 
-    # generate_manhattan_plot(config)
+    generate_manhattan_plot(config)
 
-    generate_GSS_distribution(config)
+    # generate_GSS_distribution(config)
