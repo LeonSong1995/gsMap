@@ -77,8 +77,3 @@ name = "gsMap"
 include = [
     "src/gsMap/templates/*.html"
 ]
-
-[tool.flit.wheel]
-include = [
-    "src/gsMap/templates/*.html"
-]
