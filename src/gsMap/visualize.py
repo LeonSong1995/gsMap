@@ -1,6 +1,7 @@
 import argparse
 from pathlib import Path
 from typing import Literal
+from scipy.spatial import KDTree
 
 import scanpy as sc
 import numpy as np
@@ -37,10 +38,26 @@ def load_st_coord(adata, feature_series: pd.Series, annotation):
         space_coord_concat = pd.concat([space_coord_concat, annotation], axis=1)
     return space_coord_concat
 
-# %%
+
+def estimate_point_size_for_plot(coordinates, DEFAULT_PIXEL_WIDTH = 1000):
+    tree = KDTree(coordinates)
+    distances, _ = tree.query(coordinates, k=2)
+    avg_min_distance = np.mean(distances[:, 1])
+    # get the width and height of the plot
+    width = np.max(coordinates[:, 0]) - np.min(coordinates[:, 0])
+    height = np.max(coordinates[:, 1]) - np.min(coordinates[:, 1])
+
+    scale_factor = DEFAULT_PIXEL_WIDTH / max(width, height)
+    pixel_width = width * scale_factor
+    pixel_height = height * scale_factor
+
+    point_size = np.ceil(avg_min_distance * scale_factor)
+    return (pixel_width, pixel_height), point_size
+
+
 def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'light'] = 'light',
                  point_size: int = None, width=800, height=600, annotation=None, color_by='logp'):
-    # change theme to plotly_white
+    # Set theme based on fig_style
     if fig_style == 'dark':
         px.defaults.template = "plotly_dark"
     else:
@@ -57,8 +74,9 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
         (1 / 8, '#4575b4'),  # Dark Blue
         (0, '#313695')  # Deep Blue
     ]
-    # custom_color_scale = px.colors.diverging.balance
     custom_color_scale.reverse()
+
+    # Create the scatter plot
     fig = px.scatter(
         space_coord_concat,
         x='sx',
@@ -70,11 +88,11 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
         range_color=[0, max(space_coord_concat[color_by])],
     )
 
+    # Update marker size if specified
     if point_size is not None:
-        fig.update_traces(marker=dict(size=point_size))
+        fig.update_traces(marker=dict(size=point_size, symbol='circle'))
 
-    fig.update_layout(legend_title_text='Annotation')
-
+    # Update layout for figure size
     fig.update_layout(
         autosize=False,
         width=width,
@@ -87,16 +105,52 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
             yanchor="top",
             y=0.99,
             xanchor="left",
-            x=-0.39,
+            x=1.2,
             font=dict(
                 size=10,
             )
         )
     )
-    # change color bar title
-    fig.update_layout(coloraxis_colorbar_title='-log10(p)' if color_by == 'logp' else color_by)
+
+    # Update colorbar to be at the bottom and horizontal
+    fig.update_layout(
+        coloraxis_colorbar=dict(
+            orientation='h',  # Make the colorbar horizontal
+            x=0.5,  # Center the colorbar horizontally
+            y=-0.0,  # Position below the plot
+            xanchor='center',  # Anchor the colorbar at the center
+            yanchor='top',  # Anchor the colorbar at the top to keep it just below the plot
+            len=0.75,  # Length of the colorbar relative to the plot width
+            title=dict(
+                text='-log10(p)' if color_by == 'logp' else color_by,  # Colorbar title
+                side='top'  # Place the title at the top of the colorbar
+            )
+        )
+    )
+    # Remove gridlines, axis labels, and ticks
+    fig.update_xaxes(
+        showgrid=False,   # Hide x-axis gridlines
+        zeroline=False,   # Hide x-axis zero line
+        showticklabels=False,  # Hide x-axis tick labels
+        title=None,       # Remove x-axis title
+        scaleanchor='y',  # Link the x-axis scale to the y-axis scale
+    )
+
+    fig.update_yaxes(
+        showgrid=False,   # Hide y-axis gridlines
+        zeroline=False,   # Hide y-axis zero line
+        showticklabels=False,  # Hide y-axis tick labels
+        title=None        # Remove y-axis title
+    )
+
+    # Adjust margins to ensure no clipping and equal axis ratio
+    fig.update_layout(
+        margin=dict(l=50, r=50, t=50, b=100),  # Adjust margins to prevent clipping
+        height=width  # Ensure the figure height matches the width for equal axis ratio
+    )
 
     return fig
+
 
 
 def run_Visualize(config: VisualizeConfig):
@@ -129,8 +183,10 @@ def run_Visualize(config: VisualizeConfig):
     fig.write_image(str(output_file_pdf))
     space_coord_concat.to_csv(str(output_file_csv))
 
-    print(f'------The visualization result is saved in a html file: {output_file_html} which can interactively viewed in a web browser and a pdf file: {output_file_pdf}.')
+    print(
+        f'------The visualization result is saved in a html file: {output_file_html} which can interactively viewed in a web browser and a pdf file: {output_file_pdf}.')
     print(f'------The visualization data is saved in a csv file: {output_file_csv}.')
+
 
 if __name__ == '__main__':
     TEST = True

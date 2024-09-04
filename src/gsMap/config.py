@@ -643,7 +643,6 @@ class DiagnosisConfig:
     sumstats_file: str
     diagnosis_save_dir: str
 
-    gene_window_size: int = 50000
     top_corr_genes: int = 50
     selected_genes: Optional[List[str]] = None
 

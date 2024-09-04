@@ -1,8 +1,9 @@
 import logging
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
-from gsMap.diagnosis import DiagnosisConfig, generate_manhattan_plot
+from gsMap.diagnosis import DiagnosisConfig, generate_manhattan_plot, run_Diagnosis
 from gsMap.cauchy_combination_test import run_Cauchy_combination
 from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, VisualizeConfig, LatentToGeneConfig, FindLatentRepresentationsConfig, CauchyCombinationConfig
 from gsMap.find_latent_representation import run_find_latent_representation
@@ -28,7 +29,6 @@ class Config_Mouse:
     SAMPLE_NAME: str = "E16.5_E1S1.MOSTA"
 
     # Input data
-    # HDF5_PATH: str = "/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/example_data/ST/E16.5_E1S1.MOSTA.h5ad"
     HDF5_PATH: str = "/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad"
     ANNOTATION: str = "annotation"
     DATA_TYPE: str = 'count'
@@ -50,6 +50,11 @@ class Config_Mouse:
 class Mouse_Without_Denoise(Config_Mouse):
     WORKDIR: str = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4'
 
+
+def format_duration(seconds):
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    return f"{hours}h {minutes}m"
 
 def run_pipeline(config: Config_Mouse):
     logger.info("Starting pipeline with configuration: %s", config)
@@ -98,24 +103,34 @@ def run_pipeline(config: Config_Mouse):
     )
 
     # Step 1: Find latent representations
+    start_time = time.time()
     logger.info("Step 1: Finding latent representations")
     if Path(find_latent_config.output_hdf5_path).exists():
         logger.info("Latent representations already found, skipping...")
     else:
         run_find_latent_representation(find_latent_config)
+    end_time = time.time()
+    logger.info(f"Step 1 completed in {format_duration(end_time - start_time)}.")
 
     # Step 2: Latent to gene
+    start_time = time.time()
     logger.info("Step 2: Mapping latent representations to genes")
     if Path(latent_to_gene_config.output_feather_path).exists():
         logger.info("Latent to gene mapping already done, skipping...")
     else:
         run_latent_to_gene(latent_to_gene_config)
+    end_time = time.time()
+    logger.info(f"Step 2 completed in {format_duration(end_time - start_time)}.")
 
     # Step 3: Generate LDScores
+    start_time = time.time()
     logger.info("Step 3: Generating LDScores")
     run_generate_ldscore(ldscore_config)
+    end_time = time.time()
+    logger.info(f"Step 3 completed in {format_duration(end_time - start_time)}.")
 
     # Step 4: Spatial LDSC
+    start_time = time.time()
     logger.info("Step 4: Running spatial LDSC")
     with open(spatial_ldsc_config.sumstats_config_file, 'r') as f:
         sumstats_config = yaml.load(f, Loader=yaml.FullLoader)
@@ -133,8 +148,11 @@ def run_pipeline(config: Config_Mouse):
             ldscore_save_format=spatial_ldsc_config.ldscore_save_format,
         )
         run_spatial_ldsc(spatial_ldsc_config_trait)
+    end_time = time.time()
+    logger.info(f"Step 4 completed in {format_duration(end_time - start_time)}.")
 
     # Step 5: Visualization
+    start_time = time.time()
     logger.info("Step 5: Visualization")
     for trait_name in sumstats_config:
         visualize_config = VisualizeConfig(
@@ -148,8 +166,11 @@ def run_pipeline(config: Config_Mouse):
             point_size=2,
         )
         run_Visualize(visualize_config)
+    end_time = time.time()
+    logger.info(f"Step 5 completed in {format_duration(end_time - start_time)}.")
 
     # Step 6: Cauchy combination test
+    start_time = time.time()
     logger.info("Step 6: Running Cauchy combination test")
     for trait_name in sumstats_config:
         cauchy_config = CauchyCombinationConfig(
@@ -161,8 +182,11 @@ def run_pipeline(config: Config_Mouse):
             trait_name=trait_name,
         )
         run_Cauchy_combination(cauchy_config)
+    end_time = time.time()
+    logger.info(f"Step 6 completed in {format_duration(end_time - start_time)}.")
 
     # Step 7: Diagnosis
+    start_time = time.time()
     logger.info("Step 7: Running diagnosis")
     for trait_name in sumstats_config:
         diagnosis_config = DiagnosisConfig(
@@ -174,13 +198,18 @@ def run_pipeline(config: Config_Mouse):
             trait_name=trait_name,
             plot_type='manhattan',
             ldscore_save_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/generate_ldscore",
-            gene_window_size=50000,
             top_corr_genes=50,
             selected_genes=None,
             sumstats_file=sumstats_config[trait_name],
             diagnosis_save_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/diagnosis"
         )
-        generate_manhattan_plot(diagnosis_config)
+        run_Diagnosis(diagnosis_config)
+
+        diagnosis_config.plot_type = 'GSS'
+        diagnosis_config.top_corr_genes = 20
+        run_Diagnosis(diagnosis_config)
+    end_time = time.time()
+    logger.info(f"Step 7 completed in {format_duration(end_time - start_time)}.")
 
     logger.info("Pipeline completed successfully.")
 

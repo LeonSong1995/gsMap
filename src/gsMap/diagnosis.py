@@ -9,7 +9,7 @@ from scipy.stats import norm
 
 from gsMap.config import DiagnosisConfig
 from gsMap.utils.manhattan_plot import ManhattanPlot
-from gsMap.visualize import draw_scatter, load_st_coord
+from gsMap.visualize import draw_scatter, load_st_coord, estimate_point_size_for_plot
 
 # %%
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -19,8 +19,6 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
     '[{asctime}] {name} {levelname:6s} {message}', style='{'))
 logger.addHandler(handler)
-
-
 
 
 def convert_z_to_p(gwas_data):
@@ -48,9 +46,7 @@ def generate_manhattan_plot(config: DiagnosisConfig):
 
     # Select top correlated genes if not provided in the configuration
     if not config.selected_genes:
-        # Calculate the correlation between gene marker scores and trait logp-values
-        top_corr_genes = gene_diagnostic_info.head(config.top_corr_genes)
-        plot_genes = top_corr_genes.index.tolist()
+        plot_genes = gene_diagnostic_info.Gene.iloc[:config.top_corr_genes].tolist()
     else:
         plot_genes = config.selected_genes
 
@@ -62,7 +58,7 @@ def generate_manhattan_plot(config: DiagnosisConfig):
     ])
 
     # Merge GWAS data with SNP-gene pairs
-    gwas_data_with_gene = gwas_data.merge(SNP_gene_pair, on='SNP', how='inner')
+    gwas_data_with_gene = SNP_gene_pair.merge(gwas_data, on='SNP', how='inner')
     gwas_data_with_gene.rename(columns={'gene_name': 'GENE'}, inplace=True)
 
     # Merge GWAS data with gene annotations
@@ -73,21 +69,42 @@ def generate_manhattan_plot(config: DiagnosisConfig):
         how='left'
     )
 
-    gwas_data_with_gene_annotation['Annotation_text'] = 'PCC: ' + gwas_data_with_gene_annotation['PCC'].round(2).astype(
-        str) + '<br>' + 'Annotation: ' + gwas_data_with_gene_annotation['Annotation']
+    # subsample the GWAS data
+    SUBSAMPLE_SNP_NUMBER = 100_000
+    wo_gene_annotation_mask = gwas_data_with_gene_annotation['Annotation'].isna()
+    logger.info('Only keeping SNPs with gene annotation...')
+    gwas_data_with_gene_annotation = gwas_data_with_gene_annotation[~wo_gene_annotation_mask]
 
+    gwas_data_with_gene_annotation_sort = gwas_data_with_gene_annotation.sort_values('P', )
+
+    pass_suggestive_line_mask = gwas_data_with_gene_annotation_sort['P'] < 1e-5
+    pass_suggestive_line_number = pass_suggestive_line_mask.sum()
+
+    if pass_suggestive_line_number > SUBSAMPLE_SNP_NUMBER:
+        snps2plot = gwas_data_with_gene_annotation_sort[pass_suggestive_line_mask].SNP
+        logger.info(f'To reduce the number of SNPs to plot, only {snps2plot.shape[0]} SNPs with P < 1e-5 are plotted.')
+    else:
+        snps2plot = gwas_data_with_gene_annotation_sort.head(SUBSAMPLE_SNP_NUMBER).SNP
+        logger.info(
+            f'To reduce the number of SNPs to plot, only {SUBSAMPLE_SNP_NUMBER} SNPs with the smallest P-values are plotted.')
+
+    gwas_data_to_plot = gwas_data_with_gene_annotation[
+        gwas_data_with_gene_annotation['SNP'].isin(snps2plot)].reset_index(drop=True)
+    gwas_data_to_plot['Annotation_text'] = 'PCC: ' + gwas_data_to_plot['PCC'].round(2).astype(
+        str) + '<br>' + 'Annotation: ' + gwas_data_to_plot['Annotation']
+
+    gwas_data_to_plot.value_counts('Annotation', dropna=False)
     # Create the Manhattan plot
     logger.info('Generating Diagnostic Manhattan Plot...')
     fig = ManhattanPlot(
-        dataframe=gwas_data_with_gene_annotation,
+        dataframe=gwas_data_to_plot,
         title='gsMap Diagnosis Manhattan Plot',
-        point_size=1,
+        point_size=3,
         highlight_gene_list=plot_genes,
         suggestiveline_value=-np.log10(1e-5),
         annotation='Annotation_text',
     )
 
-    fig.show()
     save_manhattan_plot_path = save_dir / f'{config.sample_name}_{config.trait_name}_Diagnostic_Manhattan_Plot.html'
     fig.write_html(save_manhattan_plot_path)
     logger.info(f'Diagnostic Manhattan Plot saved to {save_manhattan_plot_path}. Open in browser to view.')
@@ -114,9 +131,15 @@ def get_gene_diagnostic_info(config):
     # Load LDSC results
     logger.info('Loading Spatial LDSC results...')
     trait_ldsc_result = load_ldsc(f"{config.input_ldsc_dir}/{config.sample_name}_{config.trait_name}.csv.gz")
+
     mk_score_aligned = mk_score.loc[trait_ldsc_result.index]
+
+    # drop genes mk score always 0, which will raise error in correlation calculation
+    zero_mk_score_mask = mk_score_aligned.sum(axis=0) == 0
+    mk_score_aligned = mk_score_aligned.loc[:, ~zero_mk_score_mask]
+
     logger.info('Calculating correlation between gene marker scores and trait logp-values...')
-    corr = mk_score_aligned.corrwith(trait_ldsc_result['logp'])
+    corr = mk_score_aligned.corrwith(trait_ldsc_result['logp'].astype(np.float32))
     corr.name = 'PCC'
 
     # Group the marker score by annotation and determine the highest GSS annotation
@@ -152,6 +175,8 @@ def generate_GSS_distribution(config: DiagnosisConfig):
     logger.info('Loading ST data...')
     adata = sc.read_h5ad(config.input_hdf5_path, )
 
+    (pixel_width, pixel_height), point_size = estimate_point_size_for_plot(adata.obsm['spatial'])
+
     logger.info('Loading marker score...')
     mk_score = pd.read_feather(config.mkscore_feather_file)
     mk_score.set_index('HUMAN_GENE_SYM', inplace=True)
@@ -174,7 +199,7 @@ def generate_GSS_distribution(config: DiagnosisConfig):
     else:
         logger.info(f'Selected genes not provided. Using the top {config.top_corr_genes} correlated genes...')
         gene_diagnostic_info = load_gene_diagnostic_info(config, save_dir)
-        plot_genes = gene_diagnostic_info.head(config.top_corr_genes).index
+        plot_genes = gene_diagnostic_info.Gene.iloc[:config.top_corr_genes].tolist()
 
     sub_fig_save_dir = save_dir / 'GSS_distribution'
     sub_fig_save_dir.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
@@ -191,7 +216,9 @@ def generate_GSS_distribution(config: DiagnosisConfig):
                                  title=f'{selected_gene} (Expression)',
                                  annotation='annotation',
                                  color_by='Expression',
-                                 point_size=2
+                                 point_size=point_size,
+                                 width=pixel_width,
+                                 height=pixel_height
                                  )
         save_sub_fig_1_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_Expression_Distribution.html'
         sub_fig_1.write_html(str(save_sub_fig_1_path))
@@ -202,19 +229,22 @@ def generate_GSS_distribution(config: DiagnosisConfig):
                                  title=f'{selected_gene} (GSS)',
                                  annotation='annotation',
                                  color_by='GSS',
-                                 point_size=2
+                                 point_size=point_size,
+                                 width=pixel_width,
+                                 height=pixel_height
                                  )
         save_sub_fig_2_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_GSS_Distribution.html'
         sub_fig_2.write_html(str(save_sub_fig_2_path))
 
 
-def run_diagnosis(config: DiagnosisConfig):
+def run_Diagnosis(config: DiagnosisConfig):
     if config.plot_type == 'manhattan':
         generate_manhattan_plot(config)
     elif config.plot_type == 'GSS':
         generate_GSS_distribution(config)
     else:
         raise ValueError(f'Invalid plot type: {config.plot_type}')
+
 
 # %%
 if __name__ == '__main__':
@@ -224,16 +254,16 @@ if __name__ == '__main__':
         annotation='annotation',
         mkscore_feather_file='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/latent_to_gene/E16.5_E1S1.MOSTA_gene_marker_score.feather',
         input_ldsc_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/spatial_ldsc',
-        trait_name='GIANT_EUR_Height_2022_Nature',
-        gene_window_size=50000,
-        top_corr_genes=10,
-        selected_genes=['COL11A1', 'MECOM'],
-        sumstats_file='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/example_data/GWAS/GIANT_EUR_Height_2022_Nature.sumstats.gz',
+        # trait_name='GIANT_EUR_Height_2022_Nature',
+        trait_name='Depression_2023_NatureMed',
+        top_corr_genes=5,
+        # selected_genes=['COL11A1', 'MECOM'],
+        sumstats_file='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz',
         diagnosis_save_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/diagnosis',
         plot_type='manhattan',
-        ldscore_save_dir='',
+        ldscore_save_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/generate_ldscore',
     )
 
-    generate_manhattan_plot(config)
+    # generate_manhattan_plot(config)
 
-    # generate_GSS_distribution(config)
+    generate_GSS_distribution(config)

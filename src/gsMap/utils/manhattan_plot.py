@@ -481,7 +481,7 @@ class _ManhattanPlot():
             horizontallines.append(genomewideline)
 
         data_to_plot = []  # To contain the data traces
-        tmp = pd.DataFrame()  # Empty DataFrame to contain the highlighted data
+        highlight_tmp = pd.DataFrame()  # Empty DataFrame to contain the highlighted data
 
         if highlight:
             if not isinstance(highlight, bool):
@@ -506,38 +506,24 @@ class _ManhattanPlot():
                         f": {set(highlight_gene_list) - common_genes}"
                     )
 
-                tmp = self.data
+                highlight_tmp = self.data
 
-                tmp = tmp[tmp[self.geneName].isin(common_genes)]
+                highlight_tmp = highlight_tmp[highlight_tmp[self.geneName].isin(common_genes)]
 
                 highlight_hover_text = _get_hover_text(
-                    tmp,
+                    highlight_tmp,
                     snpname=self.snpName,
                     genename=self.geneName,
                     annotationname=self.annotationName
                 )
 
-            if not tmp.empty:
-                data_to_plot.append(
-                    go.Scattergl(
-                        x=tmp[self.pos].values,
-                        y=-np.log10(tmp[self.pName].values) if self.logp
-                        else tmp[self.pName].values,
-                        mode="markers",
-                        text=highlight_hover_text,
-                        marker=dict(
-                            color=highlight_color,
-                            size=point_size * 5,
-                        ),
-                        name="SNP-Gene Pairs of interest"
-                    )
-                )
+
 
         # Remove the highlighted data from the DataFrame if not empty
-        if tmp.empty:
+        if highlight_tmp.empty:
             data = self.data
         else:
-            data = self.data.drop(self.data.index[tmp.index])
+            data = self.data.drop(self.data.index[highlight_tmp.index])
 
         if self.nChr == 1:
 
@@ -631,6 +617,23 @@ class _ManhattanPlot():
                 )
 
                 icol = icol + 1
+
+
+        if not highlight_tmp.empty:
+            data_to_plot.append(
+                go.Scattergl(
+                    x=highlight_tmp[self.pos].values,
+                    y=-np.log10(highlight_tmp[self.pName].values) if self.logp
+                    else highlight_tmp[self.pName].values,
+                    mode="markers",
+                    text=highlight_hover_text,
+                    marker=dict(
+                        color=highlight_color,
+                        size=point_size * 2,
+                    ),
+                    name="SNP-Gene Pairs of interest"
+                )
+            )
 
         layout.shapes = horizontallines
 
