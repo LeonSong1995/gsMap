@@ -130,15 +130,26 @@
         </div>
     </div>
 
-    <!-- Running Info -->
+    <!-- Running Info (collapsible) -->
     <div class="plot-container">
-        <h2>Running Info</h2>
-        <p class="section-description">Details about the gsMap run, including the version and parameters used.</p>
-        <p><strong>gsMap Version:</strong> {{ gsmap_version }}</p>
-        <p><strong>Parameters:</strong> {{ parameters }}</p>
+        <h2>
+            <a class="btn btn-secondary" data-bs-toggle="collapse" href="#runningInfo" role="button" aria-expanded="false" aria-controls="runningInfo">
+                Running Info
+            </a>
+        </h2>
+        <div class="collapse" id="runningInfo">
+            <p><strong>gsMap Version:</strong> {{ gsmap_version }}</p>
+            <p><strong>Parameters:</strong></p>
+            <ul>
+                {% for key, value in parameters.items() %}
+                <li><strong>{{ key }}:</strong> {{ value }}</li>
+                {% endfor %}
+            </ul>
+        </div>
     </div>
 
     <!-- JavaScript for Gene Plots (change images based on dropdown selection) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const geneSelect = document.getElementById('geneSelect');
         const expressionPlotImg = document.getElementById('expressionPlot').querySelector('img');

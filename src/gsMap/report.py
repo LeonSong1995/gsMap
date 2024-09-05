@@ -46,7 +46,7 @@ def embed_html_content(file_path):
         return f.read()
 
 
-def generate_report(result_dir, sample_name, trait_name):
+def run_Report(result_dir, sample_name, trait_name, run_parameters):
     """
     Generate the report by dynamically loading data based on the result directory,
     sample name, and trait name. Use PNG images for gene plots, copy them to the report folder,
@@ -94,11 +94,9 @@ def generate_report(result_dir, sample_name, trait_name):
     manhattan_plot = embed_html_content(
         os.path.join(result_dir, 'diagnosis', f'{sample_name}_{trait_name}_Diagnostic_Manhattan_Plot.html'))
 
-
     gsmap_version = "1.0.0"
-    parameters = "param1=value1, param2=value2"
 
-    # Render the template with dynamic content
+    # Render the template with dynamic content, including the run parameters
     output_html = template.render(
         title=title,
         genetic_mapping_plot=genetic_mapping_plot,  # Inlined genetic mapping plot
@@ -106,7 +104,7 @@ def generate_report(result_dir, sample_name, trait_name):
         cauchy_table=cauchy_table,
         gene_plots=gene_plots,  # List of PNG paths for gene plots
         gsmap_version=gsmap_version,
-        parameters=parameters,
+        parameters=run_parameters,  # Pass the run parameters to the template
         gene_diagnostic_info=gene_diagnostic_info  # Include top 50 gene diagnostic info rows
     )
 
@@ -118,10 +116,6 @@ def generate_report(result_dir, sample_name, trait_name):
     print(f"Report generated successfully! Saved at {report_file}")
 
 
-def run_Report(result_dir, sample_name, trait_name):
-    generate_report(result_dir, sample_name, trait_name)
-
-
 if __name__ == '__main__':
 
     # Example usage
@@ -129,4 +123,18 @@ if __name__ == '__main__':
     sample_name = "E16.5_E1S1.MOSTA"
     trait_name = "Depression_2023_NatureMed"
 
-    run_Report(result_dir, sample_name, trait_name,)
+
+    run_parameter_dict = {
+        "sample_name": 'config.SAMPLE_NAME',
+        "trait_name": trait_name,
+        "ldscore_dir": 'ldscore_config.ldscore_save_dir',
+        "w_file": 'config.W_FILE',
+        "annotation": 'config.ANNOTATION',
+        "gtf_annotation_file": 'config.GTFFILE',
+        "bfile_root": 'config.BFILE_ROOT',
+        "keep_snp_root": 'config.KEEP_SNP_ROOT',
+        "mkscore_feather_file": 'latent_to_gene_config.output_feather_path',
+        "spatial_ldsc_save_dir": 'spatial_ldsc_config.ldsc_save_dir',
+        "sumstats_file": 'sumstats_config[trait_name]',
+    }
+    run_Report(result_dir, sample_name, trait_name,run_parameter_dict)

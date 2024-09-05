@@ -5,7 +5,8 @@ from pathlib import Path
 
 from gsMap.diagnosis import DiagnosisConfig, generate_manhattan_plot, run_Diagnosis
 from gsMap.cauchy_combination_test import run_Cauchy_combination
-from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, VisualizeConfig, LatentToGeneConfig, FindLatentRepresentationsConfig, CauchyCombinationConfig
+from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, VisualizeConfig, LatentToGeneConfig, \
+    FindLatentRepresentationsConfig, CauchyCombinationConfig
 from gsMap.find_latent_representation import run_find_latent_representation
 from gsMap.generate_ldscore import run_generate_ldscore
 from gsMap.latent_to_gene import run_latent_to_gene
@@ -22,6 +23,7 @@ logging.basicConfig(level=logging.INFO,
                         logging.StreamHandler()
                     ])
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class Config_Mouse:
@@ -57,6 +59,7 @@ def format_duration(seconds):
     minutes = int((seconds % 3600) // 60)
     return f"{hours}h {minutes}m"
 
+
 def run_pipeline(config: Config_Mouse):
     logger.info("Starting pipeline with configuration: %s", config)
 
@@ -82,16 +85,16 @@ def run_pipeline(config: Config_Mouse):
     )
 
     ldscore_config = GenerateLDScoreConfig(
-            sample_name=config.SAMPLE_NAME,
-            chrom='all',
-            ldscore_save_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/generate_ldscore",
-            mkscore_feather_file=latent_to_gene_config.output_feather_path,
-            bfile_root=config.BFILE_ROOT,
-            keep_snp_root=config.KEEP_SNP_ROOT,
-            gtf_annotation_file=config.GTFFILE,
-            spots_per_chunk=5_000,
-            ldscore_save_format="feather",
-        )
+        sample_name=config.SAMPLE_NAME,
+        chrom='all',
+        ldscore_save_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/generate_ldscore",
+        mkscore_feather_file=latent_to_gene_config.output_feather_path,
+        bfile_root=config.BFILE_ROOT,
+        keep_snp_root=config.KEEP_SNP_ROOT,
+        gtf_annotation_file=config.GTFFILE,
+        spots_per_chunk=5_000,
+        ldscore_save_format="feather",
+    )
 
     spatial_ldsc_config = SpatialLDSCConfig(
         w_file=config.W_FILE,
@@ -102,6 +105,8 @@ def run_pipeline(config: Config_Mouse):
         sumstats_config_file="/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GWAS_data_Collection/sumstats_configs/sumstats_config_scPaGWAS.yaml",
         ldscore_save_format="feather",
     )
+
+    pipeline_start_time = time.time()
 
     # Step 1: Find latent representations
     start_time = time.time()
@@ -212,13 +217,49 @@ def run_pipeline(config: Config_Mouse):
     end_time = time.time()
     logger.info(f"Step 7 completed in {format_duration(end_time - start_time)}.")
 
-    logger.info("Pipeline completed successfully.")
+
+    # Step 8: Report
 
     for trait_name in sumstats_config:
-        # Step 8: Report
-        run_Report(f"{config.WORKDIR}/{config.SAMPLE_NAME}", config.SAMPLE_NAME, trait_name, configs_for_this_trait),
+        logger.info("Running final report generation for trait: %s", trait_name)
+
+        # Create the run parameters dictionary for each trait
+        run_parameter_dict = {
+            "sample_name": config.SAMPLE_NAME,
+            "trait_name": trait_name,
+            "sumstats_file": sumstats_config[trait_name],
+            "hdf5_path": config.HDF5_PATH,
+            "annotation": config.ANNOTATION,
+
+            "num_processes": spatial_ldsc_config.num_processes,
+            "ldscore_dir": ldscore_config.ldscore_save_dir,
+            "w_file": config.W_FILE,
+            "gtf_annotation_file": config.GTFFILE,
+            "bfile_root": config.BFILE_ROOT,
+            "keep_snp_root": config.KEEP_SNP_ROOT,
+            "mkscore_feather_file": latent_to_gene_config.output_feather_path,
+            "spatial_ldsc_save_dir": spatial_ldsc_config.ldsc_save_dir,
+            "cauchy_dir": f"{config.WORKDIR}/{config.SAMPLE_NAME}/cauchy_combination",
+            'visualize_dir': f"{config.WORKDIR}/{config.SAMPLE_NAME}/visualize",
+            "diagnosis_dir": f"{config.WORKDIR}/{config.SAMPLE_NAME}/diagnosis",
+
+            "Spending_time": format_duration(time.time() - pipeline_start_time),
+            "Finish_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+
+        }
+
+        # Pass the run parameter dictionary to the report generation function
+        run_Report(
+            result_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}",
+            sample_name=config.SAMPLE_NAME,
+            trait_name=trait_name,
+            run_parameters=run_parameter_dict
+        )
 
 
-# Example usage:
-config = Mouse_Without_Denoise()
-run_pipeline(config)
+    logger.info("Pipeline completed successfully.")
+
+if __name__ == '__main__':
+    # Example usage:
+    config = Mouse_Without_Denoise()
+    run_pipeline(config)
