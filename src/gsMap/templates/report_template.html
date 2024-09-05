@@ -129,7 +129,17 @@
         const geneSelect = document.getElementById('geneSelect');
         const expressionPlotImg = document.getElementById('expressionPlot').querySelector('img');
         const gssPlotImg = document.getElementById('gssPlot').querySelector('img');
-        const genePlots = {{ gene_plots_json | safe }};
+
+        // We construct the gene_plots object directly from the template
+        const genePlots = [
+            {% for gene in gene_plots %}
+            {
+                name: "{{ gene.name }}",
+                expression_plot: "{{ gene.expression_plot }}",
+                gss_plot: "{{ gene.gss_plot }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
 
         geneSelect.addEventListener('change', function() {
             const selectedGene = this.value;
