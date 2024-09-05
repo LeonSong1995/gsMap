@@ -16,17 +16,24 @@
             max-height: 300px;
             overflow-y: auto;
         }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+        }
     </style>
 </head>
 <body>
     <h1>{{ title }}</h1>
 
-    <!-- Genetic Spatial Mapping Plot -->
+    <!-- Genetic Spatial Mapping Plot (embedded HTML) -->
     <div class="plot-container">
         <h2>Genetic Spatial Mapping Plot</h2>
-        <div>
-            {{ genetic_mapping_plot|safe }}
-        </div>
+        <iframe src="{{ genetic_mapping_plot }}"></iframe>
     </div>
 
     <!-- Cauchy Combination Result Table -->
@@ -54,18 +61,16 @@
         </div>
     </div>
 
-    <!-- Manhattan Plot -->
+    <!-- Manhattan Plot (embedded HTML) -->
     <div class="plot-container">
         <h2>Diagnosis Manhattan Plot</h2>
-        <div>
-            {{ manhattan_plot|safe }}
-        </div>
+        <iframe src="{{ manhattan_plot }}"></iframe>
     </div>
 
-    <!-- Gene Expression and GSS Distribution -->
+    <!-- Gene Expression and GSS Distribution (using PNG images) -->
     <div class="plot-container">
         <h2>Gene Expression and GSS Distribution</h2>
-        <label for="geneSelect">Select a gene:</label>
+                <label for="geneSelect">Select a gene:</label>
         <select id="geneSelect" class="form-select">
             {% for gene in gene_plots %}
             <option value="{{ gene.name }}">{{ gene.name }}</option>
@@ -74,10 +79,10 @@
 
         <div id="genePlots">
             <div id="expressionPlot">
-                {{ gene_plots[0].expression_plot|safe }}
+                <img src="{{ gene_plots[0].expression_plot }}" alt="{{ gene_plots[0].name }} Expression Distribution">
             </div>
             <div id="gssPlot">
-                {{ gene_plots[0].gss_plot|safe }}
+                <img src="{{ gene_plots[0].gss_plot }}" alt="{{ gene_plots[0].name }} GSS Distribution">
             </div>
         </div>
     </div>
@@ -116,20 +121,25 @@
         <p><strong>Parameters:</strong> {{ parameters }}</p>
     </div>
 
-    <!-- JavaScript for Gene Plots -->
+    <!-- JavaScript for Gene Plots (change images based on dropdown selection) -->
     <script>
         const geneSelect = document.getElementById('geneSelect');
-        const expressionPlotDiv = document.getElementById('expressionPlot');
-        const gssPlotDiv = document.getElementById('gssPlot');
+        const expressionPlotImg = document.getElementById('expressionPlot').querySelector('img');
+        const gssPlotImg = document.getElementById('gssPlot').querySelector('img');
         const genePlots = {{ gene_plots_json | safe }};
 
         geneSelect.addEventListener('change', function() {
             const selectedGene = this.value;
             const selectedGenePlots = genePlots.find(g => g.name === selectedGene);
-            expressionPlotDiv.innerHTML = selectedGenePlots.expression_plot;
-            gssPlotDiv.innerHTML = selectedGenePlots.gss_plot;
+
+            // Update the expression and GSS plot images when a different gene is selected
+            expressionPlotImg.src = selectedGenePlots.expression_plot;
+            expressionPlotImg.alt = `${selectedGenePlots.name} Expression Distribution`;
+            gssPlotImg.src = selectedGenePlots.gss_plot;
+            gssPlotImg.alt = `${selectedGenePlots.name} GSS Distribution`;
         });
     </script>
 
 </body>
 </html>
+

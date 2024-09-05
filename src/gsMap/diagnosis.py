@@ -225,6 +225,9 @@ def generate_GSS_distribution(config: DiagnosisConfig):
         save_sub_fig_1_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_Expression_Distribution.html'
         sub_fig_1.write_html(str(save_sub_fig_1_path))
 
+        sub_fig_1.update_layout(showlegend=False)
+        sub_fig_1.write_image(str(save_sub_fig_1_path).replace('.html', '.png'))
+
         # GSS distribution
         select_gene_GSS_with_space_coord = load_st_coord(adata, mk_score[selected_gene].rename('GSS'), 'annotation')
         sub_fig_2 = draw_scatter(select_gene_GSS_with_space_coord,
@@ -238,19 +241,21 @@ def generate_GSS_distribution(config: DiagnosisConfig):
         save_sub_fig_2_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_GSS_Distribution.html'
         sub_fig_2.write_html(str(save_sub_fig_2_path))
 
+        # disable legend
+        sub_fig_2.update_layout(showlegend=False)
+        # output png
+        sub_fig_2.write_image(str(save_sub_fig_2_path).replace('.html', '.png'))
+
+        # Combine figures into a subplot for PNG output
         combined_fig = make_subplots(rows=1, cols=2,
                                      subplot_titles=(f'{selected_gene} (Expression)', f'{selected_gene} (GSS)'))
 
-        # Add both figures
-        combined_fig.add_trace(sub_fig_1.data[0], row=1, col=1)
-        combined_fig.add_trace(sub_fig_1.data[0], row=1, col=2)
+        # Add both figures, preserving their individual color scales
+        for trace in sub_fig_1.data:
+            combined_fig.add_trace(trace, row=1, col=1)
 
-        # Update the layout for the combined figure
-        combined_fig.update_layout(height=pixel_height, width=pixel_width * 2, showlegend=False)
-
-        # Save the combined figure as PNG
-        combined_png_path = sub_fig_save_dir / f'{config.sample_name}_{selected_gene}_Combined.png'
-        pio.write_image(combined_fig, str(combined_png_path))
+        for trace in sub_fig_2.data:
+            combined_fig.add_trace(trace, row=1, col=2)
 
 def run_Diagnosis(config: DiagnosisConfig):
     if config.plot_type == 'manhattan':

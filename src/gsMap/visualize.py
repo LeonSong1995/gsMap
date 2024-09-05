@@ -103,9 +103,9 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
     fig.update_layout(
         legend=dict(
             yanchor="top",
-            y=0.99,
+            y=0.95,
             xanchor="left",
-            x=1.2,
+            x=1.0,
             font=dict(
                 size=10,
             )
@@ -145,9 +145,21 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
 
     # Adjust margins to ensure no clipping and equal axis ratio
     fig.update_layout(
-        margin=dict(l=50, r=50, t=50, b=100),  # Adjust margins to prevent clipping
+        margin=dict(l=0, r=0, t=20, b=10),  # Adjust margins to prevent clipping
         height=width  # Ensure the figure height matches the width for equal axis ratio
     )
+
+    # Adjust the title location and font size
+    fig.update_layout(
+        title=dict(
+            y=0.98,
+            x=0.5,  # Center the title horizontally
+            xanchor='center',  # Anchor the title at the center
+            yanchor='top',  # Anchor the title at the top
+            font=dict(
+                size=20  # Increase the title font size
+            )
+        ))
 
     return fig
 
