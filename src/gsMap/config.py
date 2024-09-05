@@ -1,14 +1,15 @@
 import argparse
 import logging
-from dataclasses import dataclass, field
-from pprint import pprint
-from typing import Union, Literal, Tuple, Optional, List
-from pathlib import Path
-
 from collections import OrderedDict, namedtuple
+from dataclasses import dataclass
+from pathlib import Path
+from pprint import pprint
 from typing import Callable
-from gsMap.__init__ import __version__
+from typing import Union, Literal, Tuple, Optional, List
+
 import pyfiglet
+
+from gsMap.__init__ import __version__
 
 # Global registry to hold functions
 cli_function_registry = OrderedDict()
@@ -47,7 +48,8 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
     parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="The gene expression layer of the input data (e.g., 'count', 'counts', 'log1p').")
+    parser.add_argument('--type', default=None, type=str,
+                        help="The gene expression layer of the input data (e.g., 'count', 'counts', 'log1p').")
     parser.add_argument('--epochs', default=300, type=int,
                         help="Number of training epochs for the GNN-VAE model. Default is 300.")
 
@@ -116,7 +118,7 @@ def add_generate_ldscore_args(parser):
     parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
 
     # additional baseline annotation
-    parser.add_argument('--additional_baseline_annotation_dir_path', type=str, default=None,)
+    parser.add_argument('--additional_baseline_annotation_dir_path', type=str, default=None, )
 
     # reference panel
     parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
@@ -162,9 +164,12 @@ def add_latent_to_gene_args(parser):
                         help='Number of neighbours to consider. Default is 21.')
     parser.add_argument('--num_neighbour_spatial', type=int, default=101,
                         help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--species', type=str, default=None, help='Species name, which is the column name in the homolog gene conversion file.')
-    parser.add_argument('--gs_species', type=str, default=None, help='Homologous gene conversion file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None, help='The mean Gene marker scores path across multiple slices.')
+    parser.add_argument('--species', type=str, default=None,
+                        help='Species name, which is the column name in the homolog gene conversion file.')
+    parser.add_argument('--gs_species', type=str, default=None,
+                        help='Homologous gene conversion file path, if applicable.')
+    parser.add_argument('--gM_slices', type=str, default=None,
+                        help='The mean Gene marker scores path across multiple slices.')
 
 
 def add_spatial_ldsc_args(parser):
@@ -183,7 +188,7 @@ def add_spatial_ldsc_args(parser):
     parser.add_argument('--all_chunk', type=int, help="Number of chunks for processing spatial data.")
 
     # if use additional baseline annotation
-    parser.add_argument('--disable_additional_baseline_annotation', action='store_true', default=False,)
+    parser.add_argument('--disable_additional_baseline_annotation', action='store_true', default=False, )
 
     parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
 
@@ -205,7 +210,6 @@ def add_Cauchy_combination_args(parser):
     parser.add_argument('--slide', default=None, type=str, )
 
 
-
 def add_Visualization_args(parser):
     # Required arguments
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
@@ -215,13 +219,14 @@ def add_Visualization_args(parser):
     parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
 
-
     # Arguments with defaults
     parser.add_argument('--fig_title', type=str, default=None, help='Title of figure')
     parser.add_argument('--fig_height', type=int, default=600, help='Height of figure in pixels')
     parser.add_argument('--fig_width', type=int, default=800, help='Width of figure in pixels')
     parser.add_argument('--point_size', type=int, default=None, help='Point size of figure')
-    parser.add_argument('--fig_style', type=str, default='light', choices=['dark', 'light'], help='Plot style of figure')
+    parser.add_argument('--fig_style', type=str, default='light', choices=['dark', 'light'],
+                        help='Plot style of figure')
+
 
 def add_all_mode_args(parser):
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
@@ -230,7 +235,8 @@ def add_all_mode_args(parser):
     # parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
     parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
     parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="The gene expression layer of the input data (e.g., 'count', 'counts', 'log1p').")
+    parser.add_argument('--type', default=None, type=str,
+                        help="The gene expression layer of the input data (e.g., 'count', 'counts', 'log1p').")
 
     # latent_to_gene
     # input
@@ -254,10 +260,12 @@ def add_all_mode_args(parser):
                         help='Number of neighbours to consider. Default is 21.')
     parser.add_argument('--num_neighbour_spatial', type=int, default=101,
                         help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--species', type=str, default=None, help='Species name, which is the column name in the homolog gene conversion file.')
-    parser.add_argument('--gs_species', type=str, default=None, help='Homologous gene conversion file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None, help='The mean Gene marker scores path across multiple slices.')
-
+    parser.add_argument('--species', type=str, default=None,
+                        help='Species name, which is the column name in the homolog gene conversion file.')
+    parser.add_argument('--gs_species', type=str, default=None,
+                        help='Homologous gene conversion file path, if applicable.')
+    parser.add_argument('--gM_slices', type=str, default=None,
+                        help='The mean Gene marker scores path across multiple slices.')
 
     # generate_ldscore
     # parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
@@ -339,50 +347,51 @@ def add_format_sumstats_args(parser):
                         help='Path to save the formatted gwas data')
 
     # Arguments for specify column name
-    parser.add_argument('--snp', default=None,type=str,
+    parser.add_argument('--snp', default=None, type=str,
                         help="Name of snp column (if not a name that gsMap understands)")
-    parser.add_argument('--a1', default=None,type=str,
+    parser.add_argument('--a1', default=None, type=str,
                         help="Name of effect allele column (if not a name that gsMap understands)")
-    parser.add_argument('--a2', default=None,type=str,
+    parser.add_argument('--a2', default=None, type=str,
                         help="Name of none-effect allele column (if not a name that gsMap understands)")
-    parser.add_argument('--info', default=None,type=str,
+    parser.add_argument('--info', default=None, type=str,
                         help="Name of info column (if not a name that gsMap understands)")
-    parser.add_argument('--beta', default=None,type=str,
+    parser.add_argument('--beta', default=None, type=str,
                         help="Name of gwas beta column (if not a name that gsMap understands).")
-    parser.add_argument('--se', default=None,type=str,
+    parser.add_argument('--se', default=None, type=str,
                         help="Name of gwas standar error of beta column (if not a name that gsMap understands)")
-    parser.add_argument('--p', default=None,type=str,
+    parser.add_argument('--p', default=None, type=str,
                         help="Name of p-value column (if not a name that gsMap understands)")
-    parser.add_argument('--frq', default=None,type=str,
+    parser.add_argument('--frq', default=None, type=str,
                         help="Name of A1 ferquency column (if not a name that gsMap understands)")
-    parser.add_argument('--n', default=None,type=str,
+    parser.add_argument('--n', default=None, type=str,
                         help="Name of sample size column (if not a name that gsMap understands)")
-    parser.add_argument('--z', default=None,type=str,
+    parser.add_argument('--z', default=None, type=str,
                         help="Name of gwas Z-statistics column (if not a name that gsMap understands)")
-    parser.add_argument('--OR', default=None,type=str,
+    parser.add_argument('--OR', default=None, type=str,
                         help="Name of gwas OR column (if not a name that gsMap understands)")
-    parser.add_argument('--se_OR', default=None,type=str,
+    parser.add_argument('--se_OR', default=None, type=str,
                         help="Name of standar error of OR column (if not a name that gsMap understands)")
 
     # Arguments for convert SNP (chr, pos) to rsid
-    parser.add_argument('--chr', default="Chr",type=str,
+    parser.add_argument('--chr', default="Chr", type=str,
                         help="Name of SNP chromosome column (if not a name that gsMap understands)")
-    parser.add_argument('--pos', default="Pos",type=str,
+    parser.add_argument('--pos', default="Pos", type=str,
                         help="Name of SNP positions column (if not a name that gsMap understands)")
-    parser.add_argument('--dbsnp', default=None,type=str,
+    parser.add_argument('--dbsnp', default=None, type=str,
                         help='Path to reference dnsnp file')
-    parser.add_argument('--chunksize', default=1e+6,type=int,
+    parser.add_argument('--chunksize', default=1e+6, type=int,
                         help='Chunk size for loading dbsnp file')
 
     # Arguments for output format and quality
-    parser.add_argument('--format',default='gsMap', type=str,
-                        help='Format of output data',choices=['gsMap', 'COJO'])
-    parser.add_argument('--info_min', default=0.9,type=float,
+    parser.add_argument('--format', default='gsMap', type=str,
+                        help='Format of output data', choices=['gsMap', 'COJO'])
+    parser.add_argument('--info_min', default=0.9, type=float,
                         help='Minimum INFO score.')
-    parser.add_argument('--maf_min', default=0.01,type=float,
+    parser.add_argument('--maf_min', default=0.01, type=float,
                         help='Minimum MAF.')
     parser.add_argument('--keep_chr_pos', action='store_true', default=False,
-                    help='Keep SNP chromosome and position columns in the output data')
+                        help='Keep SNP chromosome and position columns in the output data')
+
 
 @dataclass
 class FindLatentRepresentationsConfig:
@@ -459,7 +468,7 @@ class GenerateLDScoreConfig:
     # annotation by enhancer
     enhancer_annotation_file: str = None
     snp_multiple_enhancer_strategy: Literal['max_mkscore', 'nearest_TSS'] = 'max_mkscore'
-    gene_window_enhancer_priority: Literal['gene_window_first', 'enhancer_first', 'enhancer_only',] = None
+    gene_window_enhancer_priority: Optional[Literal['gene_window_first', 'enhancer_first', 'enhancer_only',]] = None
 
     # for calculating ld score
     additional_baseline_annotation_dir_path: str = None
@@ -468,7 +477,7 @@ class GenerateLDScoreConfig:
     ld_unit: str = 'CM'
 
     # zarr config
-    ldscore_save_format:Literal['feather', 'zarr'] = 'zarr'
+    ldscore_save_format: Literal['feather', 'zarr'] = 'zarr'
     zarr_chunk_size: Tuple[int, int] = None
 
     def __post_init__(self):
@@ -496,19 +505,24 @@ class GenerateLDScoreConfig:
         if self.additional_baseline_annotation_dir_path is None:
             logger.info(f'------Baseline annotation is not provided. Default baseline annotation will be used.')
         else:
-            logger.info(f'------Baseline annotation is provided. Additional baseline annotation will be used with the default baseline annotation.')
+            logger.info(
+                f'------Baseline annotation is provided. Additional baseline annotation will be used with the default baseline annotation.')
             logger.info(f'------Baseline annotation directory: {self.additional_baseline_annotation_dir_path}')
             # check the existence of baseline annotation
             if self.chrom == 'all':
                 for chrom in range(1, 23):
                     chrom = str(chrom)
-                    baseline_annotation_path = Path(self.additional_baseline_annotation_dir_path) / f'baseline.{chrom}.annot.gz'
+                    baseline_annotation_path = Path(
+                        self.additional_baseline_annotation_dir_path) / f'baseline.{chrom}.annot.gz'
                     if not baseline_annotation_path.exists():
-                        raise FileNotFoundError(f'baseline.{chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
+                        raise FileNotFoundError(
+                            f'baseline.{chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
             else:
-                baseline_annotation_path = Path(self.additional_baseline_annotation_dir_path) / f'baseline.{self.chrom}.annot.gz'
+                baseline_annotation_path = Path(
+                    self.additional_baseline_annotation_dir_path) / f'baseline.{self.chrom}.annot.gz'
                 if not baseline_annotation_path.exists():
-                    raise FileNotFoundError(f'baseline.{self.chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
+                    raise FileNotFoundError(
+                        f'baseline.{self.chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
 
         # set the default zarr chunk size
         if self.ldscore_save_format == 'zarr' and self.zarr_chunk_size is None:
@@ -531,8 +545,7 @@ class SpatialLDSCConfig:
     chisq_max: Optional[int] = None
     all_chunk: Optional[int] = None
     chunk_range: Optional[Tuple[int, int]] = None
-    ldscore_save_format:Literal['feather', 'zarr'] = 'zarr'
-
+    ldscore_save_format: Literal['feather', 'zarr'] = 'zarr'
 
     def __post_init__(self):
         if self.sumstats_file is None and self.sumstats_config_file is None:
@@ -629,6 +642,7 @@ class VisualizeConfig:
     point_size: int = None
     fig_style: Literal['dark', 'light'] = 'light'
 
+
 # %%
 @dataclass
 class DiagnosisConfig:
@@ -639,7 +653,28 @@ class DiagnosisConfig:
 
     plot_type: Literal['manhattan', 'GSS']  # 'manhattan' for diagnostic manhattan plot, 'GSS' for GSS distribution plot
     # for get SNP-gene pairs
-    ldscore_save_dir:str
+    ldscore_save_dir: str
+
+    input_ldsc_dir: str
+    trait_name: str
+    sumstats_file: str
+    diagnosis_save_dir: str
+
+    top_corr_genes: int = 50
+    selected_genes: Optional[List[str]] = None
+
+
+@dataclass
+class ReportConfig:
+    sample_name: str
+    input_hdf5_path: str
+    annotation: str
+    mkscore_feather_file: str
+
+    output_cauchy_dir: str
+
+    # for get SNP-gene pairs
+    ldscore_save_dir: str
 
     input_ldsc_dir: str
     trait_name: str
@@ -682,7 +717,7 @@ class FormatSumstatsConfig:
     chunksize: int = 1e+7
     info_min: float = 0.9
     maf_min: float = 0.01
-    keep_chr_pos:bool = False
+    keep_chr_pos: bool = False
 
 
 @register_cli(name='run_find_latent_representations',
@@ -756,6 +791,7 @@ def run_all_mode_from_cli(args: argparse.Namespace):
     if args.annotation is not None:
         config.cauchy_config.annotation = args.annotation
         run_Cauchy_combination(config.cauchy_config)
+
 
 @register_cli(name='format_sumstats',
               description='Format gwas summary statistics',
