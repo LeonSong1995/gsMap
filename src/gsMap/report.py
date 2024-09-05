@@ -118,9 +118,15 @@ def generate_report(result_dir, sample_name, trait_name):
     print(f"Report generated successfully! Saved at {report_file}")
 
 
-# Example usage
-result_dir = "/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/"
-sample_name = "E16.5_E1S1.MOSTA"
-trait_name = "Depression_2023_NatureMed"
+def run_Report(result_dir, sample_name, trait_name):
+    generate_report(result_dir, sample_name, trait_name)
 
-generate_report(result_dir, sample_name, trait_name)
+
+if __name__ == '__main__':
+
+    # Example usage
+    result_dir = "/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/"
+    sample_name = "E16.5_E1S1.MOSTA"
+    trait_name = "Depression_2023_NatureMed"
+
+    run_Report(result_dir, sample_name, trait_name,)

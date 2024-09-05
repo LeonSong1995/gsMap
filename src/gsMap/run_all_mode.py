@@ -9,6 +9,7 @@ from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, VisualizeConf
 from gsMap.find_latent_representation import run_find_latent_representation
 from gsMap.generate_ldscore import run_generate_ldscore
 from gsMap.latent_to_gene import run_latent_to_gene
+from gsMap.report import run_Report
 from gsMap.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
 from gsMap.visualize import run_Visualize
 import yaml
@@ -212,6 +213,10 @@ def run_pipeline(config: Config_Mouse):
     logger.info(f"Step 7 completed in {format_duration(end_time - start_time)}.")
 
     logger.info("Pipeline completed successfully.")
+
+    for trait_name in sumstats_config:
+        # Step 8: Report
+        run_Report(f"{config.WORKDIR}/{config.SAMPLE_NAME}", config.SAMPLE_NAME, trait_name, configs_for_this_trait),
 
 
 # Example usage:
