@@ -25,6 +25,11 @@
             height: 600px;
             border: none;
         }
+        .section-description {
+            color: grey;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -33,6 +38,7 @@
     <!-- Genetic Spatial Mapping Plot -->
     <div class="plot-container">
         <h2>Genetic Spatial Mapping Plot</h2>
+        <p class="section-description">This plot shows the spatial genetic mapping results across different tissues.</p>
         <div>
             {{ genetic_mapping_plot|safe }}
         </div>
@@ -41,6 +47,7 @@
     <!-- Cauchy Combination Result Table -->
     <div class="plot-container">
         <h2>Cauchy Combination Result</h2>
+        <p class="section-description">This table presents the results of the Cauchy combination test, summarizing the genetic associations.</p>
         <div class="scrollable-table">
             <table class="table table-striped">
                 <thead>
@@ -63,28 +70,33 @@
         </div>
     </div>
 
-   <!-- Manhattan Plot -->
+    <!-- Manhattan Plot -->
     <div class="plot-container">
         <h2>Diagnosis Manhattan Plot</h2>
+        <p class="section-description">The Manhattan plot shows the association of SNPs with the top associated gene across the genome.</p>
         <div>
             {{ manhattan_plot|safe }}
         </div>
     </div>
+
     <!-- Gene Expression and GSS Distribution (using PNG images) -->
     <div class="plot-container">
         <h2>Gene Expression and GSS Distribution</h2>
+        <p class="section-description">Select a gene to view its expression distribution and gene specificity score (GSS).</p>
         <label for="geneSelect">Select a gene:</label>
-        <select id="geneSelect" class="form-select">
+        <select id="geneSelect" class="form-select mb-3">
             {% for gene in gene_plots %}
             <option value="{{ gene.name }}">{{ gene.name }}</option>
             {% endfor %}
         </select>
 
-        <div id="genePlots">
-            <div id="expressionPlot">
+        <div id="genePlots" class="row">
+            <div id="expressionPlot" class="col-md-6">
+                <h5>Expression Distribution</h5>
                 <img src="{{ gene_plots[0].expression_plot }}" alt="{{ gene_plots[0].name }} Expression Distribution">
             </div>
-            <div id="gssPlot">
+            <div id="gssPlot" class="col-md-6">
+                <h5>Gene Specificity Score (GSS)</h5>
                 <img src="{{ gene_plots[0].gss_plot }}" alt="{{ gene_plots[0].name }} GSS Distribution">
             </div>
         </div>
@@ -93,6 +105,7 @@
     <!-- Gene Diagnostic Info Table -->
     <div class="plot-container">
         <h2>Top 50 Gene Diagnostic Info</h2>
+        <p class="section-description">This table lists the top 50 genes based on diagnostic criteria, including the gene specificity score (GSS) and PCC.</p>
         <div class="scrollable-table">
             <table class="table table-striped">
                 <thead>
@@ -120,6 +133,7 @@
     <!-- Running Info -->
     <div class="plot-container">
         <h2>Running Info</h2>
+        <p class="section-description">Details about the gsMap run, including the version and parameters used.</p>
         <p><strong>gsMap Version:</strong> {{ gsmap_version }}</p>
         <p><strong>Parameters:</strong> {{ parameters }}</p>
     </div>
