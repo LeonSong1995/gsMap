@@ -2,6 +2,7 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Literal, Optional
 
 from gsMap.diagnosis import DiagnosisConfig, generate_manhattan_plot, run_Diagnosis
 from gsMap.cauchy_combination_test import run_Cauchy_combination
@@ -22,36 +23,58 @@ logging.basicConfig(level=logging.INFO,
                         logging.FileHandler("pipeline.log"),
                         logging.StreamHandler()
                     ])
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('gsMap Pipeline')
 
-
-@dataclass
-class Config_Mouse:
-    # Constants and configuration
-    WORKDIR: str = './example/Mouse_Embryo'
-    SAMPLE_NAME: str = "E16.5_E1S1.MOSTA"
-
-    # Input data
-    HDF5_PATH: str = "/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad"
-    ANNOTATION: str = "annotation"
-    DATA_TYPE: str = 'count'
-
-    # === ORTHOLOGOUS PARAMETERS ===
-    species = 'MOUSE_GENE_SYM'
-    gs_species = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/GPS_resource/homologs/mouse_human_homologs.txt'
-
-    ## === FIXED PARAMETERS ===
-    # Running Dependencies and Resources
-    GTFFILE: str = "/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/gsMap_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf"
-    ALL_ENHANCER_FILE: str = "/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/gsMap_resource/genome_annotation/enhancer/by_tissue/ALL/ABC_roadmap_merged.bed"
-    BFILE_ROOT: str = "/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/gsMap_resource/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC"
-    KEEP_SNP_ROOT: str = "/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/gsMap_resource/LDSC_resource/hapmap3_snps/hm"
-    W_FILE: str = "/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/gsMap_resource/LDSC_resource/weights_hm3_no_hla/weights."
 
 
 @dataclass
-class Mouse_Without_Denoise(Config_Mouse):
-    WORKDIR: str = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4'
+class RunAllModeConfig:
+    workdir: str
+    sample_name: str
+
+    gsMap_resource_dir: str
+
+    # == ST DATA PARAMETERS ==
+    hdf5_path: str
+    annotation: str
+    data_layer: str = 'X'
+
+    # ==GWAS DATA PARAMETERS==
+    trait_name: Optional[str] = None
+    sumstats_file: Optional[str] = None
+    sumstats_config_file: Optional[str] = None
+
+    # === homolog PARAMETERS ===
+    homolog_file: Optional[str] = None
+
+    num_processes: int = 5
+
+    def __post_init__(self):
+        logger.info(f"Running pipeline with configuration: {self}")
+
+        self.gtffile = f"{self.gsMap_resource_dir}/genome_annotation/gtf/gencode.v39lift37.annotation.gtf"
+        self.bfile_root = f"{self.gsMap_resource_dir}/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC"
+        self.keep_snp_root = f"{self.gsMap_resource_dir}/LDSC_resource/hapmap3_snps/hm"
+        self.w_file = f"{self.gsMap_resource_dir}/LDSC_resource/weights_hm3_no_hla/weights."
+
+        if self.homolog_file is not None:
+            logger.info(f"User provided homolog file to map gene names to human: {self.homolog_file}")
+            # check the format of the homolog file
+            with open(self.homolog_file, 'r') as f:
+                first_line = f.readline().strip()
+                _n_col = len(first_line.split())
+                if _n_col != 2:
+                    raise ValueError(f"Invalid homolog file format. Expected 2 columns, first column should be other species gene name, second column should be human gene name. "
+                                     f"Got {_n_col} columns in the first line.")
+                else:
+                    first_col_name, second_col_name = first_line.split()
+                    logger.info(f"Successfully parse homolog file with format and will map {first_col_name} to {second_col_name}")
+        else:
+            logger.info("No homolog file provided. Run in human mode.")
+
+        # check the existence of the input files and resources files
+        for file in [self.hdf5_path, self.gtffile]:
+                raise FileNotFoundError(f"File {file} does not exist.")
 
 
 def format_duration(seconds):
@@ -60,50 +83,50 @@ def format_duration(seconds):
     return f"{hours}h {minutes}m"
 
 
-def run_pipeline(config: Config_Mouse):
+def run_pipeline(config: RunAllModeConfig):
     logger.info("Starting pipeline with configuration: %s", config)
 
     find_latent_config = FindLatentRepresentationsConfig(
-        input_hdf5_path=config.HDF5_PATH,
-        output_hdf5_path=f"{config.WORKDIR}/{config.SAMPLE_NAME}/find_latent_representations/{config.SAMPLE_NAME}_add_latent.h5ad",
-        sample_name=config.SAMPLE_NAME,
-        annotation=config.ANNOTATION,
-        type=config.DATA_TYPE
+        input_hdf5_path=config.hdf5_path,
+        output_hdf5_path=f"{config.workdir}/{config.sample_name}/find_latent_representations/{config.sample_name}_add_latent.h5ad",
+        sample_name=config.sample_name,
+        annotation=config.annotation,
+        type=config.data_layer
     )
 
     latent_to_gene_config = LatentToGeneConfig(
         input_hdf5_with_latent_path=find_latent_config.output_hdf5_path,
-        sample_name=config.SAMPLE_NAME,
-        output_feather_path=f"{config.WORKDIR}/{config.SAMPLE_NAME}/latent_to_gene/{config.SAMPLE_NAME}_gene_marker_score.feather",
-        annotation=config.ANNOTATION,
-        type=config.DATA_TYPE,
+        sample_name=config.sample_name,
+        output_feather_path=f"{config.workdir}/{config.sample_name}/latent_to_gene/{config.sample_name}_gene_marker_score.feather",
+        annotation=config.annotation,
+        type=config.data_layer,
         latent_representation='latent_GVAE',
         num_neighbour=51,
         num_neighbour_spatial=201,
-        species=config.species,
-        gs_species=config.gs_species,
+        homolog_file=config.homolog_file
     )
 
     ldscore_config = GenerateLDScoreConfig(
-        sample_name=config.SAMPLE_NAME,
+        sample_name=config.sample_name,
         chrom='all',
-        ldscore_save_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/generate_ldscore",
+        ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
         mkscore_feather_file=latent_to_gene_config.output_feather_path,
-        bfile_root=config.BFILE_ROOT,
-        keep_snp_root=config.KEEP_SNP_ROOT,
-        gtf_annotation_file=config.GTFFILE,
+        bfile_root=config.bfile_root,
+        keep_snp_root=config.keep_snp_root,
+        gtf_annotation_file=config.gtffile,
         spots_per_chunk=5_000,
         ldscore_save_format="feather",
     )
 
     spatial_ldsc_config = SpatialLDSCConfig(
-        w_file=config.W_FILE,
-        sample_name=config.SAMPLE_NAME,
-        ldscore_input_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/generate_ldscore",
-        ldsc_save_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/spatial_ldsc",
-        num_processes=10,
-        sumstats_config_file="/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GWAS_data_Collection/sumstats_configs/sumstats_config_scPaGWAS.yaml",
-        ldscore_save_format="feather",
+        w_file=config.w_file,
+        sample_name=config.sample_name,
+        ldscore_input_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
+        ldsc_save_dir=f"{config.workdir}/{config.sample_name}/spatial_ldsc",
+        num_processes=config.num_processes,
+        trait_name=config.trait_name,
+        sumstats_config_file=config.sumstats_config_file,
+        sumstats_file=config.sumstats_file,
     )
 
     pipeline_start_time = time.time()
@@ -146,8 +169,8 @@ def run_pipeline(config: Config_Mouse):
         spatial_ldsc_config_trait = SpatialLDSCConfig(
             sumstats_file=sumstats_config[trait_name],
             trait_name=trait_name,
-            w_file=config.W_FILE,
-            sample_name=config.SAMPLE_NAME,
+            w_file=config.w_file,
+            sample_name=config.sample_name,
             ldscore_input_dir=spatial_ldsc_config.ldscore_input_dir,
             ldsc_save_dir=spatial_ldsc_config.ldsc_save_dir,
             num_processes=spatial_ldsc_config.num_processes,
@@ -162,12 +185,12 @@ def run_pipeline(config: Config_Mouse):
     logger.info("Step 5: Visualization")
     for trait_name in sumstats_config:
         visualize_config = VisualizeConfig(
-            input_hdf5_path=config.HDF5_PATH,
+            input_hdf5_path=config.hdf5_path,
             input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
-            output_figure_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/visualize",
-            sample_name=config.SAMPLE_NAME,
+            output_figure_dir=f"{config.workdir}/{config.sample_name}/visualize",
+            sample_name=config.sample_name,
             trait_name=trait_name,
-            annotation=config.ANNOTATION,
+            annotation=config.annotation,
             fig_title=trait_name,
             point_size=2,
         )
@@ -180,11 +203,11 @@ def run_pipeline(config: Config_Mouse):
     logger.info("Step 6: Running Cauchy combination test")
     for trait_name in sumstats_config:
         cauchy_config = CauchyCombinationConfig(
-            input_hdf5_path=config.HDF5_PATH,
+            input_hdf5_path=config.hdf5_path,
             input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
-            sample_name=config.SAMPLE_NAME,
-            annotation=config.ANNOTATION,
-            output_cauchy_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/cauchy_combination",
+            sample_name=config.sample_name,
+            annotation=config.annotation,
+            output_cauchy_dir=f"{config.workdir}/{config.sample_name}/cauchy_combination",
             trait_name=trait_name,
         )
         run_Cauchy_combination(cauchy_config)
@@ -196,18 +219,18 @@ def run_pipeline(config: Config_Mouse):
     logger.info("Step 7: Running diagnosis")
     for trait_name in sumstats_config:
         diagnosis_config = DiagnosisConfig(
-            sample_name=config.SAMPLE_NAME,
-            input_hdf5_path=config.HDF5_PATH,
-            annotation=config.ANNOTATION,
+            sample_name=config.sample_name,
+            input_hdf5_path=config.hdf5_path,
+            annotation=config.annotation,
             mkscore_feather_file=latent_to_gene_config.output_feather_path,
             input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
             trait_name=trait_name,
             plot_type='manhattan',
-            ldscore_save_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/generate_ldscore",
+            ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
             top_corr_genes=50,
             selected_genes=None,
             sumstats_file=sumstats_config[trait_name],
-            diagnosis_save_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}/diagnosis"
+            diagnosis_save_dir=f"{config.workdir}/{config.sample_name}/diagnosis"
         )
         run_Diagnosis(diagnosis_config)
 
@@ -225,23 +248,23 @@ def run_pipeline(config: Config_Mouse):
 
         # Create the run parameters dictionary for each trait
         run_parameter_dict = {
-            "sample_name": config.SAMPLE_NAME,
+            "sample_name": config.sample_name,
             "trait_name": trait_name,
             "sumstats_file": sumstats_config[trait_name],
-            "hdf5_path": config.HDF5_PATH,
-            "annotation": config.ANNOTATION,
+            "hdf5_path": config.hdf5_path,
+            "annotation": config.annotation,
 
             "num_processes": spatial_ldsc_config.num_processes,
             "ldscore_dir": ldscore_config.ldscore_save_dir,
-            "w_file": config.W_FILE,
-            "gtf_annotation_file": config.GTFFILE,
-            "bfile_root": config.BFILE_ROOT,
-            "keep_snp_root": config.KEEP_SNP_ROOT,
+            "w_file": config.w_file,
+            "gtf_annotation_file": config.gtffile,
+            "bfile_root": config.bfile_root,
+            "keep_snp_root": config.keep_snp_root,
             "mkscore_feather_file": latent_to_gene_config.output_feather_path,
             "spatial_ldsc_save_dir": spatial_ldsc_config.ldsc_save_dir,
-            "cauchy_dir": f"{config.WORKDIR}/{config.SAMPLE_NAME}/cauchy_combination",
-            'visualize_dir': f"{config.WORKDIR}/{config.SAMPLE_NAME}/visualize",
-            "diagnosis_dir": f"{config.WORKDIR}/{config.SAMPLE_NAME}/diagnosis",
+            "cauchy_dir": f"{config.workdir}/{config.sample_name}/cauchy_combination",
+            'visualize_dir': f"{config.workdir}/{config.sample_name}/visualize",
+            "diagnosis_dir": f"{config.workdir}/{config.sample_name}/diagnosis",
 
             "Spending_time": format_duration(time.time() - pipeline_start_time),
             "Finish_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
@@ -250,8 +273,8 @@ def run_pipeline(config: Config_Mouse):
 
         # Pass the run parameter dictionary to the report generation function
         run_Report(
-            result_dir=f"{config.WORKDIR}/{config.SAMPLE_NAME}",
-            sample_name=config.SAMPLE_NAME,
+            result_dir=f"{config.workdir}/{config.sample_name}",
+            sample_name=config.sample_name,
             trait_name=trait_name,
             run_parameters=run_parameter_dict
         )

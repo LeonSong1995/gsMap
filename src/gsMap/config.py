@@ -437,7 +437,7 @@ class LatentToGeneConfig:
     num_neighbour: int = 21
     num_neighbour_spatial: int = 101
     species: str = None
-    gs_species: str = None
+    homolog_file: str = None
     gM_slices: str = None
     annotation: str = None
     type: str = None
@@ -550,12 +550,15 @@ class SpatialLDSCConfig:
             with open(self.sumstats_config_file) as f:
                 config = yaml.load(f, Loader=yaml.FullLoader)
             for trait_name, sumstats_file in config.items():
-                self.sumstats_config_dict[trait_name] = sumstats_file
+                assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
         # load the sumstats file
         elif self.sumstats_file is not None:
             self.sumstats_config_dict[self.trait_name] = self.sumstats_file
         else:
             raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
+
+        for sumstats_file in self.sumstats_config_dict.values():
+            assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
 
         # check if additional baseline annotation is exist
         self.use_additional_baseline_annotation = False
