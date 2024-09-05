@@ -30,10 +30,12 @@
 <body>
     <h1>{{ title }}</h1>
 
-    <!-- Genetic Spatial Mapping Plot (embedded HTML) -->
+    <!-- Genetic Spatial Mapping Plot -->
     <div class="plot-container">
         <h2>Genetic Spatial Mapping Plot</h2>
-        <iframe src="{{ genetic_mapping_plot }}"></iframe>
+        <div>
+            {{ genetic_mapping_plot|safe }}
+        </div>
     </div>
 
     <!-- Cauchy Combination Result Table -->
@@ -61,16 +63,17 @@
         </div>
     </div>
 
-    <!-- Manhattan Plot (embedded HTML) -->
+   <!-- Manhattan Plot -->
     <div class="plot-container">
         <h2>Diagnosis Manhattan Plot</h2>
-        <iframe src="{{ manhattan_plot }}"></iframe>
+        <div>
+            {{ manhattan_plot|safe }}
+        </div>
     </div>
-
     <!-- Gene Expression and GSS Distribution (using PNG images) -->
     <div class="plot-container">
         <h2>Gene Expression and GSS Distribution</h2>
-                <label for="geneSelect">Select a gene:</label>
+        <label for="geneSelect">Select a gene:</label>
         <select id="geneSelect" class="form-select">
             {% for gene in gene_plots %}
             <option value="{{ gene.name }}">{{ gene.name }}</option>
@@ -142,4 +145,3 @@
 
 </body>
 </html>
-

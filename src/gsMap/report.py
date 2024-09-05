@@ -19,19 +19,11 @@ env = Environment(loader=FileSystemLoader(template_dir))
 # Load the template
 template = env.get_template('report_template.html')
 
-
-def copy_png_files(result_dir, report_dir, gene_plots):
-    """Copy PNG files to the report directory."""
+def copy_files_to_report_dir(result_dir, report_dir, files_to_copy):
+    """Copy specified files (HTML or PNG) to the report directory."""
     os.makedirs(report_dir, exist_ok=True)
-    for gene in gene_plots:
-        expression_png = gene['expression_plot']
-        gss_png = gene['gss_plot']
-
-        # Copy expression plot
-        shutil.copy2(expression_png, os.path.join(report_dir, os.path.basename(expression_png)))
-
-        # Copy GSS plot
-        shutil.copy2(gss_png, os.path.join(report_dir, os.path.basename(gss_png)))
+    for file in files_to_copy:
+        shutil.copy2(file, os.path.join(report_dir, os.path.basename(file)))
 
 
 def load_cauchy_table(csv_file):
@@ -47,10 +39,18 @@ def load_gene_diagnostic_info(csv_file):
     top_50 = df.head(50).to_dict(orient='records')
     return top_50
 
+
+def embed_html_content(file_path):
+    """Read the content of an HTML file and return it as a string."""
+    with open(file_path, 'r') as f:
+        return f.read()
+
+
 def generate_report(result_dir, sample_name, trait_name):
     """
     Generate the report by dynamically loading data based on the result directory,
-    sample name, and trait name. Use PNG images for gene plots and copy them to the report folder.
+    sample name, and trait name. Use PNG images for gene plots, copy them to the report folder,
+    and copy the HTML files for the Genetic Mapping Plot and Manhattan Plot.
     """
 
     # Paths to different directories and files based on the provided result directory and sample/trait name
@@ -80,19 +80,20 @@ def generate_report(result_dir, sample_name, trait_name):
         })
 
     # Copy PNG files to the report directory
-    copy_png_files(result_dir, report_dir, gene_plots)
+    copy_files_to_report_dir(result_dir, report_dir, [gene['expression_plot'] for gene in gene_plots] + [gene['gss_plot'] for gene in gene_plots])
 
     # Update paths to point to copied images inside the report folder
     for gene in gene_plots:
-        gene['expression_plot'] = os.path.join('report', os.path.basename(gene['expression_plot']))
-        gene['gss_plot'] = os.path.join('report', os.path.basename(gene['gss_plot']))
+        gene['expression_plot'] = os.path.join(os.path.basename(gene['expression_plot']))
+        gene['gss_plot'] = os.path.join(os.path.basename(gene['gss_plot']))
 
     # Sample data for other report components
     title = f"{sample_name} Genetic Spatial Mapping Report"
 
-    # Embed the genetic mapping plot and Manhattan plot as HTML
-    genetic_mapping_plot = os.path.join(result_dir, 'visualize', f'{sample_name}_{trait_name}.html')  # Embed HTML
-    manhattan_plot = os.path.join(diagnosis_dir, f'{sample_name}_{trait_name}_Diagnostic_Manhattan_Plot.html')  # Embed HTML
+    genetic_mapping_plot = embed_html_content(os.path.join(result_dir, 'visualize', f'{sample_name}_{trait_name}.html'))
+    manhattan_plot = embed_html_content(
+        os.path.join(result_dir, 'diagnosis', f'{sample_name}_{trait_name}_Diagnostic_Manhattan_Plot.html'))
+
 
     gsmap_version = "1.0.0"
     parameters = "param1=value1, param2=value2"
@@ -100,8 +101,8 @@ def generate_report(result_dir, sample_name, trait_name):
     # Render the template with dynamic content
     output_html = template.render(
         title=title,
-        genetic_mapping_plot=genetic_mapping_plot,  # Inlined genetic mapping plot (HTML)
-        manhattan_plot=manhattan_plot,  # Inlined Manhattan plot (HTML)
+        genetic_mapping_plot=genetic_mapping_plot,  # Inlined genetic mapping plot
+        manhattan_plot=manhattan_plot,  # Inlined Manhattan plot
         cauchy_table=cauchy_table,
         gene_plots=gene_plots,  # List of PNG paths for gene plots
         gsmap_version=gsmap_version,
