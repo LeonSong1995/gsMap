@@ -6,7 +6,7 @@ from typing import Optional
 
 from gsMap.cauchy_combination_test import run_Cauchy_combination
 from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, LatentToGeneConfig, \
-    FindLatentRepresentationsConfig, CauchyCombinationConfig, DiagnosisConfig
+    FindLatentRepresentationsConfig, CauchyCombinationConfig, DiagnosisConfig, RunAllModeConfig
 from gsMap.diagnosis import run_Diagnosis
 from gsMap.find_latent_representation import run_find_latent_representation
 from gsMap.generate_ldscore import run_generate_ldscore
@@ -28,67 +28,6 @@ handler = logging.StreamHandler()
 handler.setFormatter(logging.Formatter(
     '[{asctime}] {name} {levelname:8s} {filename} {message}', style='{'))
 logger.addHandler(handler)
-
-
-@dataclass
-class RunAllModeConfig:
-    workdir: str
-    sample_name: str
-
-    gsMap_resource_dir: str
-
-    # == ST DATA PARAMETERS ==
-    hdf5_path: str
-    annotation: str
-    data_layer: str = 'X'
-
-    # ==GWAS DATA PARAMETERS==
-    trait_name: Optional[str] = None
-    sumstats_file: Optional[str] = None
-    sumstats_config_file: Optional[str] = None
-
-    # === homolog PARAMETERS ===
-    homolog_file: Optional[str] = None
-
-    max_processes: int = 10
-
-    def __post_init__(self):
-
-        self.gtffile = f"{self.gsMap_resource_dir}/genome_annotation/gtf/gencode.v39lift37.annotation.gtf"
-        self.bfile_root = f"{self.gsMap_resource_dir}/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC"
-        self.keep_snp_root = f"{self.gsMap_resource_dir}/LDSC_resource/hapmap3_snps/hm"
-        self.w_file = f"{self.gsMap_resource_dir}/LDSC_resource/weights_hm3_no_hla/weights."
-
-
-        # check the existence of the input files and resources files
-        for file in [self.hdf5_path, self.gtffile]:
-            if not Path(file).exists():
-                raise FileNotFoundError(f"File {file} does not exist.")
-
-        if self.sumstats_file is None and self.sumstats_config_file is None:
-            raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
-        if self.sumstats_file is not None and self.sumstats_config_file is not None:
-            raise ValueError('Only one of sumstats_file and sumstats_config_file must be provided.')
-        if self.sumstats_file is not None and self.trait_name is None:
-            raise ValueError('trait_name must be provided if sumstats_file is provided.')
-        if self.sumstats_config_file is not None and self.trait_name is not None:
-            raise ValueError('trait_name must not be provided if sumstats_config_file is provided.')
-        self.sumstats_config_dict = {}
-        # load the sumstats config file
-        if self.sumstats_config_file is not None:
-            import yaml
-            with open(self.sumstats_config_file) as f:
-                config = yaml.load(f, Loader=yaml.FullLoader)
-            for trait_name, sumstats_file in config.items():
-                assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
-        # load the sumstats file
-        elif self.sumstats_file is not None and self.trait_name is not None:
-            self.sumstats_config_dict[self.trait_name] = self.sumstats_file
-        else:
-            raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
-
-        for sumstats_file in self.sumstats_config_dict.values():
-            assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
 
 
 def format_duration(seconds):

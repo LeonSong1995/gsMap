@@ -521,9 +521,6 @@ class GenerateLDScoreConfig(ConfigWithAutoPaths):
     gtf_annotation_file: str
     gene_window_size: int = 50000
 
-    # mkscore_feather_file: Optional[str] = None
-    # ldscore_save_dir: Optional[str] = None
-
     # annotation by enhancer
     enhancer_annotation_file: str = None
     snp_multiple_enhancer_strategy: Literal['max_mkscore', 'nearest_TSS'] = 'max_mkscore'
@@ -538,6 +535,9 @@ class GenerateLDScoreConfig(ConfigWithAutoPaths):
     # zarr config
     ldscore_save_format: Literal['feather', 'zarr'] = 'feather'
     zarr_chunk_size: Tuple[int, int] = None
+
+    # for pre calculating the SNP Gene ldscore Weight
+    save_pre_calculate_snp_gene_weight_matrix: bool = False
 
     def __post_init__(self):
         # if self.mkscore_feather_file is None:
@@ -738,13 +738,64 @@ class ReportConfig:
     selected_genes: Optional[List[str]] = None
 
 
+
 @dataclass
-class RunAllModeConfig:
-    flr_config: FindLatentRepresentationsConfig
-    ltg_config: LatentToGeneConfig
-    gls_config: GenerateLDScoreConfig
-    ldsc_config: SpatialLDSCConfig
-    cauchy_config: CauchyCombinationConfig
+class RunAllModeConfig(ConfigWithAutoPaths):
+    gsMap_resource_dir: str
+
+    # == ST DATA PARAMETERS ==
+    hdf5_path: str
+    annotation: str
+    data_layer: str = 'X'
+
+    # ==GWAS DATA PARAMETERS==
+    trait_name: Optional[str] = None
+    sumstats_file: Optional[str] = None
+    sumstats_config_file: Optional[str] = None
+
+    # === homolog PARAMETERS ===
+    homolog_file: Optional[str] = None
+
+    max_processes: int = 10
+
+    def __post_init__(self):
+        super().__post_init__()
+        self.gtffile = f"{self.gsMap_resource_dir}/genome_annotation/gtf/gencode.v39lift37.annotation.gtf"
+        self.bfile_root = f"{self.gsMap_resource_dir}/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC"
+        self.keep_snp_root = f"{self.gsMap_resource_dir}/LDSC_resource/hapmap3_snps/hm"
+        self.w_file = f"{self.gsMap_resource_dir}/LDSC_resource/weights_hm3_no_hla/weights."
+
+
+        # check the existence of the input files and resources files
+        for file in [self.hdf5_path, self.gtffile]:
+            if not Path(file).exists():
+                raise FileNotFoundError(f"File {file} does not exist.")
+
+        if self.sumstats_file is None and self.sumstats_config_file is None:
+            raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
+        if self.sumstats_file is not None and self.sumstats_config_file is not None:
+            raise ValueError('Only one of sumstats_file and sumstats_config_file must be provided.')
+        if self.sumstats_file is not None and self.trait_name is None:
+            raise ValueError('trait_name must be provided if sumstats_file is provided.')
+        if self.sumstats_config_file is not None and self.trait_name is not None:
+            raise ValueError('trait_name must not be provided if sumstats_config_file is provided.')
+        self.sumstats_config_dict = {}
+        # load the sumstats config file
+        if self.sumstats_config_file is not None:
+            import yaml
+            with open(self.sumstats_config_file) as f:
+                config = yaml.load(f, Loader=yaml.FullLoader)
+            for trait_name, sumstats_file in config.items():
+                assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
+        # load the sumstats file
+        elif self.sumstats_file is not None and self.trait_name is not None:
+            self.sumstats_config_dict[self.trait_name] = self.sumstats_file
+        else:
+            raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
+
+        for sumstats_file in self.sumstats_config_dict.values():
+            assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
+
 
 
 @dataclass
