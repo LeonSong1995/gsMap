@@ -2,29 +2,32 @@ import logging
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 
-from gsMap.diagnosis import DiagnosisConfig, generate_manhattan_plot, run_Diagnosis
 from gsMap.cauchy_combination_test import run_Cauchy_combination
-from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, VisualizeConfig, LatentToGeneConfig, \
-    FindLatentRepresentationsConfig, CauchyCombinationConfig
+from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, LatentToGeneConfig, \
+    FindLatentRepresentationsConfig, CauchyCombinationConfig, DiagnosisConfig
+from gsMap.diagnosis import run_Diagnosis
 from gsMap.find_latent_representation import run_find_latent_representation
 from gsMap.generate_ldscore import run_generate_ldscore
 from gsMap.latent_to_gene import run_latent_to_gene
 from gsMap.report import run_Report
 from gsMap.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
-from gsMap.visualize import run_Visualize
-import yaml
 
-# Set up logging
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s',
-                    handlers=[
-                        logging.FileHandler("pipeline.log"),
-                        logging.StreamHandler()
-                    ])
-logger = logging.getLogger('gsMap Pipeline')
-
+# # Set up logging
+# logging.basicConfig(level=logging.INFO,
+#                     format='%(asctime)s - %(levelname)s - %(message)s',
+#                     handlers=[
+#                         logging.FileHandler("pipeline.log"),
+#                         logging.StreamHandler()
+#                     ])
+# logger = logging.getLogger('gsMap Pipeline')
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter(
+    '[{asctime}] {name} {levelname:8s} {filename} {message}', style='{'))
+logger.addHandler(handler)
 
 
 @dataclass
@@ -50,27 +53,12 @@ class RunAllModeConfig:
     max_processes: int = 10
 
     def __post_init__(self):
-        logger.info(f"Running pipeline with configuration: {self}")
 
         self.gtffile = f"{self.gsMap_resource_dir}/genome_annotation/gtf/gencode.v39lift37.annotation.gtf"
         self.bfile_root = f"{self.gsMap_resource_dir}/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC"
         self.keep_snp_root = f"{self.gsMap_resource_dir}/LDSC_resource/hapmap3_snps/hm"
         self.w_file = f"{self.gsMap_resource_dir}/LDSC_resource/weights_hm3_no_hla/weights."
 
-        if self.homolog_file is not None:
-            logger.info(f"User provided homolog file to map gene names to human: {self.homolog_file}")
-            # check the format of the homolog file
-            with open(self.homolog_file, 'r') as f:
-                first_line = f.readline().strip()
-                _n_col = len(first_line.split())
-                if _n_col != 2:
-                    raise ValueError(f"Invalid homolog file format. Expected 2 columns, first column should be other species gene name, second column should be human gene name. "
-                                     f"Got {_n_col} columns in the first line.")
-                else:
-                    first_col_name, second_col_name = first_line.split()
-                    logger.info(f"Successfully parse homolog file with format and will map {first_col_name} to {second_col_name}")
-        else:
-            logger.info("No homolog file provided. Run in human mode.")
 
         # check the existence of the input files and resources files
         for file in [self.hdf5_path, self.gtffile]:
@@ -113,17 +101,16 @@ def run_pipeline(config: RunAllModeConfig):
     logger.info("Starting pipeline with configuration: %s", config)
 
     find_latent_config = FindLatentRepresentationsConfig(
+        workdir=config.workdir,
         input_hdf5_path=config.hdf5_path,
-        output_hdf5_path=f"{config.workdir}/{config.sample_name}/find_latent_representations/{config.sample_name}_add_latent.h5ad",
         sample_name=config.sample_name,
         annotation=config.annotation,
-        type=config.data_layer
+        data_layer=config.data_layer
     )
 
     latent_to_gene_config = LatentToGeneConfig(
-        input_hdf5_with_latent_path=find_latent_config.output_hdf5_path,
+        workdir=config.workdir,
         sample_name=config.sample_name,
-        output_feather_path=f"{config.workdir}/{config.sample_name}/latent_to_gene/{config.sample_name}_gene_marker_score.feather",
         annotation=config.annotation,
         type=config.data_layer,
         latent_representation='latent_GVAE',
@@ -133,22 +120,21 @@ def run_pipeline(config: RunAllModeConfig):
     )
 
     ldscore_config = GenerateLDScoreConfig(
+        workdir=config.workdir,
         sample_name=config.sample_name,
         chrom='all',
-        ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
-        mkscore_feather_file=latent_to_gene_config.output_feather_path,
+        # ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
+        # mkscore_feather_file=latent_to_gene_config.output_feather_path,
         bfile_root=config.bfile_root,
         keep_snp_root=config.keep_snp_root,
         gtf_annotation_file=config.gtffile,
         spots_per_chunk=5_000,
-        ldscore_save_format="feather",
     )
 
     spatial_ldsc_config = SpatialLDSCConfig(
+        workdir=config.workdir,
         w_file=config.w_file,
         sample_name=config.sample_name,
-        ldscore_input_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
-        ldsc_save_dir=f"{config.workdir}/{config.sample_name}/spatial_ldsc",
         num_processes=config.max_processes,
         trait_name=config.trait_name,
         sumstats_config_file=config.sumstats_config_file,
@@ -160,8 +146,8 @@ def run_pipeline(config: RunAllModeConfig):
     # Step 1: Find latent representations
     start_time = time.time()
     logger.info("Step 1: Finding latent representations")
-    if Path(find_latent_config.output_hdf5_path).exists():
-        logger.info(f"Find latent representations already done. Results saved at {find_latent_config.output_hdf5_path}. Skipping...")
+    if Path(find_latent_config.hdf5_with_latent_path).exists():
+        logger.info(f"Find latent representations already done. Results saved at {find_latent_config.hdf5_with_latent_path}. Skipping...")
     else:
         run_find_latent_representation(find_latent_config)
     end_time = time.time()
@@ -170,8 +156,8 @@ def run_pipeline(config: RunAllModeConfig):
     # Step 2: Latent to gene
     start_time = time.time()
     logger.info("Step 2: Mapping latent representations to genes")
-    if Path(latent_to_gene_config.output_feather_path).exists():
-        logger.info(f"Latent to gene mapping already done. Results saved at {latent_to_gene_config.output_feather_path}. Skipping...")
+    if Path(latent_to_gene_config.mkscore_feather_path).exists():
+        logger.info(f"Latent to gene mapping already done. Results saved at {latent_to_gene_config.mkscore_feather_path}. Skipping...")
     else:
         run_latent_to_gene(latent_to_gene_config)
     end_time = time.time()
@@ -207,12 +193,13 @@ def run_pipeline(config: RunAllModeConfig):
             continue
 
         spatial_ldsc_config_trait = SpatialLDSCConfig(
+            workdir=config.workdir,
             sumstats_file=sumstats_config[trait_name],
             trait_name=trait_name,
             w_file=config.w_file,
             sample_name=config.sample_name,
-            ldscore_input_dir=spatial_ldsc_config.ldscore_input_dir,
-            ldsc_save_dir=spatial_ldsc_config.ldsc_save_dir,
+            # ldscore_save_dir=spatial_ldsc_config.ldscore_save_dir,
+            # ldsc_save_dir=spatial_ldsc_config.ldsc_save_dir,
             num_processes=spatial_ldsc_config.num_processes,
             ldscore_save_format=spatial_ldsc_config.ldscore_save_format,
         )
@@ -231,11 +218,12 @@ def run_pipeline(config: RunAllModeConfig):
             logger.info(f"Cauchy combination already done for trait {trait_name}. Results saved at {cauchy_result_file}. Skipping...")
             continue
         cauchy_config = CauchyCombinationConfig(
-            input_hdf5_path=config.hdf5_path,
-            input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
+            workdir=config.workdir,
+            # input_hdf5_path=config.hdf5_path,
+            # input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
             sample_name=config.sample_name,
             annotation=config.annotation,
-            output_cauchy_dir=f"{config.workdir}/{config.sample_name}/cauchy_combination",
+            # output_cauchy_dir=f"{config.workdir}/{config.sample_name}/cauchy_combination",
             trait_name=trait_name,
         )
         run_Cauchy_combination(cauchy_config)
@@ -247,18 +235,19 @@ def run_pipeline(config: RunAllModeConfig):
     logger.info("Step 7: Running diagnosis")
     for trait_name in sumstats_config:
         diagnosis_config = DiagnosisConfig(
+            workdir=config.workdir,
             sample_name=config.sample_name,
-            input_hdf5_path=config.hdf5_path,
+            # input_hdf5_path=config.hdf5_path,
             annotation=config.annotation,
-            mkscore_feather_file=latent_to_gene_config.output_feather_path,
-            input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
+            # mkscore_feather_file=latent_to_gene_config.output_feather_path,
+            # input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
             trait_name=trait_name,
             plot_type='manhattan',
-            ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
+            # ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
             top_corr_genes=50,
             selected_genes=None,
             sumstats_file=sumstats_config[trait_name],
-            diagnosis_save_dir=f"{config.workdir}/{config.sample_name}/diagnosis"
+            # diagnosis_save_dir=f"{config.workdir}/{config.sample_name}/diagnosis"
         )
         run_Diagnosis(diagnosis_config)
 
@@ -312,15 +301,43 @@ def run_pipeline(config: RunAllModeConfig):
 
 if __name__ == '__main__':
     # Example usage:
+    # config = RunAllModeConfig(
+    #     workdir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/0908_workdir_test',
+    #     sample_name='Human_Cortex_151507',
+    #     gsMap_resource_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/gsMap_resource',
+    #     hdf5_path='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/example_data/ST/Cortex_151507.h5ad',
+    #     annotation='layer_guess',
+    #     data_layer='count',
+    #     trait_name='Depression_2023_NatureMed',
+    #     sumstats_file='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz',
+    #     homolog_file=None,
+    #     max_processes=10
+    # )
+
+    path_prefix = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/'
     config = RunAllModeConfig(
-        workdir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4/E16.5_E1S1.MOSTA',
-        sample_name='E16.5_E1S1.MOSTA',
-        gsMap_resource_dir='/storage/yangjianLab/songliyang/SpatialData/gsMap_resource',
-        hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
+        workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
+        sample_name='Human_Cortex_151507',
+        gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
+        hdf5_path=('%s/test/20240902_gsMap_Local_Test/example_data/ST/Cortex_151507.h5ad' % path_prefix),
         annotation='layer_guess',
+        data_layer='count',
         trait_name='Depression_2023_NatureMed',
-        sumstats_config_file='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/ldsc_enrichment_frac/E16.5_E1S1/sumstats_config.yaml',
+        sumstats_file=(
+                    '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
         homolog_file=None,
         max_processes=10
     )
+
+    # config = RunAllModeConfig(
+    #     workdir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4/E16.5_E1S1.MOSTA',
+    #     sample_name='E16.5_E1S1.MOSTA',
+    #     gsMap_resource_dir='/storage/yangjianLab/songliyang/SpatialData/gsMap_resource',
+    #     hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
+    #     annotation='layer_guess',
+    #     trait_name='Depression_2023_NatureMed',
+    #     sumstats_config_file='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/ldsc_enrichment_frac/E16.5_E1S1/sumstats_config.yaml',
+    #     homolog_file=None,
+    #     max_processes=10
+    # )
     run_pipeline(config)

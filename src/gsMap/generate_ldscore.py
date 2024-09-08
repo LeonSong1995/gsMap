@@ -31,7 +31,7 @@ def load_gtf(gtf_file, mk_score, window_size):
     print("Loading gtf data")
     #
     # Load GTF file
-    gtf = pr.read_gtf(gtf_file)
+    gtf = pr.read_gtf(gtf_file, full=False)
     gtf = gtf.df
     #
     # Select the common genes
@@ -91,7 +91,7 @@ def load_bim(bfile_root, chrom):
     bim_pr.columns = ["Chromosome", "SNP", "CM", "Start", "A1", "A2"]
 
     bim_pr['End'] = bim_pr['Start'].copy()
-    bim_pr['Start'] = bim_pr['Start'] - 1 # Due to bim file is 1-based
+    bim_pr['Start'] = bim_pr['Start'] - 1  # Due to bim file is 1-based
 
     bim_pr = pr.PyRanges(bim_pr)
     bim_pr.Chromosome = f'chr{chrom}'
@@ -143,8 +143,6 @@ def get_snp_counts(config):
     snp_counts['chrom_snp_start_point'] = [0] + chrom_snp_length_array.tolist()
 
     return snp_counts
-
-
 
 
 # %%
@@ -247,7 +245,7 @@ class S_LDSC_Boost:
     def __init__(self, config: GenerateLDScoreConfig):
         self.config = config
 
-        self.mk_score = load_marker_score(config.mkscore_feather_file)
+        self.mk_score = load_marker_score(config.mkscore_feather_path)
 
         # Load GTF and get common markers
         self.gtf_pr, self.mk_score_common = load_gtf(config.gtf_annotation_file, self.mk_score,
@@ -278,7 +276,7 @@ class S_LDSC_Boost:
             chrom_snp_length_dict = get_snp_counts(config)
             self.chrom_snp_start_point = chrom_snp_length_dict['chrom_snp_start_point']
 
-            zarr_path = Path(config.ldscore_save_dir)/f'{config.sample_name}.ldscore.zarr'
+            zarr_path = Path(config.ldscore_save_dir) / f'{config.sample_name}.ldscore.zarr'
             if not zarr_path.exists():
                 self.zarr_file = zarr.open(zarr_path.as_posix(), mode='a', dtype=np.float16,
                                            chunks=config.zarr_chunk_size,
@@ -290,7 +288,6 @@ class S_LDSC_Boost:
                 self.zarr_file.attrs['chrom_snp_start_point'] = self.chrom_snp_start_point
             else:
                 self.zarr_file = zarr.open(zarr_path.as_posix(), mode='a')
-
 
     def process_chromosome(self, chrom: int):
         self.snp_pass_maf = get_snp_pass_maf(self.config.bfile_root, chrom, maf_min=0.05)
@@ -411,7 +408,7 @@ class S_LDSC_Boost:
         df.reset_index().to_feather(save_file_name)
 
     def save_ldscore_chunk_to_zarr(self, ldscore_chr_chunk: np.ndarray,
-                                   chrom:int, start_col_index,
+                                   chrom: int, start_col_index,
                                    ):
         ldscore_chr_chunk = ldscore_chr_chunk.astype(np.float16, copy=False)
         # avoid overflow of float16, if inf, set to max of float16
@@ -421,7 +418,8 @@ class S_LDSC_Boost:
         chrom_snp_start_point = self.chrom_snp_start_point[chrom - 1]
         chrom_snp_end_point = self.chrom_snp_start_point[chrom]
 
-        self.zarr_file[chrom_snp_start_point:chrom_snp_end_point, start_col_index:start_col_index + ldscore_chr_chunk.shape[1]] = ldscore_chr_chunk
+        self.zarr_file[chrom_snp_start_point:chrom_snp_end_point,
+        start_col_index:start_col_index + ldscore_chr_chunk.shape[1]] = ldscore_chr_chunk
 
     def calculate_M_use_SNP_gene_pair_dummy_by_chunk(self,
                                                      mk_score_chunk,
@@ -554,9 +552,10 @@ class S_LDSC_Boost:
             raise ValueError('gtf_pr and enhancer_pr cannot be None at the same time')
 
         # save the SNP_gene_pair to feather
-        SNP_gene_pair_save_path=Path(self.config.ldscore_save_dir)/f'SNP_gene_pair/{self.config.sample_name}_chr{chrom}.feather'
+        SNP_gene_pair_save_path = Path(
+            self.config.ldscore_save_dir) / f'SNP_gene_pair/{self.config.sample_name}_chr{chrom}.feather'
         SNP_gene_pair_save_path.parent.mkdir(parents=True, exist_ok=True)
-        SNP_gene_pair.to_feather(SNP_gene_pair_save_path)
+        SNP_gene_pair.reset_index().to_feather(SNP_gene_pair_save_path)
 
         # Get the dummy matrix
         SNP_gene_pair_dummy = pd.get_dummies(SNP_gene_pair['gene_name'], dummy_na=True)
@@ -618,6 +617,7 @@ if __name__ == '__main__':
         enhancer_annotation = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/resource/epigenome/cleaned_data/by_tissue/BRN/ABC_roadmap_merged.bed'
         # %%
         import submitit
+
         log_folder = "/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240605_without_denoise/mouse_embryo/submitit/log%j"
         executor = submitit.AutoExecutor(folder=log_folder)
         # executor = submitit.DebugExecutor(folder=log_folder)
@@ -632,9 +632,9 @@ if __name__ == '__main__':
             config = GenerateLDScoreConfig(
                 sample_name=sample_name,
                 chrom=chrom,
-                ldscore_save_dir=save_dir,
+                # ldscore_save_dir=save_dir,
                 gtf_annotation_file=gtf_file,
-                mkscore_feather_file=mkscore_feather_file,
+                # mkscore_feather_file=mkscore_feather_file,
                 bfile_root=bfile_root,
                 keep_snp_root=keep_snp_root,
                 gene_window_size=window_size,
@@ -660,3 +660,20 @@ if __name__ == '__main__':
         args = parser.parse_args()
         config = GenerateLDScoreConfig(**vars(args))
         run_generate_ldscore(config)
+
+    # gtf_old = '/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/gsMap_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf'
+    # gtf = pr.read_gtf(gtf_old)
+    # gtf = gtf.df
+    # gtf = gtf[gtf['Feature'] == 'gene']
+    # gtf = gtf[gtf['gene_type'] == 'protein_coding']
+    # gtf['gene_id'] = gtf['gene_id'].str.split('.').str[0]
+    #
+    # gtf_new = '/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/gsMap_resource/genome_annotation/gtf/gencode.v46lift37.basic.annotation.gtf'
+    # gtf_new = pr.read_gtf(gtf_new, full=False)
+    #
+    # gtf_new = gtf_new.df
+    # gtf_new = gtf_new[gtf_new['Feature'] == 'gene']
+    # gtf_new = gtf_new
+    # gtf_new['gene_id'] = gtf_new['gene_id'].str.split('.').str[0]
+    #
+    # gtf.merge(gtf_new, on='gene_id', how='left').value_counts('Chromosome_y',dropna=False)

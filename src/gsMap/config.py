@@ -394,12 +394,51 @@ def add_format_sumstats_args(parser):
 
 
 @dataclass
-class FindLatentRepresentationsConfig:
-    input_hdf5_path: str
-    output_hdf5_path: str
+class ConfigWithAutoPaths:
+    workdir: str
     sample_name: str
+
+    def __post_init__(self):
+        if self.workdir is None:
+            raise ValueError('workdir must be provided.')
+
+    @property
+    def hdf5_with_latent_path(self) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/find_latent_representations/{self.sample_name}_add_latent.h5ad')
+
+    @property
+    def mkscore_feather_path(self) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/latent_to_gene/{self.sample_name}_gene_marker_score.feather')
+
+    @property
+    def ldscore_save_dir(self) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/generate_ldscore')
+
+    @property
+    def ldsc_save_dir(self) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/spatial_ldsc')
+
+    @property
+    def cauchy_save_dir(self) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/cauchy_combination')
+
+    @property
+    def report_save_dir(self) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/report')
+
+    def get_ldsc_result_file(self, trait_name: str) -> Path:
+        return Path(f'{self.ldsc_save_dir}/{self.sample_name}_{trait_name}.csv.gz')
+
+    def get_cauchy_result_file(self, trait_name: str) -> Path:
+        return Path(f'{self.cauchy_save_dir}/{self.sample_name}_{trait_name}.Cauchy.csv.gz')
+
+
+@dataclass
+class FindLatentRepresentationsConfig(ConfigWithAutoPaths):
+    input_hdf5_path: str
+    # output_hdf5_path: str
     annotation: str = None
-    type: str = None
+    data_layer: str = None
 
     epochs: int = 300
     feat_hidden1: int = 256
@@ -422,6 +461,7 @@ class FindLatentRepresentationsConfig:
     hierarchically: bool = False
 
     def __post_init__(self):
+        # self.output_hdf5_path = self.hdf5_with_latent_path
         if self.hierarchically:
             if self.annotation is None:
                 raise ValueError('annotation must be provided if hierarchically is True.')
@@ -437,10 +477,9 @@ class FindLatentRepresentationsConfig:
 
 
 @dataclass
-class LatentToGeneConfig:
-    input_hdf5_with_latent_path: str
-    sample_name: str
-    output_feather_path: str
+class LatentToGeneConfig(ConfigWithAutoPaths):
+    # input_hdf5_with_latent_path: str
+    # output_feather_path: str
     no_expression_fraction: bool = False
     latent_representation: str = 'latent_GVAE'
     num_neighbour: int = 21
@@ -451,19 +490,39 @@ class LatentToGeneConfig:
     annotation: str = None
     type: str = None
 
+    def __post_init__(self):
+        if self.homolog_file is not None:
+            logger.info(f"User provided homolog file to map gene names to human: {self.homolog_file}")
+            # check the format of the homolog file
+            with open(self.homolog_file, 'r') as f:
+                first_line = f.readline().strip()
+                _n_col = len(first_line.split())
+                if _n_col != 2:
+                    raise ValueError(
+                        f"Invalid homolog file format. Expected 2 columns, first column should be other species gene name, second column should be human gene name. "
+                        f"Got {_n_col} columns in the first line.")
+                else:
+                    first_col_name, second_col_name = first_line.split()
+                    self.species = first_col_name
+                    logger.info(
+                        f"Homolog file provided and will map gene name from column1:{first_col_name} to column2:{second_col_name}")
+        else:
+            logger.info("No homolog file provided. Run in human mode.")
+
 
 @dataclass
-class GenerateLDScoreConfig:
-    sample_name: str
+class GenerateLDScoreConfig(ConfigWithAutoPaths):
     chrom: Union[int, str]
-    ldscore_save_dir: str
-    mkscore_feather_file: str
+
     bfile_root: str
     keep_snp_root: Optional[str]
 
     # annotation by gene distance
     gtf_annotation_file: str
     gene_window_size: int = 50000
+
+    # mkscore_feather_file: Optional[str] = None
+    # ldscore_save_dir: Optional[str] = None
 
     # annotation by enhancer
     enhancer_annotation_file: str = None
@@ -477,10 +536,13 @@ class GenerateLDScoreConfig:
     ld_unit: str = 'CM'
 
     # zarr config
-    ldscore_save_format: Literal['feather', 'zarr'] = 'zarr'
+    ldscore_save_format: Literal['feather', 'zarr'] = 'feather'
     zarr_chunk_size: Tuple[int, int] = None
 
     def __post_init__(self):
+        # if self.mkscore_feather_file is None:
+        #     self.mkscore_feather_file = self._get_mkscore_feather_path()
+
         if self.enhancer_annotation_file is not None and self.gene_window_enhancer_priority is None:
             logger.warning("enhancer_annotation_file is provided but gene_window_enhancer_priority is not provided. "
                            "by default, gene_window_enhancer_priority is set to 'enhancer_only', when enhancer_annotation_file is provided.")
@@ -530,11 +592,9 @@ class GenerateLDScoreConfig:
 
 
 @dataclass
-class SpatialLDSCConfig:
-    sample_name: str
+class SpatialLDSCConfig(ConfigWithAutoPaths):
     w_file: str
-    ldscore_input_dir: str
-    ldsc_save_dir: str
+    # ldscore_save_dir: str
     disable_additional_baseline_annotation: bool = False
     trait_name: Optional[str] = None
     sumstats_file: Optional[str] = None
@@ -548,6 +608,7 @@ class SpatialLDSCConfig:
     ldscore_save_format: Literal['feather', 'zarr'] = 'zarr'
 
     def __post_init__(self):
+        super().__post_init__()
         if self.sumstats_file is None and self.sumstats_config_file is None:
             raise ValueError('One of sumstats_file and sumstats_config_file must be provided.')
         if self.sumstats_file is not None and self.sumstats_config_file is not None:
@@ -578,12 +639,12 @@ class SpatialLDSCConfig:
         self.process_additional_baseline_annotation()
 
     def process_additional_baseline_annotation(self):
-        additional_baseline_annotation_dir_path = Path(self.ldscore_input_dir) / 'additional_baseline'
+        additional_baseline_annotation_dir_path = Path(self.ldscore_save_dir) / 'additional_baseline'
         dir_exists = additional_baseline_annotation_dir_path.exists()
 
         if not dir_exists:
             if self.use_additional_baseline_annotation:
-                logger.warning(f"additional_baseline directory is not found in {self.ldscore_input_dir}.")
+                logger.warning(f"additional_baseline directory is not found in {self.ldscore_save_dir}.")
                 print('''\
                     if you want to use additional baseline annotation, 
                     please provide additional baseline annotation when calculating ld score.
@@ -596,7 +657,7 @@ class SpatialLDSCConfig:
 
         if self.disable_additional_baseline_annotation:
             logger.warning(
-                f"additional_baseline directory is found in {self.ldscore_input_dir}, but use_additional_baseline_annotation is disabled.")
+                f"additional_baseline directory is found in {self.ldscore_save_dir}, but use_additional_baseline_annotation is disabled.")
             print('''\
                 if you want to use additional baseline annotation,
                 please enable by not adding --disable_additional_baseline_annotation.
@@ -616,11 +677,11 @@ class SpatialLDSCConfig:
 
 
 @dataclass
-class CauchyCombinationConfig:
-    input_hdf5_path: str
-    input_ldsc_dir: str
-    output_cauchy_dir: str
-    sample_name: str
+class CauchyCombinationConfig(ConfigWithAutoPaths):
+    # input_hdf5_path: str
+    # input_ldsc_dir: str
+    # output_cauchy_dir: str
+    # sample_name: str
     trait_name: str
     annotation: str
     meta: str = None
@@ -628,11 +689,11 @@ class CauchyCombinationConfig:
 
 
 @dataclass
-class VisualizeConfig:
-    input_hdf5_path: str
-    input_ldsc_dir: str
-    output_figure_dir: str
-    sample_name: str
+class VisualizeConfig(ConfigWithAutoPaths):
+    # input_hdf5_path: str
+    # input_ldsc_dir: str
+    # output_figure_dir: str
+    # sample_name: str
     trait_name: str
 
     annotation: str = None
@@ -643,23 +704,15 @@ class VisualizeConfig:
     fig_style: Literal['dark', 'light'] = 'light'
 
 
-# %%
+
 @dataclass
-class DiagnosisConfig:
-    sample_name: str
-    input_hdf5_path: str
+class DiagnosisConfig(ConfigWithAutoPaths):
     annotation: str
-    mkscore_feather_file: str
+    # mkscore_feather_file: str
+    plot_type: Literal['manhattan', 'GSS']
 
-    plot_type: Literal['manhattan', 'GSS']  # 'manhattan' for diagnostic manhattan plot, 'GSS' for GSS distribution plot
-    # for get SNP-gene pairs
-    ldscore_save_dir: str
-
-    input_ldsc_dir: str
     trait_name: str
     sumstats_file: str
-    diagnosis_save_dir: str
-
     top_corr_genes: int = 50
     selected_genes: Optional[List[str]] = None
 

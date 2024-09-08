@@ -126,7 +126,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     args = config
     # Load and process the spatial data
     print('------Loading the spatial data...')
-    adata = sc.read_h5ad(config.input_hdf5_with_latent_path)
+    adata = sc.read_h5ad(config.hdf5_with_latent_path)
 
     # Process the data
     adata.X = adata.layers[config.type]
@@ -139,13 +139,19 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         adata = adata[~pd.isnull(adata.obs[config.annotation]), :]
 
     # Homologs transformation
-    if not config.species is None:
+    if not config.homolog_file is None:
         print(f'------Transforming the {config.species} to HUMAN_GENE_SYM...')
-        homologs = pd.read_csv(config.gs_species, sep='\t')
-        homologs.index = homologs[config.species]
-        adata = adata[:, adata.var_names.isin(homologs[config.species])]
-        print(f'{adata.shape[1]} genes left after homologs transformation.')
-        adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM']
+        homologs = pd.read_csv(config.homolog_file, sep='\t')
+        if homologs.shape[1] == 2:
+            raise ValueError(
+                "Homologs file must have two columns: one for the species and one for the human gene symbol.")
+
+        homologs.columns = [config.species, 'HUMAN_GENE_SYM']
+        homologs.set_index(config.species, inplace=True)
+        adata = adata[:, adata.var_names.isin(homologs.index)]
+        # Log the number of genes left after homolog transformation
+        print(f"{adata.shape[1]} genes retained after homolog transformation.")
+        adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM'].values
 
     # Remove cells that do not express any genes after transformation, and genes that are not expressed in any cells.
     print(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')
@@ -164,18 +170,18 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     cell_list = adata.obs.index.tolist()
 
     # Load the geometrical mean across slices
-    if not config.gM_slices is None:
-        print('Geometrical mean across multiple slices are provided.')
+    if config.gM_slices is not None:
+        print('Geometrical mean across multiple slices is provided.')
         gM = pd.read_parquet(config.gM_slices)
-
-        # Homologs transformation for gM
-        if  config.species is not None:
-            homologs = pd.read_csv(config.gs_species, sep='\t')
-            homologs.index = homologs[config.species]
-            gM = gM.loc[gM.index.isin(homologs[config.species])]
-            gM.index = homologs.loc[gM.index, 'HUMAN_GENE_SYM']
-
-        # Select the common gene
+        if config.species is not None:
+            homologs = pd.read_csv(config.homolog_file, sep='\t', header=None)
+            if homologs.shape[1] < 2:
+                raise ValueError(
+                    "Homologs file must have at least two columns: one for the species and one for the human gene symbol.")
+            homologs.columns = [config.species, 'HUMAN_GENE_SYM']
+            homologs.set_index(config.species, inplace=True)
+            gM = gM.loc[gM.index.isin(homologs.index)]
+            gM.index = homologs.loc[gM.index, 'HUMAN_GENE_SYM'].values
         common_gene = np.intersect1d(adata.var_names, gM.index)
         gM = gM.loc[common_gene]
         gM = gM['G_Mean'].to_numpy()
@@ -206,17 +212,18 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     print(mk_score.shape)
 
     # save the modified adata
-    adata.write(config.input_hdf5_with_latent_path)
+    adata.write(config.hdf5_with_latent_path)
 
     # Save the marker scores
     print(f'------Saving marker scores ...')
-    output_file_path = Path(config.output_feather_path)
+    output_file_path = Path(config.mkscore_feather_path)
     output_file_path.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
     mk_score.reset_index(inplace=True)
     mk_score.rename(columns={mk_score.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
     mk_score.to_feather(output_file_path)
 
-#%%
+
+# %%
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Process latent to gene data.")
     add_latent_to_gene_args(parser)
@@ -242,7 +249,7 @@ if __name__ == '__main__':
         #     **{'annotation': 'SubClass',
         #        'fold': 1.0,
         #        'gM_slices': None,
-        #        'gs_species': '/storage/yangjianLab/songliyang/SpatialData/homologs/macaque_human_homologs.txt',
+        #        'homolog_file': '/storage/yangjianLab/songliyang/SpatialData/homologs/macaque_human_homologs.txt',
         #        'input_hdf5_with_latent_path': '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/macaque/T121_macaque1/find_latent_representations/T121_macaque1_add_latent.h5ad',
         #        'latent_representation': 'latent_GVAE',
         #        'method': 'rank',

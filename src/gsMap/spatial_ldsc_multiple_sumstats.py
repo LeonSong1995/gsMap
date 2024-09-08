@@ -182,7 +182,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     w_ld.set_index('SNP', inplace=True)
 
     # Load the baseline annotations
-    ld_file_baseline = f'{config.ldscore_input_dir}/baseline/baseline.'
+    ld_file_baseline = f'{config.ldscore_save_dir}/baseline/baseline.'
     ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
     n_annot_baseline = len(ref_ld_baseline.columns)
     M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, config.not_M_5_50)
@@ -210,7 +210,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
     # load additional baseline annotations
     if config.use_additional_baseline_annotation:
-        ld_file_baseline_additional = f'{config.ldscore_input_dir}/additional_baseline/baseline.'
+        ld_file_baseline_additional = f'{config.ldscore_save_dir}/additional_baseline/baseline.'
         ref_ld_baseline_additional = _read_ref_ld_v2(ld_file_baseline_additional)
         n_annot_baseline_additional = len(ref_ld_baseline_additional.columns)
         logger.info(f'{len(ref_ld_baseline_additional.columns)} additional baseline annotations loaded')
@@ -221,9 +221,9 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         del ref_ld_baseline_additional
 
     # Detect avalable chunk files
-    all_file = os.listdir(config.ldscore_input_dir)
+    all_file = os.listdir(config.ldscore_save_dir)
     total_chunk_number_found = sum('chunk' in name for name in all_file)
-    print(f'Find {total_chunk_number_found} chunked files in {config.ldscore_input_dir}')
+    print(f'Find {total_chunk_number_found} chunked files in {config.ldscore_save_dir}')
 
     if config.all_chunk is None:
         if config.chunk_range is not None:
@@ -244,7 +244,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
     # Process each chunk
     output_dict = defaultdict(list)
-    zarr_path = Path(config.ldscore_input_dir) / f'{config.sample_name}.ldscore.zarr'
+    zarr_path = Path(config.ldscore_save_dir) / f'{config.sample_name}.ldscore.zarr'
     if config.ldscore_save_format == 'zarr':
         assert zarr_path.exists(), f'{zarr_path} not found, which is required for zarr format'
         zarr_file = zarr.open(str(zarr_path))
@@ -272,15 +272,6 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
         for trait_name, sumstats in sumstats_cleaned_dict.items():
             logger.info(f'Processing {trait_name}...')
-
-            # filter ldscore by common snp
-            # common_snp = sumstats.index
-            # common_index_pos = sumstats.common_index_pos.values
-            # spatial_annotation = ref_ld_spatial.iloc[common_index_pos].astype(np.float32, copy=False)
-            # spatial_annotation_cnames = spatial_annotation.columns
-            # baseline_annotation = ref_ld_baseline.iloc[common_index_pos].astype(np.float32, copy=False)
-            # w_ld_common_snp = w_ld.iloc[common_index_pos].astype(np.float32, copy=False)
-            # x_tot_precomputed_common_snp = x_tot_precomputed.iloc[common_index_pos].values
 
             spatial_annotation = ref_ld_spatial.astype(np.float32, copy=False)
             baseline_annotation = ref_ld_baseline.copy().astype(np.float32, copy=False)
@@ -336,7 +327,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 def load_ldscore_chunk_from_feather(chunk_index, common_snp_among_all_sumstats_pos, config, ):
     # Load the spatial annotations for this chunk
     sample_name = config.sample_name
-    ld_file_spatial = f'{config.ldscore_input_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.'
+    ld_file_spatial = f'{config.ldscore_save_dir}/{sample_name}_chunk{chunk_index}/{sample_name}.'
     ref_ld_spatial = _read_ref_ld_v2(ld_file_spatial)
     ref_ld_spatial = ref_ld_spatial.iloc[common_snp_among_all_sumstats_pos]
     ref_ld_spatial = ref_ld_spatial.astype(np.float32, copy=False)
@@ -400,7 +391,7 @@ if __name__ == '__main__':
     ldscore_save_format = 'feather'
     config = SpatialLDSCConfig(sample_name='Cortex_151507',
                                w_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/gsMap_resource/LDSC_resource/weights_hm3_no_hla/weights.',
-                               ldscore_input_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse',
+                               ldscore_save_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse',
                                ldsc_save_dir=f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse/Cortex_151507/spatial_ldsc{ldscore_save_format}',
                                disable_additional_baseline_annotation=True,
                                trait_name=None,

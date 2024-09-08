@@ -66,7 +66,7 @@ def Construct_Adjacency_Matrix(adata,Params, verbose=True):
     #- 
     if verbose:
         print('The graph contains %d edges, %d cells.' %(Spatial_Net.shape[0], adata.n_obs))
-        print('%.4f neighbors per cell on average.' %(Spatial_Net.shape[0]/adata.n_obs))
+        print('%.2f neighbors per cell on average.' %(Spatial_Net.shape[0]/adata.n_obs))
     #-  
     cells = np.array(adata.obs.index)
     cells_id_tran = dict(zip(cells, range(cells.shape[0])))

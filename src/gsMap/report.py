@@ -1,8 +1,21 @@
+import logging
 import os
 import shutil
+from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader
 import pandas as pd
+
+from gsMap.cauchy_combination_test import run_Cauchy_combination
+from gsMap.config import CauchyCombinationConfig
+
+# logging.basicConfig(level=logging.INFO,
+#                     format='%(asctime)s - %(levelname)s - %(message)s',
+#                     handlers=[
+#                         logging.FileHandler("pipeline.log"),
+#                         logging.StreamHandler()
+#                     ])
+logger = logging.getLogger(__name__)
 
 # Load the Jinja2 environment
 try:
@@ -45,13 +58,25 @@ def embed_html_content(file_path):
     with open(file_path, 'r') as f:
         return f.read()
 
+def check_and_run_cauchy_combination(config):
+    cauchy_result_file = Path(
+        f"{config.workdir}/{config.sample_name}/cauchy_combination/{config.sample_name}_{trait_name}.Cauchy.csv.gz")
+    if cauchy_result_file.exists():
+        logger.info(
+            f"Cauchy combination already done for trait {trait_name}. Results saved at {cauchy_result_file}. Skipping...")
+    else:
+        ldsc_save_dir = config.ldscore_dir
+        cauchy_config = CauchyCombinationConfig(
+            input_hdf5_path=config.hdf5_path,
+            input_ldsc_dir=ldsc_save_dir,
+            sample_name=config.sample_name,
+            annotation=config.annotation,
+            output_cauchy_dir=f"{config.workdir}/{config.sample_name}/cauchy_combination",
+            trait_name=trait_name,
+        )
+        run_Cauchy_combination(cauchy_config)
 
-def run_Report(result_dir, sample_name, trait_name, run_parameters):
-    """
-    Generate the report by dynamically loading data based on the result directory,
-    sample name, and trait name. Use PNG images for gene plots, copy them to the report folder,
-    and copy the HTML files for the Genetic Mapping Plot and Manhattan Plot.
-    """
+def run_Report(result_dir, sample_name, trait_name,):
 
     # Paths to different directories and files based on the provided result directory and sample/trait name
     cauchy_file = os.path.join(result_dir, 'cauchy_combination', f"{sample_name}_{trait_name}.Cauchy.csv.gz")
@@ -95,7 +120,7 @@ def run_Report(result_dir, sample_name, trait_name, run_parameters):
         os.path.join(result_dir, 'diagnosis', f'{sample_name}_{trait_name}_Diagnostic_Manhattan_Plot.html'))
 
     gsmap_version = "1.0.0"
-
+    run_parameters = ''
     # Render the template with dynamic content, including the run parameters
     output_html = template.render(
         title=title,
@@ -114,6 +139,8 @@ def run_Report(result_dir, sample_name, trait_name, run_parameters):
         f.write(output_html)
 
     print(f"Report generated successfully! Saved at {report_file}")
+
+
 
 
 if __name__ == '__main__':
@@ -137,4 +164,4 @@ if __name__ == '__main__':
         "spatial_ldsc_save_dir": 'spatial_ldsc_config.ldsc_save_dir',
         "sumstats_file": 'sumstats_config[trait_name]',
     }
-    run_Report(result_dir, sample_name, trait_name,run_parameter_dict)
+    run_Report(result_dir, sample_name, trait_name, run_parameter_dict)

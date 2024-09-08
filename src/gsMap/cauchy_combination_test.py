@@ -67,18 +67,18 @@ def acat_test(pvalues, weights=None):
 
 def run_Cauchy_combination(config:CauchyCombinationConfig):
     # Load the ldsc results
-    print(f'------Loading LDSC results of {config.input_ldsc_dir}...')
-    ldsc_input_file= Path(config.input_ldsc_dir)/f'{config.sample_name}_{config.trait_name}.csv.gz'
+    print(f'------Loading LDSC results of {config.ldsc_save_dir}...')
+    ldsc_input_file= config.get_ldsc_result_file(config.trait_name)
     ldsc = pd.read_csv(ldsc_input_file, compression='gzip')
     ldsc.spot = ldsc.spot.astype(str).replace('\.0', '', regex=True)
     ldsc.index = ldsc.spot
     if config.meta is None:
         # Load the spatial data
-        print(f'------Loading ST data of {config.input_hdf5_path}...')
-        spe = sc.read_h5ad(f'{config.input_hdf5_path}')
+        print(f'------Loading ST data of {config.hdf5_with_latent_path}...')
+        spe = sc.read_h5ad(f'{config.hdf5_with_latent_path}')
 
         common_cell = np.intersect1d(ldsc.index, spe.obs_names)
-        spe = spe[common_cell,]
+        spe = spe[common_cell]
         ldsc = ldsc.loc[common_cell]
 
         # Add the annotation
@@ -129,7 +129,7 @@ def run_Cauchy_combination(config:CauchyCombinationConfig):
     p_tissue = pd.DataFrame(data)
     p_tissue.columns = ['p_cauchy', 'p_median', 'annotation']
     # Save the results
-    output_dir = Path(config.output_cauchy_dir)
+    output_dir = Path(config.cauchy_save_dir)
     output_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
     output_file = output_dir / f'{config.sample_name}_{config.trait_name}.Cauchy.csv.gz'
     p_tissue.to_csv(

@@ -44,19 +44,20 @@ set_seed(2024)
 # The class for finding latent representations
 class Latent_Representation_Finder:
 
-    def __init__(self, adata, Params):
+    def __init__(self, adata, args:FindLatentRepresentationsConfig):
         self.adata = adata.copy()
-        self.Params = Params
+        self.Params = args
 
         # Standard process
-        if self.Params.type == 'count' or self.Params.type == 'counts':
-            self.adata.X = self.adata.layers[self.Params.type]
+        if self.Params.data_layer == 'count' or self.Params.data_layer == 'counts':
+            self.adata.X = self.adata.layers[self.Params.data_layer]
             sc.pp.highly_variable_genes(self.adata, flavor="seurat_v3", n_top_genes=self.Params.feat_cell)
             sc.pp.normalize_total(self.adata, target_sum=1e4)
             sc.pp.log1p(self.adata)
             sc.pp.scale(self.adata)
         else:
-            self.adata.X = self.adata.layers[self.Params.type]
+            if self.Params.data_layer != 'X':
+                self.adata.X = self.adata.layers[self.Params.data_layer]
             sc.pp.highly_variable_genes(self.adata, n_top_genes=self.Params.feat_cell)
 
     def Run_GNN_VAE(self, label, verbose='whole ST data'):
@@ -88,8 +89,7 @@ class Latent_Representation_Finder:
 
 def run_find_latent_representation(args:FindLatentRepresentationsConfig):
     num_features = args.feat_cell
-    args.output_dir = Path(args.output_hdf5_path).parent
-    args.output_dir.mkdir(parents=True, exist_ok=True,mode=0o755)
+    args.hdf5_with_latent_path.parent.mkdir(parents=True, exist_ok=True,mode=0o755)
     # Load the ST data
     print(f'------Loading ST data of {args.sample_name}...')
     adata = sc.read_h5ad(f'{args.input_hdf5_path}')
@@ -100,7 +100,7 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
         # remove cells without enough annotations
         adata = adata[~pd.isnull(adata.obs[args.annotation]), :]
         num = adata.obs[args.annotation].value_counts()
-        adata = adata[adata.obs[args.annotation].isin(num[num >= 30].index.to_list()),]
+        adata = adata[adata.obs[args.annotation].isin(num[num >= 30].index.to_list())]
 
         le = preprocessing.LabelEncoder()
         le.fit(adata.obs[args.annotation])
@@ -152,7 +152,7 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
             adata.obsm["latent_GVAE_hierarchy"] = np.array(GVAE_all.loc[adata.obs_names,])
             adata.obsm["latent_PCA_hierarchy"] = np.array(PCA_all.loc[adata.obs_names,])
     print(f'------Saving ST data...')
-    adata.write(args.output_hdf5_path)
+    adata.write(args.hdf5_with_latent_path)
 
 
 if __name__ == '__main__':
