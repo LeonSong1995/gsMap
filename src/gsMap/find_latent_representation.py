@@ -94,6 +94,7 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
     print(f'------Loading ST data of {args.sample_name}...')
     adata = sc.read_h5ad(f'{args.input_hdf5_path}')
     adata.var_names_make_unique()
+    adata.X = adata.layers[args.data_layer] if args.data_layer in adata.layers.keys() else adata.X
     print('The ST data contains %d cells, %d genes.' % (adata.shape[0], adata.shape[1]))
     # Load the cell type annotation
     if not args.annotation is None:
@@ -154,56 +155,3 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
     print(f'------Saving ST data...')
     adata.write(args.hdf5_with_latent_path)
 
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="This script is designed to find latent representations in spatial transcriptomics data using a Graph Neural Network Variational Autoencoder (GNN-VAE). It processes input data, constructs a neighboring graph, and runs GNN-VAE to output latent representations.")
-    add_find_latent_representations_args(parser)
-    TEST=True
-    if TEST:
-        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021'
-        name = 'Cortex_151507'
-
-
-        args = parser.parse_args(
-            [
-                '--input_hdf5_path','/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad/Cortex_151507.h5ad',
-                '--output_hdf5_path',f'{test_dir}/{name}/hdf5/{name}_add_latent.h5ad',
-                '--sample_name', name,
-                '--annotation','layer_guess',
-                '--type','count',
-            ]
-
-        )
-
-    else:
-        args = parser.parse_args()
-    config=FindLatentRepresentationsConfig(**{'annotation': 'SubClass',
- 'convergence_threshold': 0.0001,
- 'epochs': 300,
- 'feat_cell': 3000,
- 'feat_hidden1': 256,
- 'feat_hidden2': 128,
- 'gcn_decay': 0.01,
- 'gcn_hidden1': 64,
- 'gcn_hidden2': 30,
- 'gcn_lr': 0.001,
- 'hierarchically': False,
- 'input_hdf5_path': '/storage/yangjianLab/songliyang/SpatialData/Data/Brain/macaque/Cell/processed/h5ad/T862_macaque3.h5ad',
- 'label_w': 1.0,
- 'n_comps': 300,
- 'n_neighbors': 11,
- 'nheads': 3,
- 'output_hdf5_path': 'T862_macaque3/find_latent_representations/T862_macaque3_add_latent.h5ad',
- 'p_drop': 0.1,
- 'rec_w': 1.0,
- 'sample_name': 'T862_macaque3',
- 'type': 'SCT',
- 'var': False,
- 'weighted_adj': False})
-    # config=FindLatentRepresentationsConfig(**vars(args))
-    start_time = time.time()
-    logger.info(f'Find latent representations for {config.sample_name}...')
-    pprint.pprint(config)
-    run_find_latent_representation(config)
-    end_time = time.time()
-    logger.info(f'Find latent representations for {config.sample_name} finished. Time spent: {(end_time - start_time) / 60:.2f} min.')

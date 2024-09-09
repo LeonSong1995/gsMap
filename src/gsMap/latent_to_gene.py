@@ -128,9 +128,6 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     print('------Loading the spatial data...')
     adata = sc.read_h5ad(config.hdf5_with_latent_path)
 
-    # Process the data
-    adata.X = adata.layers[config.type]
-
     print('------Ranking the spatial data...')
     adata.layers['rank'] = rankdata(adata.X.toarray().astype(np.float32), axis=1).astype(np.float32)
 

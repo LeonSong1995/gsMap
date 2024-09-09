@@ -44,49 +44,22 @@ def register_cli(name: str, description: str, add_args_function: Callable) -> Ca
 
 
 def add_find_latent_representations_args(parser):
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
-    parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
-    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str,
-                        help="The gene expression layer of the input data (e.g., 'count', 'counts', 'log1p').")
-    parser.add_argument('--epochs', default=300, type=int,
-                        help="Number of training epochs for the GNN-VAE model. Default is 300.")
-
-    parser.add_argument('--feat_hidden1', default=256, type=int,
-                        help="Number of neurons in the first hidden layer of the feature extraction network. Default is 256.")
-    parser.add_argument('--feat_hidden2', default=128, type=int,
-                        help="Number of neurons in the second hidden layer of the feature extraction network. Default is 128.")
-    parser.add_argument('--feat_cell', default=3000, type=int,
-                        help="Number of top variable genes to select. Default is 3000.")
-    parser.add_argument('--gcn_hidden1', default=64, type=int,
-                        help="Number of units in the first hidden layer of the GCN. Default is 64.")
-    parser.add_argument('--gcn_hidden2', default=30, type=int,
-                        help="Number of units in the second hidden layer of the GCN. Default is 30.")
-    parser.add_argument('--p_drop', default=0.1, type=float,
-                        help="Dropout rate used in the GNN-VAE model. Default is 0.1.")
-    parser.add_argument('--gcn_lr', default=0.001, type=float,
-                        help="Learning rate for the GCN network. Default is 0.001.")
-    parser.add_argument('--gcn_decay', default=0.01, type=float,
-                        help="Weight decay (L2 penalty) for the GCN network. Default is 0.01.")
-    parser.add_argument('--n_neighbors', default=11, type=int,
-                        help="Number of neighbors to consider for graph construction in GCN. Default is 11.")
-    parser.add_argument('--label_w', default=1, type=float,
-                        help="Weight of the label loss in the loss function. Default is 1.")
-    parser.add_argument('--rec_w', default=1, type=float,
-                        help="Weight of the reconstruction loss in the loss function. Default is 1.")
-    parser.add_argument('--n_comps', default=300, type=int,
-                        help="Number of principal components to keep if PCA is performed. Default is 300.")
-    parser.add_argument('--weighted_adj', action='store_true',
-                        help="Use a weighted adjacency matrix in GCN. Default is False.")
-    parser.add_argument('--nheads', default=3, type=int,
-                        help="Number of heads in the attention mechanism of the GNN. Default is 3.")
-    parser.add_argument('--var', action='store_true',
-                        help="Enable var. Use --var to enable. Default is False.")
-    parser.add_argument('--convergence_threshold', default=1e-4, type=float,
-                        help="Threshold for convergence during training. Training stops if the loss change is below this threshold. Default is 1e-4.")
-    parser.add_argument('--hierarchically', action='store_true',
-                        help="Find latent representations hierarchically. Use --hierarchically to enable. Default is False.")
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input HDF5 file.')
+    parser.add_argument('--annotation', type=str, help='Name of the annotation in adata.obs to use.')
+    parser.add_argument('--data_layer', type=str, help='Data layer for gene expression (e.g., "counts", "log1p").')
+    parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs (default: 300).')
+    parser.add_argument('--feat_hidden1', type=int, default=256, help='Neurons in the first hidden layer (default: 256).')
+    parser.add_argument('--feat_hidden2', type=int, default=128, help='Neurons in the second hidden layer (default: 128).')
+    parser.add_argument('--gcn_hidden1', type=int, default=64, help='Units in the first GCN hidden layer (default: 64).')
+    parser.add_argument('--gcn_hidden2', type=int, default=30, help='Units in the second GCN hidden layer (default: 30).')
+    parser.add_argument('--p_drop', type=float, default=0.1, help='Dropout rate (default: 0.1).')
+    parser.add_argument('--gcn_lr', type=float, default=0.001, help='Learning rate for the GCN (default: 0.001).')
+    parser.add_argument('--n_neighbors', type=int, default=11, help='Number of neighbors for GCN (default: 11).')
+    parser.add_argument('--n_comps', type=int, default=300, help='Number of principal components for PCA (default: 300).')
+    parser.add_argument('--weighted_adj', action='store_true', help='Use weighted adjacency in GCN.')
+    parser.add_argument('--var', action='store_true', help='Enable variance calculations.')
+    parser.add_argument('--convergence_threshold', type=float, default=1e-4, help='Threshold for convergence (default: 1e-4).')
+    parser.add_argument('--hierarchically', action='store_true', help='Enable hierarchical latent representation finding.')
 
 
 def chrom_choice(value):
@@ -112,232 +85,65 @@ def get_dataclass_from_parser(args: argparse.Namespace, data_class: dataclass):
 
 
 def add_generate_ldscore_args(parser):
-    parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
-    parser.add_argument('--chrom', type=str, required=True, help='Chromosome number (1-22) or "all"')
-    parser.add_argument('--ldscore_save_dir', type=str, required=True, help='Directory to save ld score files')
-    parser.add_argument('--mkscore_feather_file', type=str, required=True, help='Mkscore feather file path')
-
-    # additional baseline annotation
-    parser.add_argument('--additional_baseline_annotation_dir_path', type=str, default=None, )
-
-    # reference panel
-    parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
-    parser.add_argument('--keep_snp_root', type=str, required=True, help='Keep SNP root path')
-
-    # Annotation by gene distance
-    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='GTF file path')
-    parser.add_argument('--gene_window_size', type=int, default=50000, help='Gene window size')
-
-    # Enhancer annotation
-    parser.add_argument('--enhancer_annotation_file', type=str, default=None,
-                        help='Enhancer annotation bed file path, optional.')
-    parser.add_argument('--snp_multiple_enhancer_strategy', type=str, default='max_mkscore',
-                        choices=['max_mkscore', 'nearest_TSS'], help='Strategy for multiple enhancers per SNP')
-    parser.add_argument('--gene_window_enhancer_priority', type=str, default=None,
-                        choices=['gene_window_first', 'enhancer_first', 'enhancer_only'],
-                        help='Priority between gene window and enhancer')
-
-    # Arguments for calculating ld score
-    parser.add_argument('--spots_per_chunk', type=int, default=5_000, help='Number of spots per chunk')
-    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size')
-    parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
-                        choices=['SNP', 'KB', 'CM'])
+    parser.add_argument('--chrom', type=str, required=True, help='Chromosome number (1-22) or "all".')
+    parser.add_argument('--bfile_root', type=str, required=True, help='Root path for bfiles.')
+    parser.add_argument('--keep_snp_root', type=str, required=True, help='Root path for SNP files.')
+    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='Path to GTF annotation file.')
+    parser.add_argument('--gene_window_size', type=int, default=50000, help='Gene window size in base pairs (default: 50,000).')
+    parser.add_argument('--enhancer_annotation_file', type=str, help='Path to enhancer annotation file (optional).')
+    parser.add_argument('--snp_multiple_enhancer_strategy', type=str, choices=['max_mkscore', 'nearest_TSS'], default='max_mkscore',
+                        help='Strategy for handling multiple enhancers per SNP (default: max_mkscore).')
+    parser.add_argument('--gene_window_enhancer_priority', type=str, choices=['gene_window_first', 'enhancer_first', 'enhancer_only'],
+                        help='Priority between gene window and enhancer annotations.')
+    parser.add_argument('--spots_per_chunk', type=int, default=5000, help='Number of spots per chunk (default: 5,000).')
+    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size (default: 1).')
+    parser.add_argument('--ld_unit', type=str, choices=['SNP', 'KB', 'CM'], default='CM', help='Unit for LD window (default: CM).')
 
 
 def add_latent_to_gene_args(parser):
-    parser.add_argument('--input_hdf5_with_latent_path', type=str, required=True,
-                        help='Path to the input HDF5 file which contains latent representations.')
-    parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
-    parser.add_argument('--output_feather_path', type=str, required=True,
-                        help='Path to save output gene marker score feather file.')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
-
-    # no_expression_fraction
-    parser.add_argument('--no_expression_fraction', action='store_true', default=False,
-                        help='Flag to not use expression fraction as filter when calculate the maker score. Default is False.')
-
-    parser.add_argument('--latent_representation', type=str, default='latent_GVAE',
-                        choices=['latent_GVAE', 'latent_PCA'],
-                        help='Type of latent representation. Default is "latent_GVAE".')
-    parser.add_argument('--num_neighbour', type=int, default=21,
-                        help='Number of neighbours to consider. Default is 21.')
-    parser.add_argument('--num_neighbour_spatial', type=int, default=101,
-                        help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--species', type=str, default=None,
-                        help='Species name, which is the column name in the homolog gene conversion file.')
-    parser.add_argument('--gs_species', type=str, default=None,
-                        help='Homologous gene conversion file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None,
-                        help='The mean Gene marker scores path across multiple slices.')
+    parser.add_argument('--annotation', type=str, help='Name of the annotation layer (optional).')
+    parser.add_argument('--no_expression_fraction', action='store_true', help='Skip expression fraction filtering.')
+    parser.add_argument('--latent_representation', type=str, choices=['latent_GVAE', 'latent_PCA'], default='latent_GVAE',
+                        help='Type of latent representation (default: latent_GVAE).')
+    parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbors (default: 21).')
+    parser.add_argument('--num_neighbour_spatial', type=int, default=101, help='Number of spatial neighbors (default: 101).')
+    # parser.add_argument('--species', type=str, help='Species name for homolog gene mapping (optional).')
+    parser.add_argument('--homolog_file', type=str, help='Path to homologous gene conversion file (optional).')
 
 
 def add_spatial_ldsc_args(parser):
-    # Group for GWAS input data
-    parser.add_argument('--sample_name', required=True, help="Name of the spatial transcriptomic dataset.")
-
-    parser.add_argument('--sumstats_file', default=None, help="Path to GWAS summary statistics file.")
-    parser.add_argument('--sumstats_config_file', default=None, help="Path to GWAS summary statistics config file.")
-    parser.add_argument('--w_file', required=True, help="Path to regression weight file.")
-    parser.add_argument('--ldscore_input_dir', required=True, help="Input directory for LD Score files.")
-    parser.add_argument('--ldsc_save_dir', required=True, help="Directory to save Spatial LDSC results.")
-    parser.add_argument('--trait_name', default=None, help="Name of the trait.")
-    parser.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
-    parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
-    parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
-    parser.add_argument('--all_chunk', type=int, help="Number of chunks for processing spatial data.")
-
-    # if use additional baseline annotation
-    parser.add_argument('--disable_additional_baseline_annotation', action='store_true', default=False, )
-
-    parser.add_argument('--num_processes', type=int, default=4, help="Number of processes for parallel computing.")
-
-    return parser
+    parser.add_argument('--sumstats_file', type=str, required=True, help='Path to GWAS summary statistics file.')
+    parser.add_argument('--w_file', type=str, required=True, help='Path to regression weight file.')
+    parser.add_argument('--trait_name', type=str, help='Name of the trait being analyzed.')
+    parser.add_argument('--n_blocks', type=int, default=200, help='Number of blocks for jackknife resampling (default: 200).')
+    parser.add_argument('--chisq_max', type=int, help='Maximum chi-square value for filtering SNPs.')
+    parser.add_argument('--num_processes', type=int, default=4, help='Number of processes for parallel computing (default: 4).')
 
 
 def add_Cauchy_combination_args(parser):
-    # Required arguments
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
-    parser.add_argument('--input_ldsc_dir', required=True, type=str, help='Directory containing LDSC results')
-    parser.add_argument('--output_cauchy_dir', required=True, type=str,
-                        help='Output directory for Cauchy combination results')
-    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample')
-    parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
-    parser.add_argument('--annotation', required=True, type=str, help='Annotation layer name')
-
-    # Optional arguments
-    parser.add_argument('--meta', default=None, type=str, )
-    parser.add_argument('--slide', default=None, type=str, )
+    parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait being analyzed.')
+    parser.add_argument('--annotation', type=str, required=True, help='Annotation layer name.')
+    parser.add_argument('--meta', type=str, help='Optional meta information.')
+    parser.add_argument('--slide', type=str, help='Optional slide information.')
 
 
-def add_Visualization_args(parser):
-    # Required arguments
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the HDF5 file')
-    parser.add_argument('--input_ldsc_dir', required=True, type=str, help='Directory containing LDSC results')
-    parser.add_argument('--output_figure_dir', required=True, type=str, help='Output directory for figures')
-    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample')
-    parser.add_argument('--trait_name', required=True, type=str, help='Name of the trait')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
+def add_report_args(parser):
+    parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait to generate the report for.')
+    parser.add_argument('--annotation', type=str, help='Annotation layer name (optional).')
+    # parser.add_argument('--plot_type', type=str, choices=['manhattan', 'GSS', 'gsMap', 'all'], default='all',
+    #                     help="Type of diagnostic plot to generate (default: all). Choose from 'manhattan', 'GSS', 'gsMap', or 'all'.")
+    parser.add_argument('--top_corr_genes', type=int, default=50,
+                        help='Number of top correlated genes to display (default: 50).')
+    parser.add_argument('--selected_genes', type=str, nargs='*',
+                        help='List of specific genes to include in the report (optional).')
+    parser.add_argument('--sumstats_file', type=str, required=True, help='Path to GWAS summary statistics file.')
 
-    # Arguments with defaults
-    parser.add_argument('--fig_title', type=str, default=None, help='Title of figure')
-    parser.add_argument('--fig_height', type=int, default=600, help='Height of figure in pixels')
-    parser.add_argument('--fig_width', type=int, default=800, help='Width of figure in pixels')
-    parser.add_argument('--point_size', type=int, default=None, help='Point size of figure')
+    # Optional arguments for customization
+    parser.add_argument('--fig_width', type=int, default=None, help='Width of the generated figures in pixels (default: 800).')
+    parser.add_argument('--fig_height', type=int, default=None, help='Height of the generated figures in pixels (default: 600).')
+    parser.add_argument('--point_size', type=int, default=None, help='Point size for the figures (default: 10).')
     parser.add_argument('--fig_style', type=str, default='light', choices=['dark', 'light'],
-                        help='Plot style of figure')
-
-
-def add_all_mode_args(parser):
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input hdf5 file.')
-    parser.add_argument('--save_dir', required=True, type=str, help='Path to the running results.')
-    # output
-    # parser.add_argument('--output_hdf5_path', required=True, type=str, help='Path to the output hdf5 file.')
-    parser.add_argument('--sample_name', required=True, type=str, help='Name of the sample.')
-    parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    parser.add_argument('--type', default=None, type=str,
-                        help="The gene expression layer of the input data (e.g., 'count', 'counts', 'log1p').")
-
-    # latent_to_gene
-    # input
-    # parser.add_argument('--input_hdf5_path', type=str, required=True, help='Path to the input HDF5 file.')
-    # parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
-    # output
-    # parser.add_argument('--output_feather_path', type=str, required=True,
-    #                     help='Path to save output gene marker score feather file.')
-    # parser.add_argument('--annotation', default=None, type=str, help='Name of the annotation layer.')
-    # parser.add_argument('--type', default=None, type=str, help="Type of input data (e.g., 'count', 'counts').")
-
-    # no_expression_fraction
-    # no_expression_fraction
-    parser.add_argument('--no_expression_fraction', action='store_true', default=False,
-                        help='Flag to not use expression fraction as filter when calculate the maker score. Default is False.')
-
-    parser.add_argument('--latent_representation', type=str, default='latent_GVAE',
-                        choices=['latent_GVAE', 'latent_PCA'],
-                        help='Type of latent representation. Default is "latent_GVAE".')
-    parser.add_argument('--num_neighbour', type=int, default=21,
-                        help='Number of neighbours to consider. Default is 21.')
-    parser.add_argument('--num_neighbour_spatial', type=int, default=101,
-                        help='Number of spatial neighbours to consider. Default is 101.')
-    parser.add_argument('--species', type=str, default=None,
-                        help='Species name, which is the column name in the homolog gene conversion file.')
-    parser.add_argument('--gs_species', type=str, default=None,
-                        help='Homologous gene conversion file path, if applicable.')
-    parser.add_argument('--gM_slices', type=str, default=None,
-                        help='The mean Gene marker scores path across multiple slices.')
-
-    # generate_ldscore
-    # parser.add_argument('--sample_name', type=str, required=True, help='Sample name')
-    # should be all
-    # parser.add_argument('--chrom', type=chrom_choice, required=True, help='Chromosome number (1-22) or "all"')
-    # output
-    # parser.add_argument('--ldscore_save_dir', type=str, required=True, help='Directory to save ld score files')
-
-    # reference panel
-    parser.add_argument('--bfile_root', type=str, required=True, help='Bfile root path')
-    parser.add_argument('--keep_snp_root', type=str, required=True, help='Keep SNP root path')
-
-    # Annotation by gene distance
-    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='GTF file path')
-    parser.add_argument('--gene_window_size', type=int, default=50000, help='Gene window size')
-
-    # Enhancer annotation
-    parser.add_argument('--enhancer_annotation_file', type=str, default=None,
-                        help='Enhancer annotation bed file path, optional.')
-    parser.add_argument('--snp_multiple_enhancer_strategy', type=str, default='max_mkscore',
-                        choices=['max_mkscore', 'nearest_TSS'], help='Strategy for multiple enhancers per SNP')
-    parser.add_argument('--gene_window_enhancer_priority', type=str, default=None,
-                        choices=['gene_window_first', 'enhancer_first', 'enhancer_only'],
-                        help='Priority between gene window and enhancer')
-
-    # Arguments for calculating ld score
-    parser.add_argument('--spots_per_chunk', type=int, default=5_000, help='Number of spots per chunk')
-    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size')
-    parser.add_argument('--ld_unit', type=str, default='CM', help='LD window unit (SNP/KB/CM)',
-                        choices=['SNP', 'KB', 'CM'])
-
-    # spatial ldsc args:
-    parser.add_argument('--sumstats_file', default=None, help="Path to GWAS summary statistics file.")
-    parser.add_argument('--sumstats_config_file', default=None, help="Path to GWAS summary statistics config file.")
-    parser.add_argument('--w_file', required=True, help="Path to regression weight file.")
-    parser.add_argument('--ldscore_input_dir', required=True, help="Input directory for LD Score files.")
-    parser.add_argument('--ldsc_save_dir', required=True, help="Directory to save Spatial LDSC results.")
-    parser.add_argument('--trait_name', default=None, help="Name of the trait.")
-    parser.add_argument('--not_M_5_50', action='store_true', help="Flag to not use M 5 50 in calculations.")
-    parser.add_argument('--n_blocks', type=int, default=200, help="Number of blocks for jackknife resampling.")
-    parser.add_argument('--chisq_max', type=int, help="Maximum chi-square value for filtering SNPs.")
-    parser.add_argument('--all_chunk', type=int, help="Number of chunks for processing spatial data.")
-
-
-def get_runall_mode_config(args: argparse.Namespace):
-    # output
-    args.output_hdf5_path = f'{args.save_dir}/{args.sample_name}/find_latent_representations/{args.sample_name}_add_latent.h5ad'
-    args.output_feather_path = f'{args.save_dir}/{args.sample_name}/latent_to_gene/{args.sample_name}_gene_marker_score.feather'
-    args.ldscore_save_dir = f'{args.save_dir}/{args.sample_name}/generate_ldscore'
-    args.ldsc_save_dir = f'{args.save_dir}/{args.sample_name}/spatial_ldsc'
-    args.output_cauchy_dir = f'{args.save_dir}/{args.sample_name}/cauchy_combination/'
-
-    # input
-    args.input_hdf5_with_latent_path = args.output_hdf5_path
-    args.mkscore_feather_file = args.output_feather_path
-    args.ldscore_input_dir = args.ldscore_save_dir
-    args.chrom = 'all'
-    args.input_ldsc_dir = args.ldsc_save_dir
-    args.input_spatial_ldsc = f'{args.save_dir}/{args.sample_name}/spatial_ldsc/{args.sample_name}_{args.trait_name}.gz'
-    # find_latent_representations
-    flr_config = get_dataclass_from_parser(args, FindLatentRepresentationsConfig)
-    # latent_to_gene
-    ltg_config = get_dataclass_from_parser(args, LatentToGeneConfig)
-    # generate_ldscore
-    gls_config = get_dataclass_from_parser(args, GenerateLDScoreConfig)
-    # spatial ldsc
-    ldsc_config = get_dataclass_from_parser(args, SpatialLDSCConfig)
-    # cauchy combination
-    cauchy_config = get_dataclass_from_parser(args, CauchyCombinationConfig)
-    return RunAllModeConfig(flr_config=flr_config, ltg_config=ltg_config, gls_config=gls_config,
-                            ldsc_config=ldsc_config, cauchy_config=cauchy_config)
-
+                        help='Style of the generated figures (default: light).')
 
 def add_format_sumstats_args(parser):
     # Required arguments
@@ -532,11 +338,9 @@ class LatentToGeneConfig(ConfigWithAutoPaths):
     latent_representation: str = 'latent_GVAE'
     num_neighbour: int = 21
     num_neighbour_spatial: int = 101
-    species: str = None
     homolog_file: str = None
     gM_slices: str = None
     annotation: str = None
-    type: str = None
 
     def __post_init__(self):
         if self.homolog_file is not None:
@@ -733,10 +537,6 @@ class SpatialLDSCConfig(ConfigWithAutoPaths):
 
 @dataclass
 class CauchyCombinationConfig(ConfigWithAutoPaths):
-    # input_hdf5_path: str
-    # input_ldsc_dir: str
-    # output_cauchy_dir: str
-    # sample_name: str
     trait_name: str
     annotation: str
     meta: str = None
@@ -745,10 +545,6 @@ class CauchyCombinationConfig(ConfigWithAutoPaths):
 
 @dataclass
 class VisualizeConfig(ConfigWithAutoPaths):
-    # input_hdf5_path: str
-    # input_ldsc_dir: str
-    # output_figure_dir: str
-    # sample_name: str
     trait_name: str
 
     annotation: str = None
@@ -770,7 +566,18 @@ class DiagnosisConfig(ConfigWithAutoPaths):
     top_corr_genes: int = 50
     selected_genes: Optional[List[str]] = None
 
+    fig_width: Optional[int] = None
+    fig_height: Optional[int] = None
+    point_size: Optional[int] = None
+    fig_style: Literal['dark', 'light'] = 'light'
 
+    def __post_init__(self):
+        if any([self.fig_width, self.fig_height, self.point_size]):
+            logger.info('Customizing the figure size and point size.')
+            assert all([self.fig_width, self.fig_height, self.point_size]), 'All of fig_width, fig_height, and point_size must be provided.'
+            self.customize_fig = True
+        else:
+            self.customize_fig = False
 @dataclass
 class ReportConfig(DiagnosisConfig):
     pass
@@ -801,9 +608,9 @@ class RunAllModeConfig(ConfigWithAutoPaths):
         self.bfile_root = f"{self.gsMap_resource_dir}/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC"
         self.keep_snp_root = f"{self.gsMap_resource_dir}/LDSC_resource/hapmap3_snps/hm"
         self.w_file = f"{self.gsMap_resource_dir}/LDSC_resource/weights_hm3_no_hla/weights."
-        self.snp_gene_weight_adata_path = f"{self.gsMap_resource_dir}/LDSC_resource/quick_mode/snp_gene_weight_matrix.h5ad"
-        self.baseline_annotation_dir = f"{self.gsMap_resource_dir}/LDSC_resource/quick_mode/baseline"
-        self.SNP_gene_pair_dir = f"{self.gsMap_resource_dir}/LDSC_resource/quick_mode/SNP_gene_pair"
+        self.snp_gene_weight_adata_path = f"{self.gsMap_resource_dir}/quick_mode/snp_gene_weight_matrix.h5ad"
+        self.baseline_annotation_dir = f"{self.gsMap_resource_dir}/quick_mode/baseline"
+        self.SNP_gene_pair_dir = f"{self.gsMap_resource_dir}/quick_mode/SNP_gene_pair"
         # check the existence of the input files and resources files
         for file in [self.hdf5_path, self.gtffile]:
             if not Path(file).exists():
@@ -906,32 +713,13 @@ def run_Cauchy_combination_from_cli(args: argparse.Namespace):
     run_Cauchy_combination(config)
 
 
-@register_cli(name='run_visualize',
-              description='Visualize the gsMap results',
-              add_args_function=add_Visualization_args)
-def run_Visualize_from_cli(args: argparse.Namespace):
-    from gsMap.visualize import run_Visualize
-    config = get_dataclass_from_parser(args, VisualizeConfig)
-    run_Visualize(config)
-
-
-@register_cli(name='run_all_mode',
-              description='Run gsMap method (the full process)',
-              add_args_function=add_all_mode_args)
-def run_all_mode_from_cli(args: argparse.Namespace):
-    from gsMap.find_latent_representation import run_find_latent_representation
-    from gsMap.latent_to_gene import run_latent_to_gene
-    from gsMap.generate_ldscore import run_generate_ldscore
-    from gsMap.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
-    from gsMap.cauchy_combination_test import run_Cauchy_combination
-    config = get_runall_mode_config(args)
-    run_find_latent_representation(config.flr_config)
-    run_latent_to_gene(config.ltg_config)
-    run_generate_ldscore(config.gls_config)
-    run_spatial_ldsc(config.ldsc_config)
-    if args.annotation is not None:
-        config.cauchy_config.annotation = args.annotation
-        run_Cauchy_combination(config.cauchy_config)
+@register_cli(name='run_report',
+              description='Run Report to generate diagnostic plots and tables',
+              add_args_function=add_report_args)
+def run_Report_from_cli(args: argparse.Namespace):
+    from gsMap.report import run_report
+    config = get_dataclass_from_parser(args, ReportConfig)
+    run_report(config)
 
 
 @register_cli(name='format_sumstats',

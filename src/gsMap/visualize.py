@@ -7,7 +7,7 @@ import scanpy as sc
 import numpy as np
 import pandas as pd
 import plotly.express as px
-from gsMap.config import VisualizeConfig, add_Visualization_args
+from gsMap.config import VisualizeConfig
 
 
 def load_ldsc(ldsc_input_file):

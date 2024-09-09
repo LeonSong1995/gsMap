@@ -80,7 +80,7 @@ def check_and_run_cauchy_combination(config):
 
     return table_data
 
-def run_Report(config: ReportConfig, run_parameters=None):
+def run_report(config: ReportConfig, run_parameters=None):
 
     logger.info('Running gsMap Diagnosis Module')
     run_Diagnosis(config)

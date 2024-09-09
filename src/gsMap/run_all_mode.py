@@ -1,35 +1,16 @@
 import logging
 import time
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
-
-from matplotlib.tests.test_backend_pgf import baseline_dir
 
 from gsMap.cauchy_combination_test import run_Cauchy_combination
 from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, LatentToGeneConfig, \
-    FindLatentRepresentationsConfig, CauchyCombinationConfig, DiagnosisConfig, RunAllModeConfig, ReportConfig
-from gsMap.diagnosis import run_Diagnosis
+    FindLatentRepresentationsConfig, CauchyCombinationConfig, RunAllModeConfig, ReportConfig
 from gsMap.find_latent_representation import run_find_latent_representation
 from gsMap.generate_ldscore import run_generate_ldscore
 from gsMap.latent_to_gene import run_latent_to_gene
-from gsMap.report import run_Report
+from gsMap.report import run_report
 from gsMap.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
 
-# # Set up logging
-# logging.basicConfig(level=logging.INFO,
-#                     format='%(asctime)s - %(levelname)s - %(message)s',
-#                     handlers=[
-#                         logging.FileHandler("pipeline.log"),
-#                         logging.StreamHandler()
-#                     ])
-# logger = logging.getLogger('gsMap Pipeline')
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(
-    '[{asctime}] {name} {levelname:8s} {filename} {message}', style='{'))
-logger.addHandler(handler)
 
 
 def format_duration(seconds):
@@ -39,6 +20,22 @@ def format_duration(seconds):
 
 
 def run_pipeline(config: RunAllModeConfig):
+    # # Set up logging
+    log_file = Path(config.workdir) / config.sample_name / 'gsMap_pipeline.log'
+    logging.basicConfig(level=logging.INFO,
+                        format='[{asctime}] {levelname:8s} {name} {message}',
+                        handlers=[
+                            logging.FileHandler(log_file),
+                        ],
+                        style='{')
+
+    logger = logging.getLogger('gsMap Pipeline')
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(
+        '[{asctime}] {name} {levelname:8s} {message}', style='{'))
+    logger.addHandler(handler)
+
     logger.info("Starting pipeline with configuration: %s", config)
 
     find_latent_config = FindLatentRepresentationsConfig(
@@ -53,7 +50,6 @@ def run_pipeline(config: RunAllModeConfig):
         workdir=config.workdir,
         sample_name=config.sample_name,
         annotation=config.annotation,
-        type=config.data_layer,
         latent_representation='latent_GVAE',
         num_neighbour=51,
         num_neighbour_spatial=201,
@@ -82,7 +78,8 @@ def run_pipeline(config: RunAllModeConfig):
     start_time = time.time()
     logger.info("Step 1: Finding latent representations")
     if Path(find_latent_config.hdf5_with_latent_path).exists():
-        logger.info(f"Find latent representations already done. Results saved at {find_latent_config.hdf5_with_latent_path}. Skipping...")
+        logger.info(
+            f"Find latent representations already done. Results saved at {find_latent_config.hdf5_with_latent_path}. Skipping...")
     else:
         run_find_latent_representation(find_latent_config)
     end_time = time.time()
@@ -92,7 +89,8 @@ def run_pipeline(config: RunAllModeConfig):
     start_time = time.time()
     logger.info("Step 2: Mapping latent representations to genes")
     if Path(latent_to_gene_config.mkscore_feather_path).exists():
-        logger.info(f"Latent to gene mapping already done. Results saved at {latent_to_gene_config.mkscore_feather_path}. Skipping...")
+        logger.info(
+            f"Latent to gene mapping already done. Results saved at {latent_to_gene_config.mkscore_feather_path}. Skipping...")
     else:
         run_latent_to_gene(latent_to_gene_config)
     end_time = time.time()
@@ -121,10 +119,11 @@ def run_pipeline(config: RunAllModeConfig):
     for trait_name in sumstats_config:
         logger.info("Running spatial LDSC for trait: %s", trait_name)
         # detect if the spatial LDSC has been done:
-        spatial_ldsc_result_file=Path(config.ldsc_save_dir) / f"{config.sample_name}_{trait_name}.csv.gz"
+        spatial_ldsc_result_file = Path(config.ldsc_save_dir) / f"{config.sample_name}_{trait_name}.csv.gz"
 
         if spatial_ldsc_result_file.exists():
-            logger.info(f"Spatial LDSC already done for trait {trait_name}. Results saved at {spatial_ldsc_result_file}. Skipping...")
+            logger.info(
+                f"Spatial LDSC already done for trait {trait_name}. Results saved at {spatial_ldsc_result_file}. Skipping...")
             continue
 
         spatial_ldsc_config_trait = SpatialLDSCConfig(
@@ -137,6 +136,7 @@ def run_pipeline(config: RunAllModeConfig):
             # ldsc_save_dir=spatial_ldsc_config.ldsc_save_dir,
             num_processes=config.max_processes,
             ldscore_save_format='quick_mode',
+            snp_gene_weight_adata_path=config.snp_gene_weight_adata_path,
         )
         run_spatial_ldsc(spatial_ldsc_config_trait)
     end_time = time.time()
@@ -150,7 +150,8 @@ def run_pipeline(config: RunAllModeConfig):
         # check if the cauchy combination has been done
         cauchy_result_file = config.get_cauchy_result_file(trait_name)
         if cauchy_result_file.exists():
-            logger.info(f"Cauchy combination already done for trait {trait_name}. Results saved at {cauchy_result_file}. Skipping...")
+            logger.info(
+                f"Cauchy combination already done for trait {trait_name}. Results saved at {cauchy_result_file}. Skipping...")
             continue
         cauchy_config = CauchyCombinationConfig(
             workdir=config.workdir,
@@ -195,15 +196,15 @@ def run_pipeline(config: RunAllModeConfig):
     for trait_name in sumstats_config:
         logger.info("Running final report generation for trait: %s", trait_name)
         report_config = ReportConfig(
-                    workdir=config.workdir,
-                    sample_name=config.sample_name,
-                    annotation=config.annotation,
-                    trait_name=trait_name,
-                    plot_type='all',
-                    top_corr_genes=50,
-                    selected_genes=None,
-                    sumstats_file=sumstats_config[trait_name],
-                )
+            workdir=config.workdir,
+            sample_name=config.sample_name,
+            annotation=config.annotation,
+            trait_name=trait_name,
+            plot_type='all',
+            top_corr_genes=50,
+            selected_genes=None,
+            sumstats_file=sumstats_config[trait_name],
+        )
         # Create the run parameters dictionary for each trait
         run_parameter_dict = {
             "sample_name": config.sample_name,
@@ -229,9 +230,10 @@ def run_pipeline(config: RunAllModeConfig):
         }
 
         # Pass the run parameter dictionary to the report generation function
-        run_Report(report_config, run_parameters=run_parameter_dict)
+        run_report(report_config, run_parameters=run_parameter_dict)
 
     logger.info("Pipeline completed successfully.")
+
 
 if __name__ == '__main__':
     # Example usage:
@@ -258,7 +260,7 @@ if __name__ == '__main__':
         data_layer='count',
         trait_name='Depression_2023_NatureMed',
         sumstats_file=(
-                    '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
+                '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
         homolog_file=None,
         max_processes=10
     )
@@ -276,7 +278,6 @@ if __name__ == '__main__':
     #     homolog_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/gsMap_resource/homologs/mouse_human_homologs.txt',
     #     max_processes=10
     # )
-
 
     # config = RunAllModeConfig(
     #     workdir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4/E16.5_E1S1.MOSTA',

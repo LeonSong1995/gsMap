@@ -299,7 +299,6 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         spots_name = zarr_file.attrs['spot_names']
 
     for chunk_index in range(start_chunk, end_chunk + 1):
-        print(f'------Processing chunk-{chunk_index}')
         if config.ldscore_save_format == 'feather':
             ref_ld_spatial, spatial_annotation_cnames = load_ldscore_chunk_from_feather(chunk_index,
                                                                                         common_snp_among_all_sumstats_pos,

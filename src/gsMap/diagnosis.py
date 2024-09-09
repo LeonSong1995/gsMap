@@ -180,7 +180,11 @@ def generate_GSS_distribution(config: DiagnosisConfig):
         logger.info(f'Generating GSS & Expression distribution plot for selected genes: {plot_genes}...')
     else:
         logger.info(f'Generating GSS & Expression distribution plot for top {config.top_corr_genes} correlated genes...')
-    (pixel_width, pixel_height), point_size = estimate_point_size_for_plot(adata.obsm['spatial'])
+
+    if config.customize_fig:
+        pixel_width, pixel_height, point_size = config.fig_width, config.fig_height, config.point_size
+    else:
+        (pixel_width, pixel_height), point_size = estimate_point_size_for_plot(adata.obsm['spatial'])
     sub_fig_save_dir = config.get_GSS_plot_dir(config.trait_name)
 
     # save plot gene list
@@ -230,7 +234,10 @@ def generate_gsMap_plot(config: DiagnosisConfig):
     trait_ldsc_result = load_ldsc(config.get_ldsc_result_file(config.trait_name))
     space_coord_concat = load_st_coord(adata, trait_ldsc_result, annotation=config.annotation)
 
-    (pixel_width, pixel_height), point_size = estimate_point_size_for_plot(adata.obsm['spatial'])
+    if config.customize_fig:
+        pixel_width, pixel_height, point_size = config.fig_width, config.fig_height, config.point_size
+    else:
+        (pixel_width, pixel_height), point_size = estimate_point_size_for_plot(adata.obsm['spatial'])
     fig = draw_scatter(space_coord_concat,
                        title=f'{config.trait_name} (gsMap)',
                        point_size=point_size,

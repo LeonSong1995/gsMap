@@ -606,12 +606,12 @@ def run_generate_ldscore(config: GenerateLDScoreConfig):
 
         # link the baseline annotation
         baseline_annotation_dir = Path(config.baseline_annotation_dir)
-        baseline_annotation_dir.symlink_to(ldscore_save_dir / 'baseline')
+        (ldscore_save_dir / 'baseline').symlink_to(baseline_annotation_dir, target_is_directory=True)
 
         # link the SNP_gene_pair
         SNP_gene_pair_dir = Path(config.SNP_gene_pair_dir)
-        SNP_gene_pair_dir.symlink_to(ldscore_save_dir / 'SNP_gene_pair')
-
+        (ldscore_save_dir / 'SNP_gene_pair').symlink_to(SNP_gene_pair_dir, target_is_directory=True)
+        return
     s_ldsc_boost = S_LDSC_Boost(config)
     if config.chrom == 'all':
         for chrom in range(1, 23):
