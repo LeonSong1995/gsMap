@@ -581,7 +581,7 @@ class GenerateLDScoreConfig(ConfigWithAutoPaths):
     ld_unit: str = 'CM'
 
     # zarr config
-    ldscore_save_format: Literal['feather', 'zarr'] = 'feather'
+    ldscore_save_format: Literal['feather', 'zarr',] = 'feather'
     zarr_chunk_size: Tuple[int, int] = None
 
     # for pre calculating the SNP Gene ldscore Weight
@@ -653,7 +653,11 @@ class SpatialLDSCConfig(ConfigWithAutoPaths):
     chisq_max: Optional[int] = None
     all_chunk: Optional[int] = None
     chunk_range: Optional[Tuple[int, int]] = None
-    ldscore_save_format: Literal['feather', 'zarr'] = 'feather'
+
+    ldscore_save_format: Literal['feather', 'zarr', 'shot_gun_mode'] = 'feather'
+    spots_per_chunk_shot_gun_mode: int = 1_000
+    snp_gene_weight_adata_path: Optional[str] = None
+    baseline_annotation_dir: Optional[str] = None
 
     def __post_init__(self):
         super().__post_init__()

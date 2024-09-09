@@ -142,7 +142,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     if not config.homolog_file is None:
         print(f'------Transforming the {config.species} to HUMAN_GENE_SYM...')
         homologs = pd.read_csv(config.homolog_file, sep='\t')
-        if homologs.shape[1] == 2:
+        if homologs.shape[1] != 2:
             raise ValueError(
                 "Homologs file must have two columns: one for the species and one for the human gene symbol.")
 
@@ -152,6 +152,8 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         # Log the number of genes left after homolog transformation
         print(f"{adata.shape[1]} genes retained after homolog transformation.")
         adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM'].values
+        # drop duplicated genes
+        adata = adata[:, ~adata.var_names.duplicated()]
 
     # Remove cells that do not express any genes after transformation, and genes that are not expressed in any cells.
     print(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')

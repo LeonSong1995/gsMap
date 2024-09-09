@@ -3,6 +3,7 @@ import os
 import zarr
 import numpy as np
 import pandas as pd
+import anndata as ad
 
 import argparse
 import logging
@@ -141,6 +142,47 @@ def _get_sumstats_from_sumstats_dict(sumstats_config_dict: dict, baseline_and_w_
     return sumstats_cleaned_dict
 
 
+class S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix:
+    def __init__(self, config: SpatialLDSCConfig, common_snp_among_all_sumstats_pos):
+        self.config = config
+        mk_score = pd.read_feather(config.mkscore_feather_path).set_index('HUMAN_GENE_SYM')
+        mk_score_genes = mk_score.index
+
+        snp_gene_weight_adata = ad.read_h5ad(config.snp_gene_weight_adata_path)
+        common_genes = mk_score_genes.intersection(snp_gene_weight_adata.var.index)
+        common_snps = snp_gene_weight_adata.obs.index
+        # self.snp_gene_weight_adata = snp_gene_weight_adata[common_snp_among_all_sumstats:, common_genes.to_list()]
+        self.snp_gene_weight_matrix = snp_gene_weight_adata[common_snp_among_all_sumstats_pos:, common_genes.to_list()].X
+        self.mk_score_common = mk_score.loc[common_genes]
+
+        # calculate the chunk number
+        self.chunk_starts = list(range(0, self.mk_score_common.shape[1], self.config.spots_per_chunk_shot_gun_mode))
+
+    def fetch_ldscore_by_chunk(self, chunk_index):
+        chunk_start = self.chunk_starts[chunk_index]
+        mk_score_chunk = self.mk_score_common.iloc[:,
+                         chunk_start:chunk_start + self.config.spots_per_chunk_shot_gun_mode]
+        ldscore_chunk = self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(
+            mk_score_chunk,
+            drop_dummy_na=False,
+        )
+
+        spots_name = self.mk_score_common.columns[chunk_start:chunk_start + self.config.spots_per_chunk_shot_gun_mode]
+        return ldscore_chunk, spots_name
+
+    def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(self,
+                                                              mk_score_chunk,
+                                                              drop_dummy_na=True,
+                                                              ):
+
+        if drop_dummy_na:
+            ldscore_chr_chunk = self.snp_gene_weight_matrix[:, :-1] @ mk_score_chunk
+        else:
+            ldscore_chr_chunk = self.snp_gene_weight_matrix @ mk_score_chunk
+
+        return ldscore_chr_chunk
+
+
 def _get_sumstats_with_common_snp_from_sumstats_dict(sumstats_config_dict: dict, baseline_and_w_ld_common_snp: pd.Index,
                                                      chisq_max=None):
     # first validate if all sumstats file exists
@@ -182,10 +224,14 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     w_ld.set_index('SNP', inplace=True)
 
     # Load the baseline annotations
-    ld_file_baseline = f'{config.ldscore_save_dir}/baseline/baseline.'
+    if config.ldscore_save_format == 'shot_gun_mode':
+        ld_file_baseline = f'{config.baseline_annotation_dir}/baseline.'
+    else:
+        ld_file_baseline = f'{config.ldscore_save_dir}/baseline/baseline.'
+
     ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
-    n_annot_baseline = len(ref_ld_baseline.columns)
-    M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, config.not_M_5_50)
+    # n_annot_baseline = len(ref_ld_baseline.columns)
+    # M_annot_baseline = _read_M_v2(ld_file_baseline, n_annot_baseline, config.not_M_5_50)
 
     # common snp between baseline and w_ld
     baseline_and_w_ld_common_snp = ref_ld_baseline.index.intersection(w_ld.index)
@@ -220,10 +266,15 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         ref_ld_baseline = pd.concat([ref_ld_baseline, ref_ld_baseline_additional], axis=1)
         del ref_ld_baseline_additional
 
-    # Detect avalable chunk files
-    all_file = os.listdir(config.ldscore_save_dir)
-    total_chunk_number_found = sum('chunk' in name for name in all_file)
-    print(f'Find {total_chunk_number_found} chunked files in {config.ldscore_save_dir}')
+    # Detect available chunk files
+    if config.ldscore_save_format == 'shot_gun_mode':
+        s_ldsc = S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix(config, common_snp_among_all_sumstats_pos)
+        total_chunk_number_found = len(s_ldsc.chunk_starts)
+        print(f'Split data into {total_chunk_number_found} chunks')
+    else:
+        all_file = os.listdir(config.ldscore_save_dir)
+        total_chunk_number_found = sum('chunk' in name for name in all_file)
+        print(f'Find {total_chunk_number_found} chunked files in {config.ldscore_save_dir}')
 
     if config.all_chunk is None:
         if config.chunk_range is not None:
@@ -240,6 +291,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         print(f'\t')
         print(f'Input {all_chunk} chunked files')
         start_chunk, end_chunk = 1, all_chunk
+
     running_chunk_number = end_chunk - start_chunk + 1
 
     # Process each chunk
@@ -262,7 +314,8 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             start_spot = (chunk_index - 1) * zarr_file.chunks[1]
             ref_ld_spatial = ref_ld_spatial.astype(np.float32, copy=False)
             spatial_annotation_cnames = spots_name[start_spot:start_spot + zarr_file.chunks[1]]
-
+        elif config.ldscore_save_format == 'shot_gun_mode':
+            ref_ld_spatial, spatial_annotation_cnames = s_ldsc.fetch_ldscore_by_chunk(chunk_index - 1)
         else:
             raise ValueError(f'Invalid ld score save format: {config.ldscore_save_format}')
 
@@ -271,7 +324,6 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         # x_tot_precomputed = ref_ld_spatial + ref_ld_baseline_column_sum
 
         for trait_name, sumstats in sumstats_cleaned_dict.items():
-            logger.info(f'Processing {trait_name}...')
 
             spatial_annotation = ref_ld_spatial.astype(np.float32, copy=False)
             baseline_annotation = ref_ld_baseline.copy().astype(np.float32, copy=False)
@@ -288,7 +340,8 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             out_chunk = process_map(jackknife_for_processmap, range(chunk_size),
                                     max_workers=config.num_processes,
                                     chunksize=10,
-                                    desc=f'LDSC chunk-{chunk_index}: {trait_name}')
+                                    desc=f'Chunk-{chunk_index}/Total-chunk-{running_chunk_number} for {trait_name}',
+                                    )
 
             # cache the results
             out_chunk = pd.DataFrame.from_records(out_chunk,
@@ -308,8 +361,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         gc.collect()
 
     # Save the results
-    out_dir = Path(config.ldsc_save_dir)
-    out_dir.mkdir(parents=True, exist_ok=True, mode=0o777)
+    out_dir = config.ldsc_save_dir
     for trait_name, out_chunk_list in output_dict.items():
         out_all = pd.concat(out_chunk_list, axis=0)
         if running_chunk_number == total_chunk_number_found:
@@ -344,67 +396,34 @@ if __name__ == '__main__':
     )
     parser = add_spatial_ldsc_args(parser)
     TEST = True
-    # if TEST:
-    #     gwas_root = "/storage/yangjianLab/songliyang/GWAS_trait/LDSC"
-    #     gwas_trait = "/storage/yangjianLab/songliyang/GWAS_trait/GWAS_Public_Use_MaxPower.csv"
-    #     root = "/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/processed/h5ad"
-    #
-    #     name = 'Cortex_151507'
-    #     spe_name = name
-    #     # ld_pth = f"/storage/yangjianLab/songliyang/SpatialData/Data/Brain/Human/Nature_Neuroscience_2021/annotation/{spe_name}/snp_annotation"
-    #     ld_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/snake_workdir/{name}/generate_ldscore"
-    #     out_pth = f"/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/snake_workdir/{name}/ldsc"
-    #     gwas_file = "ADULT1_ADULT2_ONSET_ASTHMA"
-    #     # Prepare the arguments list using f-strings
-    #     args_list = [
-    #         "--h2", f"{gwas_root}/{gwas_file}.sumstats.gz",
-    #         "--w_file", "/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.",
-    #         "--sample_name", spe_name,
-    #         "--num_processes", '4',
-    #         "--ldscore_input_dir", ld_pth,
-    #         "--ldsc_save_dir", out_pth,
-    #         '--trait_name', 'adult1_adult2_onset_asthma'
-    #     ]
-    #     # args = parser.parse_args(args_list)
-    # else:
-    #     args = parser.parse_args()
-    #
-    # os.chdir('/storage/yangjianLab/chenwenhao/tmp/gsMap_Height_debug')
-    # TASK_ID = 16
-    # spe_name = f'E{TASK_ID}.5_E1S1'
-    # config = SpatialLDSCConfig(**{'all_chunk': 1,
-    #                               'chisq_max': None,
-    #                               # 'sumstats_file': '/storage/yangjianLab/songliyang/GWAS_trait/LDSC/GIANT_EUR_Height_2022_Nature.sumstats.gz',
-    #                               'ldsc_save_dir': f'{spe_name}/ldsc_results_three_row_sum_sub_config_traits',
-    #                               'ldscore_input_dir': '/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/annotation/E16.5_E1S1/generate_ldscore_new',
-    #                               'n_blocks': 200,
-    #                               'not_M_5_50': False,
-    #                               'num_processes': 15,
-    #                               'sample_name': spe_name,
-    #                               # 'trait_name': 'GIANT_EUR_Height_2022_Nature',
-    #                               'sumstats_config_file': '/storage/yangjianLab/chenwenhao/projects/202312_GPS/src/GPS/example/sumstats_config_sub.yaml',
-    #                               'w_file': '/storage/yangjianLab/sharedata/LDSC_resource/LDSC_SEG_ldscores/weights_hm3_no_hla/weights.'
-    #                               })
-    import time
+    from gsMap.config import RunAllModeConfig
 
-    start = time.time()
-    ldscore_save_format = 'feather'
-    config = SpatialLDSCConfig(sample_name='Cortex_151507',
-                               w_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/gsMap_resource/LDSC_resource/weights_hm3_no_hla/weights.',
-                               ldscore_save_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse',
-                               ldsc_save_dir=f'/storage/yangjianLab/chenwenhao/projects/202312_GPS/data/GPS_test/Nature_Neuroscience_2021/Cortex_151507/snp_annotation/test/0101/sparse/Cortex_151507/spatial_ldsc{ldscore_save_format}',
-                               disable_additional_baseline_annotation=True,
-                               trait_name=None,
-                               sumstats_file=None,
-                               sumstats_config_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/docs_test/example_data/GWAS/gwas_config_absolute_path.yaml',
-                               num_processes=10,
-                               not_M_5_50=False,
-                               n_blocks=200,
-                               chisq_max=None,
-                               all_chunk=None,
-                               chunk_range=(1, 2),
-                               ldscore_save_format=ldscore_save_format
-                               )
-    # config = SpatialLDSCConfig(**vars(args))
-    run_spatial_ldsc(config)
-    print(f'Elapsed time: {time.time() - start} using {config.num_processes} processes in {ldscore_save_format} format')
+    path_prefix = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/'
+    config = RunAllModeConfig(
+        workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
+        sample_name='Human_Cortex_151507',
+        gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
+        hdf5_path=('%s/test/20240902_gsMap_Local_Test/example_data/ST/Cortex_151507.h5ad' % path_prefix),
+        annotation='layer_guess',
+        data_layer='count',
+        trait_name='Depression_2023_NatureMed',
+        sumstats_file=(
+                '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
+        homolog_file=None,
+        max_processes=10
+    )
+    sumstats_config = config.sumstats_config_dict
+    for trait_name in sumstats_config:
+        spatial_ldsc_config_trait = SpatialLDSCConfig(
+            workdir=config.workdir,
+            sumstats_file=sumstats_config[trait_name],
+            trait_name=trait_name,
+            w_file=config.w_file,
+            sample_name=config.sample_name,
+            num_processes=config.max_processes,
+            ldscore_save_format='shot_gun_mode',
+            spots_per_chunk_shot_gun_mode=1000,
+            snp_gene_weight_adata_path = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/0908_workdir_test/Human_Cortex_151507/generate_ldscore/snp_gene_weight_matrix/snp_gene_weight_matrix.h5ad',
+            baseline_annotation_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/0908_workdir_test/Human_Cortex_15150.bak/generate_ldscore/baseline'
+        )
+        run_spatial_ldsc(spatial_ldsc_config_trait)

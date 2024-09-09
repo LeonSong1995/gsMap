@@ -70,16 +70,6 @@ def run_pipeline(config: RunAllModeConfig):
         spots_per_chunk=5_000,
     )
 
-    spatial_ldsc_config = SpatialLDSCConfig(
-        workdir=config.workdir,
-        w_file=config.w_file,
-        sample_name=config.sample_name,
-        num_processes=config.max_processes,
-        trait_name=config.trait_name,
-        sumstats_config_file=config.sumstats_config_file,
-        sumstats_file=config.sumstats_file,
-    )
-
     pipeline_start_time = time.time()
 
     # Step 1: Find latent representations
@@ -125,7 +115,7 @@ def run_pipeline(config: RunAllModeConfig):
     for trait_name in sumstats_config:
         logger.info("Running spatial LDSC for trait: %s", trait_name)
         # detect if the spatial LDSC has been done:
-        spatial_ldsc_result_file=Path(spatial_ldsc_config.ldsc_save_dir) / f"{config.sample_name}_{trait_name}.csv.gz"
+        spatial_ldsc_result_file=Path(config.ldsc_save_dir) / f"{config.sample_name}_{trait_name}.csv.gz"
 
         if spatial_ldsc_result_file.exists():
             logger.info(f"Spatial LDSC already done for trait {trait_name}. Results saved at {spatial_ldsc_result_file}. Skipping...")
@@ -139,8 +129,8 @@ def run_pipeline(config: RunAllModeConfig):
             sample_name=config.sample_name,
             # ldscore_save_dir=spatial_ldsc_config.ldscore_save_dir,
             # ldsc_save_dir=spatial_ldsc_config.ldsc_save_dir,
-            num_processes=spatial_ldsc_config.num_processes,
-            ldscore_save_format=spatial_ldsc_config.ldscore_save_format,
+            num_processes=config.max_processes,
+            ldscore_save_format='feather'
         )
         run_spatial_ldsc(spatial_ldsc_config_trait)
     end_time = time.time()

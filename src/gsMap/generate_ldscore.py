@@ -368,7 +368,6 @@ class S_LDSC_Boost:
             snp_gene_weight_matrix_save_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f'Saving snp_gene_weight_matrix for chr{chrom}...')
             self.snp_gene_weight_matrix.reset_index().to_feather(snp_gene_weight_matrix_save_dir / f'{chrom}.snp_gene_weight_matrix.feather')
-            return
 
         # convert to sparse
         self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
@@ -598,17 +597,6 @@ class S_LDSC_Boost:
         SNP_gene_pair = overlaps_small[['SNP', 'gene_name']].set_index('SNP').join(annot.set_index('SNP'), how='right')
 
         return SNP_gene_pair
-
-# class S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix(S_LDSC_Boost):
-#     def __init__(self, config: GenerateLDScoreConfig):
-#         super(S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix, self).__init__(config)
-#         self.snp_gene_weight_matrix = pd.read_feather(config.snp_gene_weight_matrix_path).set_index('SNP')
-#         self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
-#
-#     def process_chromosome(self, chrom: int):
-#         self.snp_pass_maf = get_s
-
-
 
 def run_generate_ldscore(config: GenerateLDScoreConfig):
     s_ldsc_boost = S_LDSC_Boost(config)
