@@ -1,5 +1,6 @@
 import argparse
 import logging
+import shutil
 from pathlib import Path
 import zarr
 import numpy as np
@@ -599,6 +600,18 @@ class S_LDSC_Boost:
         return SNP_gene_pair
 
 def run_generate_ldscore(config: GenerateLDScoreConfig):
+    if config.ldscore_save_format == 'shot_gun_mode':
+        logger.info('Running shot gun mode. Skip the process of generating ldscore.')
+        ldscore_save_dir = config.ldscore_save_dir
+
+        # link the baseline annotation
+        baseline_annotation_dir = Path(config.baseline_annotation_dir)
+        baseline_annotation_dir.symlink_to(ldscore_save_dir / 'baseline')
+
+        # link the SNP_gene_pair
+        SNP_gene_pair_dir = Path(config.SNP_gene_pair_dir)
+        SNP_gene_pair_dir.symlink_to(ldscore_save_dir / 'SNP_gene_pair')
+
     s_ldsc_boost = S_LDSC_Boost(config)
     if config.chrom == 'all':
         for chrom in range(1, 23):

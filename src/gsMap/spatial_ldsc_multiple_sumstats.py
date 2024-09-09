@@ -152,7 +152,7 @@ class S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix:
         common_genes = mk_score_genes.intersection(snp_gene_weight_adata.var.index)
         common_snps = snp_gene_weight_adata.obs.index
         # self.snp_gene_weight_adata = snp_gene_weight_adata[common_snp_among_all_sumstats:, common_genes.to_list()]
-        self.snp_gene_weight_matrix = snp_gene_weight_adata[common_snp_among_all_sumstats_pos:, common_genes.to_list()].X
+        self.snp_gene_weight_matrix = snp_gene_weight_adata[common_snp_among_all_sumstats_pos, common_genes.to_list()].X
         self.mk_score_common = mk_score.loc[common_genes]
 
         # calculate the chunk number
