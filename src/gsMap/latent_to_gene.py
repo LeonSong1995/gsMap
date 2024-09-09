@@ -203,16 +203,16 @@ def run_latent_to_gene(config: LatentToGeneConfig):
                             desc="Finding markers (Rank-based approach) | cells")
     ]
     # Normalize the marker scores
-    mk_score = pd.DataFrame(np.vstack(mk_score).T, index=adata.var.index, columns=cell_list)
+    mk_score = pd.DataFrame(np.vstack(mk_score).T, index=adata.var_names, columns=cell_list)
     # mk_score_normalized = mk_score.div(mk_score.sum())*1e+2
-    # Remove the mitochondrial genes
-    mt_genes = [gene for gene in mk_score.index if gene.startswith('MT-') or gene.startswith('mt-')]
-    mask = ~mk_score.index.isin(set(mt_genes))
-    mk_score = mk_score[mask]  # Apply the mask to mk_score
-    print(mk_score.shape)
 
-    # save the modified adata
-    adata.write(config.hdf5_with_latent_path)
+    # Remove the mitochondrial genes from mk_score
+    mt_gene_mask = ~adata.var_names.str.startswith(('MT-', 'mt-'))
+    mk_score = mk_score[mt_gene_mask]
+    adata = adata[:, mt_gene_mask]
+
+    # Save the mk_score DataFrame to an adata layer
+    adata.layers['mkscore'] = mk_score.values.T
 
     # Save the marker scores
     print(f'------Saving marker scores ...')
@@ -222,6 +222,8 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     mk_score.rename(columns={mk_score.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
     mk_score.to_feather(output_file_path)
 
+    # Save the modified adata object to disk
+    adata.write(config.hdf5_with_latent_path)
 
 # %%
 if __name__ == '__main__':

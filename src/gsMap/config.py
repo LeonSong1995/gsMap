@@ -422,9 +422,18 @@ class ConfigWithAutoPaths:
     def cauchy_save_dir(self) -> Path:
         return Path(f'{self.workdir}/{self.sample_name}/cauchy_combination')
 
-    @property
-    def report_save_dir(self) -> Path:
-        return Path(f'{self.workdir}/{self.sample_name}/report')
+    def get_report_dir(self, trait_name: str) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}')
+
+    def get_manhattan_plot_path(self, trait_name: str) -> Path:
+        manhattan_plot_path = Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}/manhattan_plot/{self.sample_name}_{trait_name}_Diagnostic_Manhattan_Plot.html')
+        manhattan_plot_path.parent.mkdir(parents=True, exist_ok=True)
+        return manhattan_plot_path
+
+    def get_GSS_plot_dir(self, trait_name: str) -> Path:
+        GSS_plot_dir = Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}/GSS_plot')
+        GSS_plot_dir.mkdir(parents=True, exist_ok=True)
+        return GSS_plot_dir
 
     def get_ldsc_result_file(self, trait_name: str) -> Path:
         return Path(f'{self.ldsc_save_dir}/{self.sample_name}_{trait_name}.csv.gz')
@@ -432,7 +441,8 @@ class ConfigWithAutoPaths:
     def get_cauchy_result_file(self, trait_name: str) -> Path:
         return Path(f'{self.cauchy_save_dir}/{self.sample_name}_{trait_name}.Cauchy.csv.gz')
 
-
+    def get_gene_diagnostic_info_save_path(self, trait_name: str) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}/{self.sample_name}_{trait_name}_Gene_Diagnostic_Info.csv')
 @dataclass
 class FindLatentRepresentationsConfig(ConfigWithAutoPaths):
     input_hdf5_path: str
@@ -605,7 +615,7 @@ class SpatialLDSCConfig(ConfigWithAutoPaths):
     chisq_max: Optional[int] = None
     all_chunk: Optional[int] = None
     chunk_range: Optional[Tuple[int, int]] = None
-    ldscore_save_format: Literal['feather', 'zarr'] = 'zarr'
+    ldscore_save_format: Literal['feather', 'zarr'] = 'feather'
 
     def __post_init__(self):
         super().__post_init__()
@@ -732,7 +742,6 @@ class ReportConfig:
     input_ldsc_dir: str
     trait_name: str
     sumstats_file: str
-    diagnosis_save_dir: str
 
     top_corr_genes: int = 50
     selected_genes: Optional[List[str]] = None

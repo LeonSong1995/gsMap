@@ -79,7 +79,7 @@ def check_and_run_cauchy_combination(config):
 def run_Report(result_dir, sample_name, trait_name,):
 
     # Paths to different directories and files based on the provided result directory and sample/trait name
-    cauchy_file = os.path.join(result_dir, 'cauchy_combination', f"{sample_name}_{trait_name}.Cauchy.csv.gz")
+    # cauchy_file = os.path.join(result_dir, 'cauchy_combination', f"{sample_name}_{trait_name}.Cauchy.csv.gz")
     diagnosis_dir = os.path.join(result_dir, 'diagnosis')
     gene_diagnostic_info_file = os.path.join(diagnosis_dir, f"{sample_name}_{trait_name}_Gene_Diagnostic_Info.csv")
     report_dir = os.path.join(result_dir, 'report')

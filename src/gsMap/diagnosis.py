@@ -37,14 +37,14 @@ def load_ldsc(ldsc_input_file):
 
 
 def generate_manhattan_plot(config: DiagnosisConfig):
-    save_dir = Path(config.diagnosis_save_dir)
+    report_save_dir = config.get_report_dir(config.trait_name)
 
     # Load and process GWAS data
     logger.info('Loading and processing GWAS data...')
     gwas_data = pd.read_csv(config.sumstats_file, compression='gzip', sep='\t')
     gwas_data = convert_z_to_p(gwas_data)
 
-    gene_diagnostic_info = load_gene_diagnostic_info(config, save_dir)
+    gene_diagnostic_info = load_gene_diagnostic_info(config)
 
     # Select top correlated genes if not provided in the configuration
     if not config.selected_genes:
@@ -107,13 +107,13 @@ def generate_manhattan_plot(config: DiagnosisConfig):
         annotation='Annotation_text',
     )
 
-    save_manhattan_plot_path = save_dir / f'{config.sample_name}_{config.trait_name}_Diagnostic_Manhattan_Plot.html'
+    save_manhattan_plot_path = config.get_manhattan_plot_path(config.trait_name)
     fig.write_html(save_manhattan_plot_path)
-    logger.info(f'Diagnostic Manhattan Plot saved to {save_manhattan_plot_path}. Open in browser to view.')
+    logger.info(f'Diagnostic Manhattan Plot saved to {save_manhattan_plot_path}.')
 
 
-def load_gene_diagnostic_info(config, save_dir):
-    gene_diagnostic_info_save_path = save_dir / f'{config.sample_name}_{config.trait_name}_Gene_Diagnostic_Info.csv'
+def load_gene_diagnostic_info(config):
+    gene_diagnostic_info_save_path = config.get_gene_diagnostic_info_save_path(config.trait_name)
     if gene_diagnostic_info_save_path.exists():
         logger.info(f'Loading gene diagnostic information from {gene_diagnostic_info_save_path}...')
         gene_diagnostic_info = pd.read_csv(gene_diagnostic_info_save_path)
@@ -157,30 +157,29 @@ def get_gene_diagnostic_info(config):
     # Merge with PCC
     high_GSS_Gene_annotation_pair = high_GSS_Gene_annotation_pair.merge(corr, left_on='Gene', right_index=True, )
     # Save the gene diagnostic information
-    save_dir = Path(config.diagnosis_save_dir)
-    save_dir.mkdir(parents=True, exist_ok=True)
     gene_diagnostic_info_cols = ['Gene', 'Annotation', 'Median_GSS', 'PCC']
     gene_diagnostic_info = high_GSS_Gene_annotation_pair[gene_diagnostic_info_cols].drop_duplicates().dropna(
         subset=['Gene'])
     gene_diagnostic_info.sort_values('PCC', ascending=False, inplace=True)
-    gene_diagnostic_info_save_path = save_dir / f'{config.sample_name}_{config.trait_name}_Gene_Diagnostic_Info.csv'
+    gene_diagnostic_info_save_path = config.get_gene_diagnostic_info_save_path(config.trait_name)
     gene_diagnostic_info.to_csv(gene_diagnostic_info_save_path, index=False)
     logger.info(f'Gene diagnostic information saved to {gene_diagnostic_info_save_path}.')
 
+    # add the gene_diagnostic_info info to adata
+    adata
     return gene_diagnostic_info
 
 
 def generate_GSS_distribution(config: DiagnosisConfig):
-    save_dir = Path(config.diagnosis_save_dir)
 
     # Load the H5AD file and gene marker scores
     logger.info('Loading ST data...')
-    adata = sc.read_h5ad(config.input_hdf5_path, )
+    adata = sc.read_h5ad(config.hdf5_with_latent_path)
 
     (pixel_width, pixel_height), point_size = estimate_point_size_for_plot(adata.obsm['spatial'])
 
     logger.info('Loading marker score...')
-    mk_score = pd.read_feather(config.mkscore_feather_file)
+    mk_score = pd.read_feather(config.mkscore_feather_path)
     mk_score.set_index('HUMAN_GENE_SYM', inplace=True)
     mk_score = mk_score.T
 
@@ -200,11 +199,10 @@ def generate_GSS_distribution(config: DiagnosisConfig):
         plot_genes = common_genes
     else:
         logger.info(f'Selected genes not provided. Using the top {config.top_corr_genes} correlated genes...')
-        gene_diagnostic_info = load_gene_diagnostic_info(config, save_dir)
+        gene_diagnostic_info = load_gene_diagnostic_info(config)
         plot_genes = gene_diagnostic_info.Gene.iloc[:config.top_corr_genes].tolist()
 
-    sub_fig_save_dir = save_dir / 'GSS_distribution'
-    sub_fig_save_dir.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+    sub_fig_save_dir = config.get_GSS_plot_dir(config.trait_name)
     logger.info(f'Saving GSS distribution plots to {sub_fig_save_dir}...')
 
     for selected_gene in plot_genes:
@@ -262,6 +260,9 @@ def run_Diagnosis(config: DiagnosisConfig):
         generate_manhattan_plot(config)
     elif config.plot_type == 'GSS':
         generate_GSS_distribution(config)
+    elif config.plot_type == 'both':
+        generate_manhattan_plot(config)
+        generate_GSS_distribution(config)
     else:
         raise ValueError(f'Invalid plot type: {config.plot_type}')
 
@@ -270,18 +271,13 @@ def run_Diagnosis(config: DiagnosisConfig):
 if __name__ == '__main__':
     config = DiagnosisConfig(
         sample_name='E16.5_E1S1.MOSTA',
-        input_hdf5_path='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/find_latent_representations/E16.5_E1S1.MOSTA_add_latent.h5ad',
         annotation='annotation',
-        mkscore_feather_file='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/latent_to_gene/E16.5_E1S1.MOSTA_gene_marker_score.feather',
-        input_ldsc_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/spatial_ldsc',
         # trait_name='GIANT_EUR_Height_2022_Nature',
         trait_name='Depression_2023_NatureMed',
         top_corr_genes=5,
         # selected_genes=['COL11A1', 'MECOM'],
         sumstats_file='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz',
-        diagnosis_save_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/diagnosis',
         plot_type='manhattan',
-        ldscore_save_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/generate_ldscore',
     )
 
     # generate_manhattan_plot(config)
