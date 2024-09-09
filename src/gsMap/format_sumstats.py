@@ -368,9 +368,9 @@ def gwas_format(config:FormatSumstatsConfig):
     Format GWAS data
     '''
     print(f'------Formating gwas data for {config.sumstats}...')
-    gwas_file="/storage/yangjianLab/songliyang/GWAS_trait/COJO/Alcohol_Dependence.txt"
+    # gwas_file="/storage/yangjianLab/songliyang/GWAS_trait/COJO/Alcohol_Dependence.txt"
     gwas = pd.read_csv(config.sumstats,delim_whitespace=True, 
-                header=0,compression=get_compression(gwas_file),na_values=['.', 'NA'])
+                header=0,compression=get_compression(config.sumstats),na_values=['.', 'NA'])
     print(f'Read {len(gwas)} SNPs from {config.sumstats}.')
     
     # Check name and format
