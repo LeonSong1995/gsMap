@@ -581,7 +581,7 @@ class GenerateLDScoreConfig(ConfigWithAutoPaths):
     ld_unit: str = 'CM'
 
     # zarr config
-    ldscore_save_format: Literal['feather', 'zarr', 'shot_gun_mode'] = 'feather'
+    ldscore_save_format: Literal['feather', 'zarr', 'quick_mode'] = 'feather'
 
     zarr_chunk_size: Tuple[int, int] = None
 
@@ -657,9 +657,9 @@ class SpatialLDSCConfig(ConfigWithAutoPaths):
     all_chunk: Optional[int] = None
     chunk_range: Optional[Tuple[int, int]] = None
 
-    ldscore_save_format: Literal['feather', 'zarr', 'shot_gun_mode'] = 'feather'
+    ldscore_save_format: Literal['feather', 'zarr', 'quick_mode'] = 'feather'
 
-    spots_per_chunk_shot_gun_mode: int = 1_000
+    spots_per_chunk_quick_mode: int = 1_000
     snp_gene_weight_adata_path: Optional[str] = None
 
     def __post_init__(self):
@@ -803,6 +803,7 @@ class RunAllModeConfig(ConfigWithAutoPaths):
         self.w_file = f"{self.gsMap_resource_dir}/LDSC_resource/weights_hm3_no_hla/weights."
         self.snp_gene_weight_adata_path = f"{self.gsMap_resource_dir}/LDSC_resource/quick_mode/snp_gene_weight_matrix.h5ad"
         self.baseline_annotation_dir = f"{self.gsMap_resource_dir}/LDSC_resource/quick_mode/baseline"
+        self.SNP_gene_pair_dir = f"{self.gsMap_resource_dir}/LDSC_resource/quick_mode/SNP_gene_pair"
         # check the existence of the input files and resources files
         for file in [self.hdf5_path, self.gtffile]:
             if not Path(file).exists():

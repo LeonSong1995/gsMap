@@ -156,18 +156,18 @@ class S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix:
         self.mk_score_common = mk_score.loc[common_genes]
 
         # calculate the chunk number
-        self.chunk_starts = list(range(0, self.mk_score_common.shape[1], self.config.spots_per_chunk_shot_gun_mode))
+        self.chunk_starts = list(range(0, self.mk_score_common.shape[1], self.config.spots_per_chunk_quick_mode))
 
     def fetch_ldscore_by_chunk(self, chunk_index):
         chunk_start = self.chunk_starts[chunk_index]
         mk_score_chunk = self.mk_score_common.iloc[:,
-                         chunk_start:chunk_start + self.config.spots_per_chunk_shot_gun_mode]
+                         chunk_start:chunk_start + self.config.spots_per_chunk_quick_mode]
         ldscore_chunk = self.calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(
             mk_score_chunk,
             drop_dummy_na=False,
         )
 
-        spots_name = self.mk_score_common.columns[chunk_start:chunk_start + self.config.spots_per_chunk_shot_gun_mode]
+        spots_name = self.mk_score_common.columns[chunk_start:chunk_start + self.config.spots_per_chunk_quick_mode]
         return ldscore_chunk, spots_name
 
     def calculate_ldscore_use_SNP_Gene_weight_matrix_by_chunk(self,
@@ -223,11 +223,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
     w_ld_cname = w_ld.columns[1]
     w_ld.set_index('SNP', inplace=True)
 
-    # Load the baseline annotations
-    if config.ldscore_save_format == 'shot_gun_mode':
-        ld_file_baseline = f'{config.baseline_annotation_dir}/baseline.'
-    else:
-        ld_file_baseline = f'{config.ldscore_save_dir}/baseline/baseline.'
+    ld_file_baseline = f'{config.ldscore_save_dir}/baseline/baseline.'
 
     ref_ld_baseline = _read_ref_ld_v2(ld_file_baseline)
     # n_annot_baseline = len(ref_ld_baseline.columns)
@@ -267,7 +263,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         del ref_ld_baseline_additional
 
     # Detect available chunk files
-    if config.ldscore_save_format == 'shot_gun_mode':
+    if config.ldscore_save_format == 'quick_mode':
         s_ldsc = S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix(config, common_snp_among_all_sumstats_pos)
         total_chunk_number_found = len(s_ldsc.chunk_starts)
         print(f'Split data into {total_chunk_number_found} chunks')
@@ -314,7 +310,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             start_spot = (chunk_index - 1) * zarr_file.chunks[1]
             ref_ld_spatial = ref_ld_spatial.astype(np.float32, copy=False)
             spatial_annotation_cnames = spots_name[start_spot:start_spot + zarr_file.chunks[1]]
-        elif config.ldscore_save_format == 'shot_gun_mode':
+        elif config.ldscore_save_format == 'quick_mode':
             ref_ld_spatial, spatial_annotation_cnames = s_ldsc.fetch_ldscore_by_chunk(chunk_index - 1)
         else:
             raise ValueError(f'Invalid ld score save format: {config.ldscore_save_format}')
@@ -421,9 +417,8 @@ if __name__ == '__main__':
             w_file=config.w_file,
             sample_name=config.sample_name,
             num_processes=config.max_processes,
-            ldscore_save_format='shot_gun_mode',
-            spots_per_chunk_shot_gun_mode=1000,
+            ldscore_save_format='quick_mode',
+            spots_per_chunk_quick_mode=1000,
             snp_gene_weight_adata_path = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/0908_workdir_test/Human_Cortex_151507/generate_ldscore/snp_gene_weight_matrix/snp_gene_weight_matrix.h5ad',
-            baseline_annotation_dir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/0908_workdir_test/Human_Cortex_15150.bak/generate_ldscore/baseline'
         )
         run_spatial_ldsc(spatial_ldsc_config_trait)

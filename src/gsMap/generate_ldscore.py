@@ -600,8 +600,8 @@ class S_LDSC_Boost:
         return SNP_gene_pair
 
 def run_generate_ldscore(config: GenerateLDScoreConfig):
-    if config.ldscore_save_format == 'shot_gun_mode':
-        logger.info('Running shot gun mode. Skip the process of generating ldscore.')
+    if config.ldscore_save_format == 'quick_mode':
+        logger.info('Running in quick_mode. Skip the process of generating ldscore. Using the pre-calculated ldscore.')
         ldscore_save_dir = config.ldscore_save_dir
 
         # link the baseline annotation

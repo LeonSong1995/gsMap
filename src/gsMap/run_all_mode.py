@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+from matplotlib.tests.test_backend_pgf import baseline_dir
+
 from gsMap.cauchy_combination_test import run_Cauchy_combination
 from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, LatentToGeneConfig, \
     FindLatentRepresentationsConfig, CauchyCombinationConfig, DiagnosisConfig, RunAllModeConfig, ReportConfig
@@ -68,6 +70,10 @@ def run_pipeline(config: RunAllModeConfig):
         keep_snp_root=config.keep_snp_root,
         gtf_annotation_file=config.gtffile,
         spots_per_chunk=5_000,
+        baseline_annotation_dir=config.baseline_annotation_dir,
+        SNP_gene_pair_dir=config.SNP_gene_pair_dir,
+        ldscore_save_format='quick_mode'
+
     )
 
     pipeline_start_time = time.time()
@@ -130,7 +136,7 @@ def run_pipeline(config: RunAllModeConfig):
             # ldscore_save_dir=spatial_ldsc_config.ldscore_save_dir,
             # ldsc_save_dir=spatial_ldsc_config.ldsc_save_dir,
             num_processes=config.max_processes,
-            ldscore_save_format='feather'
+            ldscore_save_format='quick_mode',
         )
         run_spatial_ldsc(spatial_ldsc_config_trait)
     end_time = time.time()
@@ -206,14 +212,14 @@ def run_pipeline(config: RunAllModeConfig):
             "hdf5_path": config.hdf5_path,
             "annotation": config.annotation,
 
-            "num_processes": spatial_ldsc_config.num_processes,
+            "num_processes": config.max_processes,
             "ldscore_dir": ldscore_config.ldscore_save_dir,
             "w_file": config.w_file,
             "gtf_annotation_file": config.gtffile,
             "bfile_root": config.bfile_root,
             "keep_snp_root": config.keep_snp_root,
             # "mkscore_feather_file": latent_to_gene_config.output_feather_path,
-            "spatial_ldsc_save_dir": spatial_ldsc_config.ldsc_save_dir,
+            "spatial_ldsc_save_dir": config.ldsc_save_dir,
             "cauchy_dir": f"{config.workdir}/{config.sample_name}/cauchy_combination",
             'visualize_dir': f"{config.workdir}/{config.sample_name}/visualize",
             "diagnosis_dir": f"{config.workdir}/{config.sample_name}/diagnosis",
@@ -256,20 +262,20 @@ if __name__ == '__main__':
         homolog_file=None,
         max_processes=10
     )
-
-    config = RunAllModeConfig(
-        workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
-        sample_name='E16.5_E1S1.MOSTA',
-        gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
-        hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
-        annotation='annotation',
-        data_layer='count',
-        trait_name='Depression_2023_NatureMed',
-        sumstats_file=(
-                    '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
-        homolog_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/gsMap_resource/homologs/mouse_human_homologs.txt',
-        max_processes=10
-    )
+    #
+    # config = RunAllModeConfig(
+    #     workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
+    #     sample_name='E16.5_E1S1.MOSTA',
+    #     gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
+    #     hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
+    #     annotation='annotation',
+    #     data_layer='count',
+    #     trait_name='Depression_2023_NatureMed',
+    #     sumstats_file=(
+    #                 '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
+    #     homolog_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/gsMap_resource/homologs/mouse_human_homologs.txt',
+    #     max_processes=10
+    # )
 
 
     # config = RunAllModeConfig(
