@@ -6,7 +6,7 @@ from typing import Optional
 
 from gsMap.cauchy_combination_test import run_Cauchy_combination
 from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, LatentToGeneConfig, \
-    FindLatentRepresentationsConfig, CauchyCombinationConfig, DiagnosisConfig, RunAllModeConfig
+    FindLatentRepresentationsConfig, CauchyCombinationConfig, DiagnosisConfig, RunAllModeConfig, ReportConfig
 from gsMap.diagnosis import run_Diagnosis
 from gsMap.find_latent_representation import run_find_latent_representation
 from gsMap.generate_ldscore import run_generate_ldscore
@@ -152,17 +152,14 @@ def run_pipeline(config: RunAllModeConfig):
     '/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4/E16.5_E1S1.MOSTA/cauchy_combination/E16.5_E1S1.MOSTA_Depression_2023_NatureMed.Cauchy.csv.gz'
     for trait_name in sumstats_config:
         # check if the cauchy combination has been done
-        cauchy_result_file = Path(f"{config.workdir}/{config.sample_name}/cauchy_combination/{config.sample_name}_{trait_name}.Cauchy.csv.gz")
+        cauchy_result_file = config.get_cauchy_result_file(trait_name)
         if cauchy_result_file.exists():
             logger.info(f"Cauchy combination already done for trait {trait_name}. Results saved at {cauchy_result_file}. Skipping...")
             continue
         cauchy_config = CauchyCombinationConfig(
             workdir=config.workdir,
-            # input_hdf5_path=config.hdf5_path,
-            # input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
             sample_name=config.sample_name,
             annotation=config.annotation,
-            # output_cauchy_dir=f"{config.workdir}/{config.sample_name}/cauchy_combination",
             trait_name=trait_name,
         )
         run_Cauchy_combination(cauchy_config)
@@ -170,38 +167,47 @@ def run_pipeline(config: RunAllModeConfig):
     logger.info(f"Step 5 completed in {format_duration(end_time - start_time)}.")
 
     # Step 7:
-    start_time = time.time()
-    logger.info("Step 7: Running diagnosis")
-    for trait_name in sumstats_config:
-        diagnosis_config = DiagnosisConfig(
-            workdir=config.workdir,
-            sample_name=config.sample_name,
-            # input_hdf5_path=config.hdf5_path,
-            annotation=config.annotation,
-            # mkscore_feather_file=latent_to_gene_config.output_feather_path,
-            # input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
-            trait_name=trait_name,
-            plot_type='manhattan',
-            # ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
-            top_corr_genes=50,
-            selected_genes=None,
-            sumstats_file=sumstats_config[trait_name],
-            # diagnosis_save_dir=f"{config.workdir}/{config.sample_name}/diagnosis"
-        )
-        run_Diagnosis(diagnosis_config)
-
-        diagnosis_config.plot_type = 'GSS'
-        diagnosis_config.top_corr_genes = 20
-        run_Diagnosis(diagnosis_config)
-    end_time = time.time()
-    logger.info(f"Step 7 completed in {format_duration(end_time - start_time)}.")
-
+    # start_time = time.time()
+    # logger.info("Step 7: Running diagnosis")
+    # for trait_name in sumstats_config:
+    #     diagnosis_config = DiagnosisConfig(
+    #         workdir=config.workdir,
+    #         sample_name=config.sample_name,
+    #         # input_hdf5_path=config.hdf5_path,
+    #         annotation=config.annotation,
+    #         # mkscore_feather_file=latent_to_gene_config.output_feather_path,
+    #         # input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
+    #         trait_name=trait_name,
+    #         plot_type='manhattan',
+    #         # ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
+    #         top_corr_genes=50,
+    #         selected_genes=None,
+    #         sumstats_file=sumstats_config[trait_name],
+    #         # diagnosis_save_dir=f"{config.workdir}/{config.sample_name}/diagnosis"
+    #     )
+    #     run_Diagnosis(diagnosis_config)
+    #
+    #     diagnosis_config.plot_type = 'GSS'
+    #     diagnosis_config.top_corr_genes = 20
+    #     run_Diagnosis(diagnosis_config)
+    # end_time = time.time()
+    # logger.info(f"Step 7 completed in {format_duration(end_time - start_time)}.")
+    #
 
     # Step 8: Report
 
     for trait_name in sumstats_config:
         logger.info("Running final report generation for trait: %s", trait_name)
-
+        report_config = ReportConfig(
+                    workdir=config.workdir,
+                    sample_name=config.sample_name,
+                    annotation=config.annotation,
+                    trait_name=trait_name,
+                    plot_type='all',
+                    top_corr_genes=50,
+                    selected_genes=None,
+                    sumstats_file=sumstats_config[trait_name],
+                )
         # Create the run parameters dictionary for each trait
         run_parameter_dict = {
             "sample_name": config.sample_name,
@@ -216,7 +222,7 @@ def run_pipeline(config: RunAllModeConfig):
             "gtf_annotation_file": config.gtffile,
             "bfile_root": config.bfile_root,
             "keep_snp_root": config.keep_snp_root,
-            "mkscore_feather_file": latent_to_gene_config.output_feather_path,
+            # "mkscore_feather_file": latent_to_gene_config.output_feather_path,
             "spatial_ldsc_save_dir": spatial_ldsc_config.ldsc_save_dir,
             "cauchy_dir": f"{config.workdir}/{config.sample_name}/cauchy_combination",
             'visualize_dir': f"{config.workdir}/{config.sample_name}/visualize",
@@ -224,17 +230,10 @@ def run_pipeline(config: RunAllModeConfig):
 
             "Spending_time": format_duration(time.time() - pipeline_start_time),
             "Finish_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-
         }
 
         # Pass the run parameter dictionary to the report generation function
-        run_Report(
-            result_dir=f"{config.workdir}/{config.sample_name}",
-            sample_name=config.sample_name,
-            trait_name=trait_name,
-            # run_parameters=run_parameter_dict
-        )
-
+        run_Report(report_config, run_parameters=run_parameter_dict)
 
     logger.info("Pipeline completed successfully.")
 
@@ -267,6 +266,21 @@ if __name__ == '__main__':
         homolog_file=None,
         max_processes=10
     )
+
+    config = RunAllModeConfig(
+        workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
+        sample_name='E16.5_E1S1.MOSTA',
+        gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
+        hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
+        annotation='annotation',
+        data_layer='count',
+        trait_name='Depression_2023_NatureMed',
+        sumstats_file=(
+                    '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
+        homolog_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/gsMap_resource/homologs/mouse_human_homologs.txt',
+        max_processes=10
+    )
+
 
     # config = RunAllModeConfig(
     #     workdir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4/E16.5_E1S1.MOSTA',

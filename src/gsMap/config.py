@@ -6,7 +6,7 @@ from pathlib import Path
 from pprint import pprint
 from typing import Callable
 from typing import Union, Literal, Tuple, Optional, List
-
+from functools import wraps
 import pyfiglet
 
 from gsMap.__init__ import __version__
@@ -393,6 +393,20 @@ def add_format_sumstats_args(parser):
                         help='Keep SNP chromosome and position columns in the output data')
 
 
+def ensure_path_exists(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        result = func(*args, **kwargs)
+        if isinstance(result, Path):
+            if result.suffix:
+                result.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
+            else:  # It's a directory path
+                result.mkdir(parents=True, exist_ok=True, mode=0o755)
+        return result
+
+    return wrapper
+
+
 @dataclass
 class ConfigWithAutoPaths:
     workdir: str
@@ -403,46 +417,70 @@ class ConfigWithAutoPaths:
             raise ValueError('workdir must be provided.')
 
     @property
+    @ensure_path_exists
     def hdf5_with_latent_path(self) -> Path:
         return Path(f'{self.workdir}/{self.sample_name}/find_latent_representations/{self.sample_name}_add_latent.h5ad')
 
     @property
+    @ensure_path_exists
     def mkscore_feather_path(self) -> Path:
         return Path(f'{self.workdir}/{self.sample_name}/latent_to_gene/{self.sample_name}_gene_marker_score.feather')
 
     @property
+    @ensure_path_exists
     def ldscore_save_dir(self) -> Path:
         return Path(f'{self.workdir}/{self.sample_name}/generate_ldscore')
 
     @property
+    @ensure_path_exists
     def ldsc_save_dir(self) -> Path:
         return Path(f'{self.workdir}/{self.sample_name}/spatial_ldsc')
 
     @property
+    @ensure_path_exists
     def cauchy_save_dir(self) -> Path:
         return Path(f'{self.workdir}/{self.sample_name}/cauchy_combination')
 
+    @ensure_path_exists
     def get_report_dir(self, trait_name: str) -> Path:
         return Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}')
 
-    def get_manhattan_plot_path(self, trait_name: str) -> Path:
-        manhattan_plot_path = Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}/manhattan_plot/{self.sample_name}_{trait_name}_Diagnostic_Manhattan_Plot.html')
-        manhattan_plot_path.parent.mkdir(parents=True, exist_ok=True)
-        return manhattan_plot_path
+    def get_gsMap_report_file(self, trait_name: str) -> Path:
+        return self.get_report_dir(trait_name) / f'{self.sample_name}_{trait_name}_gsMap_Report.html'
 
+    @ensure_path_exists
+    def get_manhattan_html_plot_path(self, trait_name: str) -> Path:
+        return Path(
+            f'{self.workdir}/{self.sample_name}/report/{trait_name}/manhattan_plot/{self.sample_name}_{trait_name}_Diagnostic_Manhattan_Plot.html')
+
+    @ensure_path_exists
     def get_GSS_plot_dir(self, trait_name: str) -> Path:
-        GSS_plot_dir = Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}/GSS_plot')
-        GSS_plot_dir.mkdir(parents=True, exist_ok=True)
-        return GSS_plot_dir
+        return Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}/GSS_plot')
 
+    def get_GSS_plot_select_gene_file(self, trait_name: str) -> Path:
+        return self.get_GSS_plot_dir(trait_name) / 'plot_genes.csv'
+
+    @ensure_path_exists
     def get_ldsc_result_file(self, trait_name: str) -> Path:
         return Path(f'{self.ldsc_save_dir}/{self.sample_name}_{trait_name}.csv.gz')
 
+    @ensure_path_exists
     def get_cauchy_result_file(self, trait_name: str) -> Path:
         return Path(f'{self.cauchy_save_dir}/{self.sample_name}_{trait_name}.Cauchy.csv.gz')
 
+    @ensure_path_exists
     def get_gene_diagnostic_info_save_path(self, trait_name: str) -> Path:
-        return Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}/{self.sample_name}_{trait_name}_Gene_Diagnostic_Info.csv')
+        return Path(
+            f'{self.workdir}/{self.sample_name}/report/{trait_name}/{self.sample_name}_{trait_name}_Gene_Diagnostic_Info.csv')
+
+    @ensure_path_exists
+    def get_gsMap_plot_save_dir(self, trait_name: str) -> Path:
+        return Path(f'{self.workdir}/{self.sample_name}/report/{trait_name}/gsMap_plot')
+
+    def get_gsMap_html_plot_save_path(self, trait_name: str) -> Path:
+        return self.get_gsMap_plot_save_dir(trait_name) / f'{self.sample_name}_{trait_name}_gsMap_plot.html'
+
+
 @dataclass
 class FindLatentRepresentationsConfig(ConfigWithAutoPaths):
     input_hdf5_path: str
@@ -714,38 +752,21 @@ class VisualizeConfig(ConfigWithAutoPaths):
     fig_style: Literal['dark', 'light'] = 'light'
 
 
-
 @dataclass
 class DiagnosisConfig(ConfigWithAutoPaths):
     annotation: str
     # mkscore_feather_file: str
-    plot_type: Literal['manhattan', 'GSS']
 
     trait_name: str
     sumstats_file: str
+    plot_type: Literal['manhattan', 'GSS', 'gsMap', 'all'] = 'all'
     top_corr_genes: int = 50
     selected_genes: Optional[List[str]] = None
 
 
 @dataclass
-class ReportConfig:
-    sample_name: str
-    input_hdf5_path: str
-    annotation: str
-    mkscore_feather_file: str
-
-    output_cauchy_dir: str
-
-    # for get SNP-gene pairs
-    ldscore_save_dir: str
-
-    input_ldsc_dir: str
-    trait_name: str
-    sumstats_file: str
-
-    top_corr_genes: int = 50
-    selected_genes: Optional[List[str]] = None
-
+class ReportConfig(DiagnosisConfig):
+    pass
 
 
 @dataclass
@@ -773,7 +794,6 @@ class RunAllModeConfig(ConfigWithAutoPaths):
         self.bfile_root = f"{self.gsMap_resource_dir}/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC"
         self.keep_snp_root = f"{self.gsMap_resource_dir}/LDSC_resource/hapmap3_snps/hm"
         self.w_file = f"{self.gsMap_resource_dir}/LDSC_resource/weights_hm3_no_hla/weights."
-
 
         # check the existence of the input files and resources files
         for file in [self.hdf5_path, self.gtffile]:
@@ -804,7 +824,6 @@ class RunAllModeConfig(ConfigWithAutoPaths):
 
         for sumstats_file in self.sumstats_config_dict.values():
             assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
-
 
 
 @dataclass

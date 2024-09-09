@@ -211,8 +211,8 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     mk_score = mk_score[mt_gene_mask]
     adata = adata[:, mt_gene_mask]
 
-    # Save the mk_score DataFrame to an adata layer
-    adata.layers['mkscore'] = mk_score.values.T
+    # # Save the mk_score DataFrame to an adata layer
+    # adata.layers['mkscore'] = mk_score.values.T
 
     # Save the marker scores
     print(f'------Saving marker scores ...')

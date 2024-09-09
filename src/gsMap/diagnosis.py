@@ -5,7 +5,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from plotly.subplots import make_subplots
 from scipy.stats import norm
 
 from gsMap.config import DiagnosisConfig
@@ -48,15 +47,16 @@ def load_gene_diagnostic_info(config:DiagnosisConfig):
         return compute_gene_diagnostic_info(config)
 
 
-def compute_gene_diagnostic_info(config:DiagnosisConfig):
-    """Calculate gene diagnostic info and save it."""
+def compute_gene_diagnostic_info(config: DiagnosisConfig):
+    """Calculate gene diagnostic info and save it to adata."""
     logger.info('Loading ST data and LDSC results...')
-    adata = sc.read_h5ad(config.hdf5_with_latent_path, backed='r')
+    # adata = sc.read_h5ad(config.hdf5_with_latent_path, backed='r')
     mk_score = pd.read_feather(config.mkscore_feather_path)
     mk_score.set_index('HUMAN_GENE_SYM', inplace=True)
     mk_score = mk_score.T
     trait_ldsc_result = load_ldsc(config.get_ldsc_result_file(config.trait_name))
 
+    # Align marker scores with trait LDSC results
     mk_score_aligned = mk_score.loc[trait_ldsc_result.index]
     mk_score_aligned = mk_score_aligned.loc[:, mk_score_aligned.sum(axis=0) != 0]
 
@@ -66,23 +66,41 @@ def compute_gene_diagnostic_info(config:DiagnosisConfig):
 
     grouped_mk_score = mk_score_aligned.groupby(adata.obs[config.annotation]).median()
     max_annotations = grouped_mk_score.idxmax()
+
     high_GSS_Gene_annotation_pair = pd.DataFrame({
         'Gene': max_annotations.index,
         'Annotation': max_annotations.values,
         'Median_GSS': grouped_mk_score.max().values
     })
+
+    # Filter based on median GSS score
     high_GSS_Gene_annotation_pair = high_GSS_Gene_annotation_pair[high_GSS_Gene_annotation_pair['Median_GSS'] >= 1.0]
     high_GSS_Gene_annotation_pair = high_GSS_Gene_annotation_pair.merge(corr, left_on='Gene', right_index=True)
 
+    # Prepare the final gene diagnostic info dataframe
     gene_diagnostic_info_cols = ['Gene', 'Annotation', 'Median_GSS', 'PCC']
     gene_diagnostic_info = high_GSS_Gene_annotation_pair[gene_diagnostic_info_cols].drop_duplicates().dropna(
         subset=['Gene'])
     gene_diagnostic_info.sort_values('PCC', ascending=False, inplace=True)
+
+    # Save gene diagnostic info to a file
     gene_diagnostic_info_save_path = config.get_gene_diagnostic_info_save_path(config.trait_name)
     gene_diagnostic_info.to_csv(gene_diagnostic_info_save_path, index=False)
     logger.info(f'Gene diagnostic information saved to {gene_diagnostic_info_save_path}.')
 
-    return gene_diagnostic_info
+    # Save to adata.var with the trait_name prefix
+    logger.info('Saving gene diagnostic info to adata.var...')
+    gene_diagnostic_info.set_index('Gene', inplace=True)  # Use 'Gene' as the index to align with adata.var
+    adata.var[f'{config.trait_name}_Annotation'] = gene_diagnostic_info['Annotation']
+    adata.var[f'{config.trait_name}_Median_GSS'] = gene_diagnostic_info['Median_GSS']
+    adata.var[f'{config.trait_name}_PCC'] = gene_diagnostic_info['PCC']
+
+    # Save trait_ldsc_result to adata.obs
+    logger.info(f'Saving trait LDSC results to adata.obs as gsMap_{config.trait_name}_p_value...')
+    adata.obs[f'gsMap_{config.trait_name}_p_value'] = trait_ldsc_result['p']
+    adata.write(config.hdf5_with_latent_path, )
+
+    return gene_diagnostic_info.reset_index()
 
 
 def load_gwas_data(config:DiagnosisConfig):
@@ -135,7 +153,7 @@ def generate_manhattan_plot(config: DiagnosisConfig):
     gwas_data_to_plot = gwas_data_with_gene_annotation[
         gwas_data_with_gene_annotation['SNP'].isin(snps2plot)].reset_index(drop=True)
     gwas_data_to_plot['Annotation_text'] = 'PCC: ' + gwas_data_to_plot['PCC'].round(2).astype(
-        str) + '<br>' + 'Annotation: ' + gwas_data_to_plot['Annotation']
+        str) + '<br>' + 'Annotation: ' + gwas_data_to_plot['Annotation'].astype(str)
 
     fig = ManhattanPlot(
         dataframe=gwas_data_to_plot,
@@ -146,39 +164,45 @@ def generate_manhattan_plot(config: DiagnosisConfig):
         annotation='Annotation_text',
     )
 
-    save_manhattan_plot_path = config.get_manhattan_plot_path(config.trait_name)
+    save_manhattan_plot_path = config.get_manhattan_html_plot_path(config.trait_name)
     fig.write_html(save_manhattan_plot_path)
     logger.info(f'Diagnostic Manhattan Plot saved to {save_manhattan_plot_path}.')
 
 
 def generate_GSS_distribution(config: DiagnosisConfig):
     """Generate GSS distribution plots."""
-    logger.info('Loading ST data...')
-    adata = sc.read_h5ad(config.hdf5_with_latent_path)
+    # logger.info('Loading ST data...')
+    # adata = sc.read_h5ad(config.hdf5_with_latent_path)
     mk_score = pd.read_feather(config.mkscore_feather_path).set_index('HUMAN_GENE_SYM').T
 
     plot_genes = config.selected_genes or load_gene_diagnostic_info(config).Gene.iloc[:config.top_corr_genes].tolist()
+    if config.selected_genes is not None:
+        logger.info(f'Generating GSS & Expression distribution plot for selected genes: {plot_genes}...')
+    else:
+        logger.info(f'Generating GSS & Expression distribution plot for top {config.top_corr_genes} correlated genes...')
     (pixel_width, pixel_height), point_size = estimate_point_size_for_plot(adata.obsm['spatial'])
     sub_fig_save_dir = config.get_GSS_plot_dir(config.trait_name)
 
+    # save plot gene list
+    config.get_GSS_plot_select_gene_file(config.trait_name).write_text('\n'.join(plot_genes))
+
     for selected_gene in plot_genes:
-        logger.info(f'Generating GSS & Expression distribution plot for {selected_gene}...')
         expression_series = pd.Series(adata[:, selected_gene].X.toarray().flatten(), index=adata.obs.index,
                                       name='Expression')
         generate_and_save_plots(adata, mk_score, expression_series, selected_gene, point_size, pixel_width,
-                                pixel_height, sub_fig_save_dir, config.sample_name)
+                                pixel_height, sub_fig_save_dir, config.sample_name, config.annotation)
 
 
 def generate_and_save_plots(adata, mk_score, expression_series, selected_gene, point_size, pixel_width, pixel_height,
-                            sub_fig_save_dir, sample_name):
+                            sub_fig_save_dir, sample_name, annotation):
     """Generate and save the plots."""
-    select_gene_expression_with_space_coord = load_st_coord(adata, expression_series, 'annotation')
+    select_gene_expression_with_space_coord = load_st_coord(adata, expression_series, annotation)
     sub_fig_1 = draw_scatter(select_gene_expression_with_space_coord, title=f'{selected_gene} (Expression)',
                              annotation='annotation', color_by='Expression', point_size=point_size, width=pixel_width,
                              height=pixel_height)
     save_plot(sub_fig_1, sub_fig_save_dir, sample_name, selected_gene, 'Expression')
 
-    select_gene_GSS_with_space_coord = load_st_coord(adata, mk_score[selected_gene].rename('GSS'), 'annotation')
+    select_gene_GSS_with_space_coord = load_st_coord(adata, mk_score[selected_gene].rename('GSS'), annotation)
     sub_fig_2 = draw_scatter(select_gene_GSS_with_space_coord, title=f'{selected_gene} (GSS)', annotation='annotation',
                              color_by='GSS', point_size=point_size, width=pixel_width, height=pixel_height)
     save_plot(sub_fig_2, sub_fig_save_dir, sample_name, selected_gene, 'GSS')
@@ -194,17 +218,49 @@ def generate_and_save_plots(adata, mk_score, expression_series, selected_gene, p
 def save_plot(sub_fig, sub_fig_save_dir, sample_name, selected_gene, plot_type):
     """Save the plot to HTML and PNG."""
     save_sub_fig_path = sub_fig_save_dir / f'{sample_name}_{selected_gene}_{plot_type}_Distribution.html'
-    sub_fig.write_html(str(save_sub_fig_path))
+    # sub_fig.write_html(str(save_sub_fig_path))
     sub_fig.update_layout(showlegend=False)
     sub_fig.write_image(str(save_sub_fig_path).replace('.html', '.png'))
 
 
+def generate_gsMap_plot(config: DiagnosisConfig):
+    """Generate gsMap plot."""
+    logger.info('Creating gsMap plot...')
+
+    trait_ldsc_result = load_ldsc(config.get_ldsc_result_file(config.trait_name))
+    space_coord_concat = load_st_coord(adata, trait_ldsc_result, annotation=config.annotation)
+
+    (pixel_width, pixel_height), point_size = estimate_point_size_for_plot(adata.obsm['spatial'])
+    fig = draw_scatter(space_coord_concat,
+                       title=f'{config.trait_name} (gsMap)',
+                       point_size=point_size,
+                       width=pixel_width,
+                       height=pixel_height,
+                       annotation=config.annotation
+                       )
+
+    output_dir = config.get_gsMap_plot_save_dir(config.trait_name)
+    output_file_html = config.get_gsMap_html_plot_save_path(config.trait_name)
+    output_file_png = output_file_html.with_suffix('.png')
+    output_file_csv = output_file_html.with_suffix('.csv')
+
+    fig.write_html(output_file_html)
+    fig.write_image(output_file_png)
+    space_coord_concat.to_csv(output_file_csv)
+
+    logger.info(f'gsMap plot created and saved in {output_dir}.')
+
+
 def run_Diagnosis(config: DiagnosisConfig):
     """Main function to run the diagnostic plot generation."""
-    if config.plot_type in ['manhattan', 'both']:
+    global adata
+    adata = sc.read_h5ad(config.hdf5_with_latent_path)
+    if config.plot_type in ['manhattan', 'all']:
         generate_manhattan_plot(config)
-    if config.plot_type in ['GSS', 'both']:
+    if config.plot_type in ['GSS', 'all']:
         generate_GSS_distribution(config)
+    if config.plot_type in ['gsMap', 'all']:
+        generate_gsMap_plot(config)
 
 # # Uncomment for running
 # if __name__ == '__main__':
