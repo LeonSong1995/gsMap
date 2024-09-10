@@ -84,7 +84,7 @@ gsmap run_latent_to_gene \
     --latent_representation 'latent_GVAE' \
     --num_neighbour 51 \
     --num_neighbour_spatial 201 \
-    --homolog_file 'homologs/mouse_human_homologs.txt'
+    --homolog_file 'gsMap_resource/homologs/mouse_human_homologs.txt'
 ```
 
 ### 3. generate_ldscore

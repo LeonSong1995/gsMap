@@ -662,8 +662,8 @@ class RunAllModeConfig(ConfigWithAutoPaths):
         self.keep_snp_root = f"{self.gsMap_resource_dir}/LDSC_resource/hapmap3_snps/hm"
         self.w_file = f"{self.gsMap_resource_dir}/LDSC_resource/weights_hm3_no_hla/weights."
         self.snp_gene_weight_adata_path = f"{self.gsMap_resource_dir}/quick_mode/snp_gene_weight_matrix.h5ad"
-        self.baseline_annotation_dir = f"{self.gsMap_resource_dir}/quick_mode/baseline"
-        self.SNP_gene_pair_dir = f"{self.gsMap_resource_dir}/quick_mode/SNP_gene_pair"
+        self.baseline_annotation_dir = Path(f"{self.gsMap_resource_dir}/quick_mode/baseline").resolve()
+        self.SNP_gene_pair_dir = Path(f"{self.gsMap_resource_dir}/quick_mode/SNP_gene_pair").resolve()
         # check the existence of the input files and resources files
         for file in [self.hdf5_path, self.gtffile]:
             if not Path(file).exists():
