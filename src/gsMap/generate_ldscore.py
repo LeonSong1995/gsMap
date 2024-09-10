@@ -563,7 +563,7 @@ class S_LDSC_Boost:
 
         # save the SNP_gene_pair to feather
         SNP_gene_pair_save_path = Path(
-            self.config.ldscore_save_dir) / f'SNP_gene_pair/{self.config.sample_name}_chr{chrom}.feather'
+            self.config.ldscore_save_dir) / f'SNP_gene_pair/SNP_gene_pair_chr{chrom}.feather'
         SNP_gene_pair_save_path.parent.mkdir(parents=True, exist_ok=True)
         SNP_gene_pair.reset_index().to_feather(SNP_gene_pair_save_path)
 

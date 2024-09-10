@@ -1,389 +1,185 @@
-
 # Mouse Embryo Example
 
 ## Preparation
 
-Please do not forget to [install](install) the gsMap package before you start.
+Please ensure you have installed the `gsMap` package before proceeding.
 
 ### 1. Download dependencies
 
-gsMap requires reference files, which include:
-- **Gene transfer format (GTF) file**, to provide gene coordinates on the genome.
-- **LD reference panel (PLINK bfile)**, to compute LD scores.
-- **SNP weight file**, to ameliorate correlations between SNP association statistics.
-- **Homologous gene transformations file** (optional), to map gene names of different species (currently only mouse and macaques) to humans.
-- **Enhancer-gene mapping file** (optional), to map SNPs to genes based on enhancer-gene linkings.
+`gsMap` requires specific reference files:
+- **Gene transfer format (GTF) file**, for gene coordinates on the genome.
+- **LD reference panel (PLINK bfile)**, for computing LD scores.
+- **SNP weight file**, to adjust correlations between SNP statistics.
+- **Homologous gene transformations file** (optional), to map genes between species.
+- **Enhancer-gene mapping file** (optional), for linking SNPs to genes based on enhancer regions.
 
-We've packaged these resources, and you can download them as follows:
+To download the resources:
 ```bash
 wget http://cnsgenomics.com/data/gsMap/gsMap_running_dependencies.tar.gz
 tar -xvzf gsMap_running_dependencies.tar.gz
 ```
-The directory structure should be looks like this:
+
+Directory structure:
 ```bash
 tree -L 2
 
 gsMap_resource
 ├── genome_annotation
-│   ├── enhancer
-│   └── gtf
+│   ├── enhancer
+│   └── gtf
 ├── LD_Reference_Panel
-│   └── 1000G_EUR_Phase3_plink
+│   └── 1000G_EUR_Phase3_plink
 └── LDSC_resource
     ├── hapmap3_snps
     └── weights_hm3_no_hla
 ```
 
-If you want to use your own reference files, please ensure that the versions of (Hg37 or Hg38) are consistent between the GTF and the LD reference panel.
-
-
 ### 2. Download example data
-You can download the example data used in this tutorial as follows:
 
 ```bash
 wget http://cnsgenomics.com/data/gsMap/gsMap_example_data.tar.gz
 tar -xvzf gsMap_example_data.tar.gz
 ```
 
-The directory structure should be looks like this:
+Directory structure:
 ```bash
 tree -L 2
 
 example_data
 ├── GWAS
-│   ├── GIANT_EUR_Height_2022_Nature.sumstats.gz
-│   ├── gwas_config.yaml
-│   ├── IQ_NG_2018.sumstats.gz
-│   └── BCX2_MCHC_EA_GWAMA.sumstats.gz
+│   ├── GIANT_EUR_Height_2022_Nature.sumstats.gz
+│   ├── gwas_config.yaml
+│   ├── IQ_NG_2018.sumstats.gz
+│   └── BCX2_MCHC_EA_GWAMA.sumstats.gz
 └── ST
     └── E16.5_E1S1.MOSTA.h5ad
 ```
 
+## Running `gsMap`
 
-## Run gsMap
-First, let us set up the working directory, the input data, and the output files.
-```shell
-# Constants and configuration
-WORKDIR='./example/Mouse_Embryo' # The directory where the gsMap output will be saved
-SAMPLE_NAME="E16.5_E1S1.MOSTA" # The sample name of ST data
-
-# Input data
-HDF5_PATH="example_data/ST/E16.5_E1S1.MOSTA.h5ad" # The input ST data (h5ad format)
-ANNOTATION="annotation" # The column names where spot annotations are stored
-DATA_TYPE='counts' # The layer of the gene expression matrix that is being used
-
-# Running Dependencies and Resources
-GTFFILE="gsMap_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf" # The GTF file
-ALL_ENHANCER_FILE="gsMap_resource/genome_annotation/enhancer/by_tissue/ALL/ABC_roadmap_merged.bed" # The enhancer-gene mapping file
-BFILE_ROOT="gsMap_resource/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC" # The LD reference panel
-KEEP_SNP_ROOT="gsMap_resource/LDSC_resource/hapmap3_snps/hm" # Only use the hapmap3 snps
-W_FILE="gsMap_resource/LDSC_resource/weights_hm3_no_hla/weights." # The SNP regression weight file
-```
-
-(find_latent_representations_mouse)=
 ### 1. find_latent_representations
 
-**Objective**: This step addresses technical noise and models spatial correlations of gene expression profiles in ST data. By employing the GNN model, gsMap finds latent representations for each spot.
-
-
-**Input**: 
-- HDF5 file containing ST data (`HDF5_PATH`) with spots annotation (`ANNOTATION`, optional).
-
-**Output**: A .h5ad file containing the ST data with the extracted latent representations for each spot.
+**Objective**: Use GNN model to handle technical noise and find latent representations of each spot.
 
 **Execution**:
-```shell
-HDF5_WITH_LATENT_PATH="$WORKDIR/$SAMPLE_NAME/find_latent_representations/${SAMPLE_NAME}_add_latent.h5ad"
+```bash
 gsmap run_find_latent_representations \
-    --input_hdf5_path $HDF5_PATH \
-    --sample_name $SAMPLE_NAME \
-    --output_hdf5_path $HDF5_OUTPUT \
-    --annotation $ANNOTATION \
-    --type $DATA_TYPE
+    --workdir './example/Mouse_Embryo' \
+    --sample_name 'E16.5_E1S1.MOSTA' \
+    --input_hdf5_path 'example_data/ST/E16.5_E1S1.MOSTA.h5ad' \
+    --annotation 'annotation' \
+    --data_layer 'count'
 ```
-(latent_to_gene_mouse)=
+
 ### 2. latent_to_gene
 
-**Objective**: Building on the latent representations, this step leverages them to find neighbors for each spot. Gene marker scores are then generated by aggregating information from these neighbors.
-
-**Input**:
-- HDF5 file with latent representations from the previous step (`HDF5_WITH_LATENT_PATH`).
-
-**Output**: 
-- A .feather file with gene marker scores (`MKSCORE_FEATHER_PATH`).
-
+**Objective**: Generate gene marker scores by aggregating information from latent representations of neighboring spots.
 
 **Execution**:
-```shell
-MKSCORE_FEATHER_PATH="$WORKDIR/$SAMPLE_NAME/latent_to_gene/${SAMPLE_NAME}_gene_marker_score.feather"
+```bash
 gsmap run_latent_to_gene \
-    --input_hdf5_with_latent_path $HDF5_WITH_LATENT_PATH \
-    --sample_name $SAMPLE_NAME \
-    --output_feather_path $MKSCORE_FEATHER_PATH \
-    --latent_representation "latent_GVAE" \
+    --workdir './example/Mouse_Embryo' \
+    --sample_name 'E16.5_E1S1.MOSTA' \
+    --annotation 'annotation' \
+    --latent_representation 'latent_GVAE' \
     --num_neighbour 51 \
     --num_neighbour_spatial 201 \
-    --annotation $ANNOTATION \
-    --type $DATA_TYPE \
-    --species MOUSE_GENE_SYM \
-    --gs_species "homologs/mouse_human_homologs.txt"
+    --homolog_file 'homologs/mouse_human_homologs.txt'
 ```
-
 
 ### 3. generate_ldscore
 
-**Objective**: By using the gene marker scores from the previous step, gsMap assigns a gene specificity score to SNPs by referencing the GTF data. Specifically, SNPs are mapped to genes based on their distances to the transcription start site (TSS) and, optionally, SNP-to-gene epigenetic linking maps. gsMap then uses the specificity scores of SNPs to generate stratified LD scores (S-LD score) for each spot in the ST data.
-
-
-**Input**:
-- Feather file with gene marker scores from the previous step (`MKSCORE_FEATHER_FILE`).
-- Reference panel data (`BFILE_ROOT` and `KEEP_SNP_ROOT`).
-- GTF file.
-
-**Output**: 
-- A set of LD score chunks stored in the (`LDScoreDir`).
-
-
-**Three SNP to gene linking methods are available:**
-
-The default setting only using the TSS mapping methods.
-
-````{tab} 1. Use TSS Only
-This will use TSS only to link SNPs to gene specificity.
-
-`--gene_window_size = 50000` is the window size around the gene body to consider for gene specificity scores.
-If a SNP is within the gene window, it will be assigned the gene specificity score of that gene. If a SNP is within the window of multiple genes, the nearest gene will be used.
+**Objective**: Assign gene specificity scores to SNPs using LD scores based on the GTF data.
 
 **Execution**:
 
+#### Method 1: Use TSS Only
 
-```shell
-LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
+```bash
 for CHROM in {1..22}; do
     gsmap run_generate_ldscore \
-        --sample_name $SAMPLE_NAME \
+        --workdir './example/Mouse_Embryo' \
+        --sample_name 'E16.5_E1S1.MOSTA' \
         --chrom $CHROM \
-        --ldscore_save_dir $LDScoreDir \
-        --mkscore_feather_file $MKSCORE_FEATHER_PATH \
-        --bfile_root $BFILE_ROOT \
-        --keep_snp_root $KEEP_SNP_ROOT \
-        --gtf_annotation_file $GTFFILE \
-        --gene_window_size 50000 \
-        --spots_per_chunk 1000 \
-        --ld_wind 1 \
-        --ld_unit "CM"
+        --bfile_root 'gsMap_resource/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC' \
+        --keep_snp_root 'gsMap_resource/LDSC_resource/hapmap3_snps/hm' \
+        --gtf_annotation_file 'gsMap_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf' \
+        --gene_window_size 50000
 done
 ```
-````
 
-`````{tab} 2. Use Enhancer-Gene Linking Only
+#### Method 2: Use Enhancer-Gene Linking Only
 
-
-When a SNP mapped to multiple enhancers, the gene specificity score of the SNP will be set by the `--snp_multiple_enhancer_strategy` parameter. The default value is `max_mkscore`, which means the gene specificity score of the SNP will be set to the maximum gene specificity score of the enhancers that the SNP mapped to. Possible choices: max_mkscore, nearest_TSS
-
-In this example we choose the all tissue enhancer annotation file (`ENHANCER_ANNOTATION_FILE`).
-
-**Execution**:
-
-```shell
-LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
+```bash
 for CHROM in {1..22}; do
     gsmap run_generate_ldscore \
-        --sample_name $SAMPLE_NAME \
+        --workdir './example/Mouse_Embryo' \
+        --sample_name 'E16.5_E1S1.MOSTA' \
         --chrom $CHROM \
-        --ldscore_save_dir $LDScoreDir \
-        --mkscore_feather_file $MKSCORE_FEATHER_PATH \
-        --bfile_root $BFILE_ROOT \
-        --keep_snp_root $KEEP_SNP_ROOT \
-        --gtf_annotation_file $GTFFILE \
-        --enhancer_annotation_file $ENHANCER_ANNOTATION_FILE \
+        --bfile_root 'gsMap_resource/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC' \
+        --keep_snp_root 'gsMap_resource/LDSC_resource/hapmap3_snps/hm' \
+        --gtf_annotation_file 'gsMap_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf' \
+        --enhancer_annotation_file 'gsMap_resource/genome_annotation/enhancer/by_tissue/ALL/ABC_roadmap_merged.bed' \
         --snp_multiple_enhancer_strategy 'max_mkscore' \
-        --gene_window_enhancer_priority 'enhancer_only' \
-        --spots_per_chunk 1000 \
-        --ld_wind 1 \
-        --ld_unit "CM"
+        --gene_window_enhancer_priority 'enhancer_only'
 done
-
 ```
 
+#### Method 3: Use Both TSS and Enhancer-Gene Linking
 
-`````
-
-
-`````{tab} 3. Use Both TSS and Enhancer-Gene Linking
-This will use both the TSS and enhancer-gene linking to map SNPs to genes. In cases where a SNP falls within the proximity window of both a gene body and an enhancer linked to a different gene, the determination of the mapped gene is governed by the `--gene_window_enhancer_priority`. Possible choices include `gene_window_first` or `enhancer_first`.
-
-**Execution**:
-
-```shell
-LDScoreDir="$WORKDIR/$SAMPLE_NAME/generate_ldscore"
+```bash
 for CHROM in {1..22}; do
     gsmap run_generate_ldscore \
-        --sample_name $SAMPLE_NAME \
+        --workdir './example/Mouse_Embryo' \
+        --sample_name 'E16.5_E1S1.MOSTA' \
         --chrom $CHROM \
-        --ldscore_save_dir $LDScoreDir \
-        --mkscore_feather_file $MKSCORE_FEATHER_PATH \
-        --bfile_root $BFILE_ROOT \
-        --keep_snp_root $KEEP_SNP_ROOT \
-        --gtf_annotation_file $GTFFILE \
+        --bfile_root 'gsMap_resource/LD_Reference_Panel/1000G_EUR_Phase3_plink/1000G.EUR.QC' \
+        --keep_snp_root 'gsMap_resource/LDSC_resource/hapmap3_snps/hm' \
+        --gtf_annotation_file 'gsMap_resource/genome_annotation/gtf/gencode.v39lift37.annotation.gtf' \
         --gene_window_size 50000 \
-        --enhancer_annotation_file ENHANCER_ANNOTATION_FILE \
+        --enhancer_annotation_file 'gsMap_resource/genome_annotation/enhancer/by_tissue/ALL/ABC_roadmap_merged.bed' \
         --snp_multiple_enhancer_strategy 'max_mkscore' \
-        --gene_window_enhancer_priority 'gene_window_first' \
-        --spots_per_chunk 1000 \
-        --ld_wind 1 \
-        --ld_unit "CM"
+        --gene_window_enhancer_priority 'gene_window_first'
 done
-```
-
-
-`````
-
-```{caution}
-If you runout of memory in this step or the next step,
-you can reduce the `--spots_per_chunk` parameter to a smaller value.
-
-In general, 40GB memory is required when `--spots_per_chunk` is set to 1000.
 ```
 
 ### 4. spatial_ldsc
 
-**Objective**: Spatially map traits-associated spots.
+**Objective**: Run spatial LDSC to map traits-associated spots.
 
 
-**Input**:
-- Directory containing LD scores generated in the previous step (`LDScoreDir`).
-
-**Output**: 
-- Spatial LDSC results saved in the specified directory (`LDSC_SAVE_DIR`) for each trait.
-
-
-`````{tab} Run single trait
-
-**Execution**:
-
-```shell
-LDSC_DIR="$WORKDIR/$SAMPLE_NAME/spatial_ldsc"
-SUMSTATS_FILE="example_data/GWAS/IQ_NG_2018.sumstats.gz"
-TRAIT_NAME="IQ"
-
+```bash
 gsmap run_spatial_ldsc \
-    --sumstats_file $SUMSTATS_FILE \
-    --trait_name $TRAIT_NAME \
-    --w_file $W_FILE \
-    --sample_name $SAMPLE_NAME \
-    --num_processes 4 \
-    --ldscore_input_dir $LDScoreDir \
-    --ldsc_save_dir $LDSC_DIR \
- ```
-
-`````
-
-`````{tab} Run multiple traits in batch
-
-**Execution**:
-
-You could run multiple traits in batch by providing a YAML file with the `--sumstats_config_file` parameter. An example of `sumstats_config_file` is like this:
-
-```yaml
-Height: example_data/GWAS/GIANT_EUR_Height_2022_Nature.sumstats.gz
-IQ: example_data/GWAS/IQ_NG_2018.sumstats.gz
-SCZ: example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
+    --workdir './example/Mouse_Embryo' \
+    --sample_name 'E16.5_E1S1.MOSTA' \
+    --trait_name 'IQ' \
+    --sumstats_file 'example_data/GWAS/IQ_NG_2018.sumstats.gz' \
+    --w_file 'gsMap_resource/LDSC_resource/weights_hm3_no_hla/weights.' \
+    --num_processes 4
 ```
 
-```shell
-LDSC_DIR="$WORKDIR/$SAMPLE_NAME/spatial_ldsc"
-SUMSTATS_CONFIG_FILE="example_data/GWAS/gwas_config.yaml"
-gsmap run_spatial_ldsc \
-    --w_file $W_FILE \
-    --sample_name $SAMPLE_NAME \
-    --num_processes 4 \
-    --ldscore_input_dir $LDScoreDir \
-    --ldsc_save_dir $LDSC_DIR \
-    --sumstats_config_file $SUMSTATS_CONFIG_FILE
-```
-`````
 
+### 5. cauchy_combination (Optional)
 
-### 5. cauchy_combination (optional)
+**Objective**: Aggregate P values for spatial regions using the Cauchy Combination Test.
 
-**Objective**: Use the Cauchy Combination Test to aggregate P values of individual spots within specific spatial regions to evaluate the association of these regions with the trait. 
-
-**Execution**:
-
-```shell
-CAUCHY_SAVE_DIR="$WORKDIR/$SAMPLE_NAME/cauchy_combination"
-TRAIT_NAME="IQ"
+```bash
 gsmap run_cauchy_combination \
-    --input_hdf5_path $HDF5_PATH \
-    --input_ldsc_dir $LDSC_DIR \
-    --sample_name $SAMPLE_NAME \
-    --output_cauchy_dir $CAUCHY_SAVE_DIR \
-    --trait_name $TRAIT_NAME \
-    --annotation $ANNOTATION
+    --workdir './example/Mouse_Embryo' \
+    --sample_name 'E16.5_E1S1.MOSTA' \
+    --trait_name 'IQ' \
+    --annotation 'annotation'
 ```
 
-You will get a csv file showing the association P values for spatial each region with the trait.
+### 6. Report Generation
 
-`````{tab} Height
+Generate diagnostic reports and plots:
 
-| annotation           | p_cauchy               | p_median            |
-|----------------------|------------------------|---------------------|
-| Adipose tissue       | 7.99e-15               | 1.11e-08            |
-| Adrenal gland        | 2.69e-13               | 2.20e-08            |
-| Brain                | 1.00                   | 0.999               |
-| Cartilage            | 5.49e-20               | 6.49e-09            |
-| Connective tissue    | 1.74e-16               | 6.94e-09            |
-| ...                  | ...                    | ...                 |
-`````
-
-
-
-`````{tab} IQ
-
-| annotation           | p_cauchy               | p_median            |
-|----------------------|------------------------|---------------------|
-| Adipose tissue       | 0.0277                 | 0.4878              |
-| Adrenal gland        | 0.0171                 | 0.1874              |
-| Brain                | 1.86e-19               | 1.60e-12            |
-| Cartilage            | 0.00016                | 0.1277              |
-| Connective tissue    | 8.97e-05               | 0.201               |
-| ...                  | ...                    | ...                 |
-
-`````
-
-`````{tab} MCHC
-
-| annotation           | p_cauchy               | p_median            |
-|----------------------|------------------------|---------------------|
-| Adipose tissue       | 2.73e-08               | 0.0361              |
-| Adrenal gland        | 1.54e-06               | 4.85e-05            |
-| Brain                | 1.00                   | 1.00                |
-| Cartilage            | 0.00155                | 0.158               |
-| Connective tissue    | 4.11e-07               | 0.0143              |
-| ...                  | ...                    | ...                 |
-
-
-`````
-### 6. visualization
-
-**Objective**: Visualize the results of gsMap.
-
-You could use below command to visualize the gsMap results. You will get a scatter plot with the -log10(p-value) of each spot.
-
-**Output**
-- A pdf file.
-- A html file which could be opened in a web browser to interactively explore the results.
-
-```shell
-gsmap run_visualize \
-    --input_hdf5_path $HDF5_PATH \
-    --input_ldsc_dir $LDSC_DIR \
-    --output_figure_dir $WORKDIR/$SAMPLE_NAME/figures \
-    --sample_name $SAMPLE_NAME \
-    --trait_name $TRAIT_NAME \
-    --fig_title $TRAIT_NAME \
-    --annotation $ANNOTATION \
-    --point_size 7
-    
+```bash
+gsmap run_report \
+    --workdir './example/Mouse_Embryo' \
+    --sample_name 'E16.5_E1S1.MOSTA' \
+    --trait_name 'IQ' \
+    --sumstats_file 'example_data/GWAS/IQ_NG_2018.sumstats.gz' \
+    --top_corr_genes 50
 ```

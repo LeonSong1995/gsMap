@@ -42,8 +42,12 @@ def register_cli(name: str, description: str, add_args_function: Callable) -> Ca
 
     return decorator
 
+def add_shared_args(parser):
+    parser.add_argument('--workdir', type=str, required=True, help='Path to the working directory.')
+    parser.add_argument('--sample_name', type=str, required=True, help='Name of the sample.')
 
 def add_find_latent_representations_args(parser):
+    add_shared_args(parser)
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input HDF5 file.')
     parser.add_argument('--annotation', type=str, help='Name of the annotation in adata.obs to use.')
     parser.add_argument('--data_layer', type=str, help='Data layer for gene expression (e.g., "counts", "log1p").')
@@ -85,6 +89,7 @@ def get_dataclass_from_parser(args: argparse.Namespace, data_class: dataclass):
 
 
 def add_generate_ldscore_args(parser):
+    add_shared_args(parser)
     parser.add_argument('--chrom', type=str, required=True, help='Chromosome number (1-22) or "all".')
     parser.add_argument('--bfile_root', type=str, required=True, help='Root path for bfiles.')
     parser.add_argument('--keep_snp_root', type=str, required=True, help='Root path for SNP files.')
@@ -101,6 +106,7 @@ def add_generate_ldscore_args(parser):
 
 
 def add_latent_to_gene_args(parser):
+    add_shared_args(parser)
     parser.add_argument('--annotation', type=str, help='Name of the annotation layer (optional).')
     parser.add_argument('--no_expression_fraction', action='store_true', help='Skip expression fraction filtering.')
     parser.add_argument('--latent_representation', type=str, choices=['latent_GVAE', 'latent_PCA'], default='latent_GVAE',
@@ -112,6 +118,8 @@ def add_latent_to_gene_args(parser):
 
 
 def add_spatial_ldsc_args(parser):
+    add_shared_args(parser)
+
     parser.add_argument('--sumstats_file', type=str, required=True, help='Path to GWAS summary statistics file.')
     parser.add_argument('--w_file', type=str, required=True, help='Path to regression weight file.')
     parser.add_argument('--trait_name', type=str, help='Name of the trait being analyzed.')
@@ -121,6 +129,8 @@ def add_spatial_ldsc_args(parser):
 
 
 def add_Cauchy_combination_args(parser):
+    add_shared_args(parser)
+
     parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait being analyzed.')
     parser.add_argument('--annotation', type=str, required=True, help='Annotation layer name.')
     parser.add_argument('--meta', type=str, help='Optional meta information.')
@@ -128,6 +138,8 @@ def add_Cauchy_combination_args(parser):
 
 
 def add_report_args(parser):
+    add_shared_args(parser)
+
     parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait to generate the report for.')
     parser.add_argument('--annotation', type=str, help='Annotation layer name (optional).')
     # parser.add_argument('--plot_type', type=str, choices=['manhattan', 'GSS', 'gsMap', 'all'], default='all',
@@ -199,6 +211,8 @@ def add_format_sumstats_args(parser):
                         help='Keep SNP chromosome and position columns in the output data')
 
 def add_run_all_mode_args(parser):
+    add_shared_args(parser)
+
     # Required paths and configurations
     parser.add_argument('--gsMap_resource_dir', type=str, required=True,
                         help='Directory containing gsMap resources (e.g., genome annotations, LD reference panel, etc.).')

@@ -57,14 +57,14 @@ def compute_gene_diagnostic_info(config: DiagnosisConfig):
     trait_ldsc_result = load_ldsc(config.get_ldsc_result_file(config.trait_name))
 
     # Align marker scores with trait LDSC results
-    mk_score_aligned = mk_score.loc[trait_ldsc_result.index]
-    mk_score_aligned = mk_score_aligned.loc[:, mk_score_aligned.sum(axis=0) != 0]
+    mk_score = mk_score.loc[trait_ldsc_result.index]
+    mk_score = mk_score.loc[:, mk_score.sum(axis=0) != 0]
 
     logger.info('Calculating correlation between gene marker scores and trait logp-values...')
-    corr = mk_score_aligned.corrwith(trait_ldsc_result['logp'].astype(np.float32))
+    corr = mk_score.corrwith(trait_ldsc_result['logp'])
     corr.name = 'PCC'
 
-    grouped_mk_score = mk_score_aligned.groupby(adata.obs[config.annotation]).median()
+    grouped_mk_score = mk_score.groupby(adata.obs[config.annotation]).median()
     max_annotations = grouped_mk_score.idxmax()
 
     high_GSS_Gene_annotation_pair = pd.DataFrame({
@@ -114,7 +114,7 @@ def load_snp_gene_pairs(config:DiagnosisConfig):
     """Load SNP-gene pairs from multiple chromosomes."""
     ldscore_save_dir = Path(config.ldscore_save_dir)
     return pd.concat([
-        pd.read_feather(ldscore_save_dir / f'SNP_gene_pair/{config.sample_name}_chr{chrom}.feather')
+        pd.read_feather(ldscore_save_dir / f'SNP_gene_pair/SNP_gene_pair_chr{chrom}.feather')
         for chrom in range(1, 23)
     ])
 
