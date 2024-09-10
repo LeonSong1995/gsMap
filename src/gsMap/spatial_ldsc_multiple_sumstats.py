@@ -12,7 +12,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from scipy.stats import norm
-from tqdm.contrib.concurrent import process_map
+from tqdm.contrib.concurrent import process_map, thread_map
 
 import gsMap.jackknife as jk
 from gsMap.config import add_spatial_ldsc_args, SpatialLDSCConfig
@@ -332,7 +332,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             # Run the jackknife
             Nbar = sumstats.N.mean()
             chunk_size = spatial_annotation.shape[1]
-            out_chunk = process_map(jackknife_for_processmap, range(chunk_size),
+            out_chunk = thread_map(jackknife_for_processmap, range(chunk_size),
                                     max_workers=config.num_processes,
                                     chunksize=10,
                                     desc=f'Chunk-{chunk_index}/Total-chunk-{running_chunk_number} for {trait_name}',
@@ -415,9 +415,10 @@ if __name__ == '__main__':
             trait_name=trait_name,
             w_file=config.w_file,
             sample_name=config.sample_name,
+            # ldscore_save_dir=spatial_ldsc_config.ldscore_save_dir,
+            # ldsc_save_dir=spatial_ldsc_config.ldsc_save_dir,
             num_processes=config.max_processes,
             ldscore_save_format='quick_mode',
-            spots_per_chunk_quick_mode=1000,
-            snp_gene_weight_adata_path = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/0908_workdir_test/Human_Cortex_151507/generate_ldscore/snp_gene_weight_matrix/snp_gene_weight_matrix.h5ad',
+            snp_gene_weight_adata_path=config.snp_gene_weight_adata_path,
         )
         run_spatial_ldsc(spatial_ldsc_config_trait)

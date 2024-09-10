@@ -198,6 +198,46 @@ def add_format_sumstats_args(parser):
     parser.add_argument('--keep_chr_pos', action='store_true', default=False,
                         help='Keep SNP chromosome and position columns in the output data')
 
+def add_run_all_mode_args(parser):
+    # Required paths and configurations
+    parser.add_argument('--gsMap_resource_dir', type=str, required=True,
+                        help='Directory containing gsMap resources (e.g., genome annotations, LD reference panel, etc.).')
+    parser.add_argument('--hdf5_path', type=str, required=True,
+                        help='Path to the input H5AD file containing spatial transcriptomics data.')
+    parser.add_argument('--annotation', type=str, required=True,
+                        help='Name of the annotation layer to use in analysis.')
+    parser.add_argument('--data_layer', type=str, default='X',
+                        help='Data layer in H5AD file for gene expression (default: X).')
+
+    # GWAS Data Parameters
+    parser.add_argument('--trait_name', type=str, help='Name of the trait for GWAS analysis (required if sumstats_file is provided).')
+    parser.add_argument('--sumstats_file', type=str,
+                        help='Path to GWAS summary statistics file. Either sumstats_file or sumstats_config_file is required.')
+    parser.add_argument('--sumstats_config_file', type=str,
+                        help='Path to GWAS summary statistics config file. Either sumstats_file or sumstats_config_file is required.')
+
+    # Homolog Data Parameters
+    parser.add_argument('--homolog_file', type=str,
+                        help='Path to homologous gene conversion file (optional, used for cross-species analysis).')
+
+    # Maximum number of processes
+    parser.add_argument('--max_processes', type=int, default=10,
+                        help='Maximum number of processes for parallel execution (default: 10).')
+
+    # # Optional paths for customization
+    # parser.add_argument('--bfile_root', type=str,
+    #                     help='Root path to PLINK bfiles (LD reference panel). If not provided, it will use the default in gsMap_resource_dir.')
+    # parser.add_argument('--keep_snp_root', type=str,
+    #                     help='Root path for SNP filtering. If not provided, it will use the default in gsMap_resource_dir.')
+    # parser.add_argument('--w_file', type=str,
+    #                     help='Path to the regression weight file. If not provided, it will use the default in gsMap_resource_dir.')
+    # parser.add_argument('--snp_gene_weight_adata_path', type=str,
+    #                     help='Path to the SNP-gene weight matrix file. If not provided, it will use the default in gsMap_resource_dir.')
+    # parser.add_argument('--baseline_annotation_dir', type=str,
+    #                     help='Directory containing the baseline annotations for quick mode. If not provided, it will use the default in gsMap_resource_dir.')
+    # parser.add_argument('--SNP_gene_pair_dir', type=str,
+    #                     help='Directory for SNP-gene pair data. If not provided, it will use the default in gsMap_resource_dir.')
+
 
 def ensure_path_exists(func):
     @wraps(func)
@@ -728,3 +768,11 @@ def gwas_format_from_cli(args: argparse.Namespace):
     from gsMap.format_sumstats import gwas_format
     config = get_dataclass_from_parser(args, FormatSumstatsConfig)
     gwas_format(config)
+
+@register_cli(name='quick_mode',
+                description='Run all the gsMap pipeline in quick mode',
+                add_args_function=add_run_all_mode_args)
+def run_all_mode_from_cli(args: argparse.Namespace):
+    from gsMap.run_all_mode import run_pipeline
+    config = get_dataclass_from_parser(args, RunAllModeConfig)
+    run_pipeline(config)
