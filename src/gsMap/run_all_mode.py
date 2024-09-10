@@ -208,26 +208,19 @@ def run_pipeline(config: RunAllModeConfig):
         )
         # Create the run parameters dictionary for each trait
         run_parameter_dict = {
-            "sample_name": config.sample_name,
-            "trait_name": trait_name,
-            "sumstats_file": sumstats_config[trait_name],
-            "hdf5_path": config.hdf5_path,
-            "annotation": config.annotation,
-
-            "num_processes": config.max_processes,
-            "ldscore_dir": ldscore_config.ldscore_save_dir,
-            "w_file": config.w_file,
-            "gtf_annotation_file": config.gtffile,
-            "bfile_root": config.bfile_root,
-            "keep_snp_root": config.keep_snp_root,
-            # "mkscore_feather_file": latent_to_gene_config.output_feather_path,
-            "spatial_ldsc_save_dir": config.ldsc_save_dir,
-            "cauchy_dir": f"{config.workdir}/{config.sample_name}/cauchy_combination",
-            'visualize_dir': f"{config.workdir}/{config.sample_name}/visualize",
-            "diagnosis_dir": f"{config.workdir}/{config.sample_name}/diagnosis",
-
-            "Spending_time": format_duration(time.time() - pipeline_start_time),
-            "Finish_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            "Sample Name": config.sample_name,
+            "Trait Name": trait_name,
+            "Summary Statistics File": sumstats_config[trait_name],
+            "HDF5 Path": config.hdf5_path,
+            "Annotation": config.annotation,
+            "Number of Processes": config.max_processes,
+            "Spatial LDSC Save Directory": config.ldsc_save_dir,
+            "Cauchy Directory": config.cauchy_save_dir,
+            "Report Directory": config.get_report_dir(trait_name),
+            "gsMap Report File": config.get_gsMap_report_file(trait_name),
+            "Gene Diagnostic Info File": config.get_gene_diagnostic_info_save_path(trait_name),
+            "Spending Time": format_duration(time.time() - pipeline_start_time),
+            "Finish Time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         }
 
         # Pass the run parameter dictionary to the report generation function

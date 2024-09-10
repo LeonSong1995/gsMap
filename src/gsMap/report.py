@@ -127,6 +127,23 @@ def run_report(config: ReportConfig, run_parameters=None):
 
     gsmap_version = gsMap.__version__
     # Render the template with dynamic content, including the run parameters
+
+    if run_parameters is None:
+        trait_name = config.trait_name
+        run_parameters = {
+            "Sample Name": config.sample_name,
+            "Trait Name": trait_name,
+            "Summary Statistics File": config.sumstats_file,
+            "HDF5 Path": config.hdf5_with_latent_path,
+            "Annotation": config.annotation,
+            "Spatial LDSC Save Directory": config.ldsc_save_dir,
+            "Cauchy Directory": config.cauchy_save_dir,
+            "Report Directory": config.get_report_dir(trait_name),
+            "gsMap Report File": config.get_gsMap_report_file(trait_name),
+            "Gene Diagnostic Info File": config.get_gene_diagnostic_info_save_path(trait_name),
+        }
+
+
     output_html = template.render(
         title=title,
         genetic_mapping_plot=genetic_mapping_plot,  # Inlined genetic mapping plot
@@ -145,30 +162,3 @@ def run_report(config: ReportConfig, run_parameters=None):
 
     logger.info(f"Report generated successfully! Saved at {report_file}.")
     logger.info(f"Copy the report directory to your local PC and open the HTML report file in a web browser to view the report.")
-
-
-#
-#
-# if __name__ == '__main__':
-#
-#     # Example usage
-#     result_dir = "/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/E16.5_E1S1.MOSTA/"
-#     sample_name = "E16.5_E1S1.MOSTA"
-#     trait_name = "Depression_2023_NatureMed"
-#
-#
-#     run_parameter_dict = {
-#         "sample_name": 'config.SAMPLE_NAME',
-#         "trait_name": trait_name,
-#         "ldscore_dir": 'ldscore_config.ldscore_save_dir',
-#         "w_file": 'config.W_FILE',
-#         "annotation": 'config.ANNOTATION',
-#         "gtf_annotation_file": 'config.GTFFILE',
-#         "bfile_root": 'config.BFILE_ROOT',
-#         "keep_snp_root": 'config.KEEP_SNP_ROOT',
-#         "mkscore_feather_file": 'latent_to_gene_config.output_feather_path',
-#         "spatial_ldsc_save_dir": 'spatial_ldsc_config.ldsc_save_dir',
-#         "sumstats_file": 'sumstats_config[trait_name]',
-#     }
-#     run_Report(result_dir, sample_name, trait_name, run_parameter_dict)
-#

@@ -7,16 +7,15 @@ import anndata as ad
 
 import argparse
 import logging
-import multiprocessing
 from collections import defaultdict
 from pathlib import Path
 
 from scipy.stats import norm
-from tqdm.contrib.concurrent import process_map, thread_map
+from tqdm.contrib.concurrent import thread_map
 
-import gsMap.jackknife as jk
+import gsMap.utils.jackknife as jk
 from gsMap.config import add_spatial_ldsc_args, SpatialLDSCConfig
-from gsMap.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2, _read_M_v2
+from gsMap.utils.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2
 
 logger = logging.getLogger(__name__)
 

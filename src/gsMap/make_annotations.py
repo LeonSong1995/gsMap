@@ -11,7 +11,7 @@ import pandas as pd
 import pyranges as pr
 from progress.bar import IncrementalBar
 
-from gsMap.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
+from gsMap.utils.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
 
 logger = logging.getLogger(__name__)

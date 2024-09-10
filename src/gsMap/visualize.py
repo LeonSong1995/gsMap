@@ -166,11 +166,11 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
 
 
 def run_Visualize(config: VisualizeConfig):
-    print(f'------Loading LDSC results of {config.input_ldsc_dir}...')
-    ldsc = load_ldsc(ldsc_input_file=Path(config.input_ldsc_dir) / f'{config.sample_name}_{config.trait_name}.csv.gz')
+    print(f'------Loading LDSC results of {config.ldsc_save_dir}...')
+    ldsc = load_ldsc(ldsc_input_file=Path(config.ldsc_save_dir) / f'{config.sample_name}_{config.trait_name}.csv.gz')
 
     print(f'------Loading ST data of {config.sample_name}...')
-    adata = sc.read_h5ad(f'{config.input_hdf5_path}')
+    adata = sc.read_h5ad(f'{config.hdf5_with_latent_path}')
 
     space_coord_concat = load_st_coord(adata, ldsc, annotation=config.annotation)
     fig = draw_scatter(space_coord_concat,
@@ -182,10 +182,9 @@ def run_Visualize(config: VisualizeConfig):
                        annotation=config.annotation
                        )
 
-    # save the figure to html
 
     # Visualization
-    output_dir = Path(config.output_figure_dir)
+    output_dir = Path(config.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True, mode=0o755)
     output_file_html = output_dir / f'{config.sample_name}_{config.trait_name}.html'
     output_file_pdf = output_dir / f'{config.sample_name}_{config.trait_name}.pdf'
@@ -198,33 +197,3 @@ def run_Visualize(config: VisualizeConfig):
     print(
         f'------The visualization result is saved in a html file: {output_file_html} which can interactively viewed in a web browser and a pdf file: {output_file_pdf}.')
     print(f'------The visualization data is saved in a csv file: {output_file_csv}.')
-
-
-if __name__ == '__main__':
-    TEST = True
-    if TEST:
-        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021'
-        name = 'E16.5_E1S1'
-
-        config = VisualizeConfig(
-            # input_hdf5_path=f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
-            # input_ldsc_dir=
-            # f'/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/ldsc_enrichment_frac/E16.5_E1S1/',
-            # output_figure_dir='/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021/snake_workdir/Cortex_151507/figure/',
-            sample_name=name,
-            trait_name='GIANT_EUR_Height_2022_Nature',
-            fig_title='GIANT_EUR_Height_2022_Nature',
-            fig_height=800,
-            fig_width=800,
-            fig_style='light',
-            point_size=2,
-            annotation='annotation',
-        )
-        run_Visualize(config)
-    else:
-        parser = argparse.ArgumentParser(description="Visualization the results")
-        add_Visualization_args(parser)
-        args = parser.parse_args()
-        config = VisualizeConfig(**vars(args))
-
-        run_Visualize(config)
