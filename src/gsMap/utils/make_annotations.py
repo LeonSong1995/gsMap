@@ -52,7 +52,6 @@ class MakeAnnotationConfig:
             raise ValueError(f"Invalid ld_wind_unit: {self.ld_wind_unit}. Choose from 'CM', 'BP', or 'SNP'.")
 
 
-
 class Snp_Annotator:
     """
     1. Annotate SNPs based on score of genes.
@@ -517,44 +516,3 @@ def run_make_annotation(args: MakeAnnotationConfig):
         args, const_max_size
     )
     ldscore_generate.compute_ldscore()
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='make_annotations.py',
-                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    add_make_annotation_args(parser)
-
-    # Store the Params
-    TEST = True
-    if TEST:
-        name = 'Cortex_151507'
-        TASK_ID = 2
-        test_dir = '/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/Nature_Neuroscience_2021'
-        config = MakeAnnotationConfig(
-            input_feather_file=f'{test_dir}/{name}/gene_markers/{name}_rank.feather',
-            sample_name=name,
-            output_dir=f'{test_dir}/{name}/snp_annotation/new_run',
-            gtf_file='/storage/yangjianLab/songliyang/ReferenceGenome/GRCh37/gencode.v39lift37.annotation.gtf',
-            bfile_root='/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC',
-            baseline_annotation=None,
-            keep_snp_root='/storage/yangjianLab/sharedata/LDSC_resource/hapmap3_snps/hm',
-            chr=TASK_ID,
-            window_size=50000,
-            cells_per_chunk=500,
-            ld_wind=1,
-            ld_wind_unit='CM',
-            r2_cache_dir='/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/r2_matrix',
-            use_gpu=True,
-            snps_per_chunk=100_000
-        )
-
-    else:
-        args = parser.parse_args()
-        config=MakeAnnotationConfig(**vars(args))
-
-    logger.info(f'Running make_annotation for {config.sample_name}')
-    pprint.pprint(config)
-    start_time = time.time()
-    run_make_annotation(config)
-    end_time = time.time()
-    logger.info(f'Make SNP annotation for {config.sample_name} finished. Time spent: {(end_time - start_time) / 60:.2f} min.')

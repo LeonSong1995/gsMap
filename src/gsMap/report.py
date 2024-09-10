@@ -11,12 +11,7 @@ from gsMap.cauchy_combination_test import run_Cauchy_combination
 from gsMap.config import CauchyCombinationConfig, ReportConfig
 from gsMap.diagnosis import run_Diagnosis
 
-# logging.basicConfig(level=logging.INFO,
-#                     format='%(asctime)s - %(levelname)s - %(message)s',
-#                     handlers=[
-#                         logging.FileHandler("pipeline.log"),
-#                         logging.StreamHandler()
-#                     ])
+
 logger = logging.getLogger(__name__)
 
 # Load the Jinja2 environment
@@ -128,20 +123,23 @@ def run_report(config: ReportConfig, run_parameters=None):
     gsmap_version = gsMap.__version__
     # Render the template with dynamic content, including the run parameters
 
-    if run_parameters is None:
-        trait_name = config.trait_name
-        run_parameters = {
-            "Sample Name": config.sample_name,
-            "Trait Name": trait_name,
-            "Summary Statistics File": config.sumstats_file,
-            "HDF5 Path": config.hdf5_with_latent_path,
-            "Annotation": config.annotation,
-            "Spatial LDSC Save Directory": config.ldsc_save_dir,
-            "Cauchy Directory": config.cauchy_save_dir,
-            "Report Directory": config.get_report_dir(trait_name),
-            "gsMap Report File": config.get_gsMap_report_file(trait_name),
-            "Gene Diagnostic Info File": config.get_gene_diagnostic_info_save_path(trait_name),
-        }
+    trait_name = config.trait_name
+    default_run_parameters = {
+        "Sample Name": config.sample_name,
+        "Trait Name": trait_name,
+        "Summary Statistics File": config.sumstats_file,
+        "HDF5 Path": config.hdf5_with_latent_path,
+        "Annotation": config.annotation,
+        "Spatial LDSC Save Directory": config.ldsc_save_dir,
+        "Cauchy Directory": config.cauchy_save_dir,
+        "Report Directory": config.get_report_dir(trait_name),
+        "gsMap Report File": config.get_gsMap_report_file(trait_name),
+        "Gene Diagnostic Info File": config.get_gene_diagnostic_info_save_path(trait_name),
+        "Report Generation Date": pd.Timestamp.now().strftime('%Y-%m-%d %H:%M:%S'),
+    }
+
+    if run_parameters is not None:
+        default_run_parameters.update(run_parameters)
 
 
     output_html = template.render(
@@ -151,7 +149,7 @@ def run_report(config: ReportConfig, run_parameters=None):
         cauchy_table=cauchy_table,
         gene_plots=gene_plots,  # List of PNG paths for gene plots
         gsmap_version=gsmap_version,
-        parameters=run_parameters,  # Pass the run parameters to the template
+        parameters=default_run_parameters,  # Pass the run parameters to the template
         gene_diagnostic_info=gene_diagnostic_info  # Include top 50 gene diagnostic info rows
     )
 

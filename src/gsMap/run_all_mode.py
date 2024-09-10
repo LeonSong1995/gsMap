@@ -164,36 +164,7 @@ def run_pipeline(config: RunAllModeConfig):
     end_time = time.time()
     logger.info(f"Step 5 completed in {format_duration(end_time - start_time)}.")
 
-    # Step 7:
-    # start_time = time.time()
-    # logger.info("Step 7: Running diagnosis")
-    # for trait_name in sumstats_config:
-    #     diagnosis_config = DiagnosisConfig(
-    #         workdir=config.workdir,
-    #         sample_name=config.sample_name,
-    #         # input_hdf5_path=config.hdf5_path,
-    #         annotation=config.annotation,
-    #         # mkscore_feather_file=latent_to_gene_config.output_feather_path,
-    #         # input_ldsc_dir=spatial_ldsc_config.ldsc_save_dir,
-    #         trait_name=trait_name,
-    #         plot_type='manhattan',
-    #         # ldscore_save_dir=f"{config.workdir}/{config.sample_name}/generate_ldscore",
-    #         top_corr_genes=50,
-    #         selected_genes=None,
-    #         sumstats_file=sumstats_config[trait_name],
-    #         # diagnosis_save_dir=f"{config.workdir}/{config.sample_name}/diagnosis"
-    #     )
-    #     run_Diagnosis(diagnosis_config)
-    #
-    #     diagnosis_config.plot_type = 'GSS'
-    #     diagnosis_config.top_corr_genes = 20
-    #     run_Diagnosis(diagnosis_config)
-    # end_time = time.time()
-    # logger.info(f"Step 7 completed in {format_duration(end_time - start_time)}.")
-    #
-
-    # Step 8: Report
-
+    # Step 6: Generate final report
     for trait_name in sumstats_config:
         logger.info("Running final report generation for trait: %s", trait_name)
         report_config = ReportConfig(
@@ -220,68 +191,9 @@ def run_pipeline(config: RunAllModeConfig):
             "gsMap Report File": config.get_gsMap_report_file(trait_name),
             "Gene Diagnostic Info File": config.get_gene_diagnostic_info_save_path(trait_name),
             "Spending Time": format_duration(time.time() - pipeline_start_time),
-            "Finish Time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         }
 
         # Pass the run parameter dictionary to the report generation function
         run_report(report_config, run_parameters=run_parameter_dict)
 
     logger.info("Pipeline completed successfully.")
-
-
-if __name__ == '__main__':
-    # Example usage:
-    # config = RunAllModeConfig(
-    #     workdir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/0908_workdir_test',
-    #     sample_name='Human_Cortex_151507',
-    #     gsMap_resource_dir='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/gsMap_resource',
-    #     hdf5_path='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/example_data/ST/Cortex_151507.h5ad',
-    #     annotation='layer_guess',
-    #     data_layer='count',
-    #     trait_name='Depression_2023_NatureMed',
-    #     sumstats_file='/mnt/e/0_Wenhao/7_Projects/20231213_GPS_Liyang/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz',
-    #     homolog_file=None,
-    #     max_processes=10
-    # )
-
-    path_prefix = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/'
-    # config = RunAllModeConfig(
-    #     workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
-    #     sample_name='Human_Cortex_151507',
-    #     gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
-    #     hdf5_path=('%s/test/20240902_gsMap_Local_Test/example_data/ST/Cortex_151507.h5ad' % path_prefix),
-    #     annotation='layer_guess',
-    #     data_layer='count',
-    #     trait_name='Depression_2023_NatureMed',
-    #     sumstats_file=(
-    #             '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
-    #     homolog_file=None,
-    #     max_processes=10
-    # )
-    #
-    config = RunAllModeConfig(
-        workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
-        sample_name='E16.5_E1S1.MOSTA',
-        gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
-        hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
-        annotation='annotation',
-        data_layer='count',
-        trait_name='Depression_2023_NatureMed',
-        sumstats_file=(
-                    '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
-        homolog_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/gsMap_resource/homologs/mouse_human_homologs.txt',
-        max_processes=10
-    )
-
-    # config = RunAllModeConfig(
-    #     workdir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4/E16.5_E1S1.MOSTA',
-    #     sample_name='E16.5_E1S1.MOSTA',
-    #     gsMap_resource_dir='/storage/yangjianLab/songliyang/SpatialData/gsMap_resource',
-    #     hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
-    #     annotation='layer_guess',
-    #     trait_name='Depression_2023_NatureMed',
-    #     sumstats_config_file='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/ldsc_enrichment_frac/E16.5_E1S1/sumstats_config.yaml',
-    #     homolog_file=None,
-    #     max_processes=10
-    # )
-    run_pipeline(config)

@@ -400,11 +400,3 @@ def gwas_format(config:FormatSumstatsConfig):
     print(f'\nWriting summary statistics for {len(gwas)} SNPs to {out_name}.')
     gwas.to_csv(out_name, sep="\t", index=False,
                float_format='%.3f', compression = 'gzip')
-
-
-if __name__ == '__main__':
-        parser = argparse.ArgumentParser(description="Visualization the results")
-        parser = add_format_sumstats_args(parser)
-        args = parser.parse_args()
-        config = FormatSumstatsConfig(**vars(args))
-        gwas_format(config)
