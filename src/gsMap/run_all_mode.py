@@ -22,6 +22,7 @@ def format_duration(seconds):
 def run_pipeline(config: RunAllModeConfig):
     # # Set up logging
     log_file = Path(config.workdir) / config.sample_name / 'gsMap_pipeline.log'
+    log_file.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(level=logging.INFO,
                         format='[{asctime}] {levelname:8s} {name} {message}',
                         handlers=[
@@ -251,33 +252,33 @@ if __name__ == '__main__':
     # )
 
     path_prefix = '/storage/yangjianLab/chenwenhao/projects/202312_GPS/'
-    config = RunAllModeConfig(
-        workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
-        sample_name='Human_Cortex_151507',
-        gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
-        hdf5_path=('%s/test/20240902_gsMap_Local_Test/example_data/ST/Cortex_151507.h5ad' % path_prefix),
-        annotation='layer_guess',
-        data_layer='count',
-        trait_name='Depression_2023_NatureMed',
-        sumstats_file=(
-                '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
-        homolog_file=None,
-        max_processes=10
-    )
-    #
     # config = RunAllModeConfig(
     #     workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
-    #     sample_name='E16.5_E1S1.MOSTA',
+    #     sample_name='Human_Cortex_151507',
     #     gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
-    #     hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
-    #     annotation='annotation',
+    #     hdf5_path=('%s/test/20240902_gsMap_Local_Test/example_data/ST/Cortex_151507.h5ad' % path_prefix),
+    #     annotation='layer_guess',
     #     data_layer='count',
     #     trait_name='Depression_2023_NatureMed',
     #     sumstats_file=(
-    #                 '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
-    #     homolog_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/gsMap_resource/homologs/mouse_human_homologs.txt',
+    #             '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
+    #     homolog_file=None,
     #     max_processes=10
     # )
+    #
+    config = RunAllModeConfig(
+        workdir=('%s/test/20240902_gsMap_Local_Test/0908_workdir_test' % path_prefix),
+        sample_name='E16.5_E1S1.MOSTA',
+        gsMap_resource_dir=('%s/test/20240902_gsMap_Local_Test/gsMap_resource' % path_prefix),
+        hdf5_path='/storage/yangjianLab/songliyang/SpatialData/Data/Embryo/Mice/Cell_MOSTA/h5ad/E16.5_E1S1.MOSTA.h5ad',
+        annotation='annotation',
+        data_layer='count',
+        trait_name='Depression_2023_NatureMed',
+        sumstats_file=(
+                    '%s/test/20240902_gsMap_Local_Test/example_data/GWAS/Depression_2023_NatureMed.sumstats.gz' % path_prefix),
+        homolog_file='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240902_gsMap_Local_Test/gsMap_resource/homologs/mouse_human_homologs.txt',
+        max_processes=10
+    )
 
     # config = RunAllModeConfig(
     #     workdir='/storage/yangjianLab/chenwenhao/projects/202312_GPS/test/20240817_vanilla_pipeline_mouse_embryo_v4/E16.5_E1S1.MOSTA',

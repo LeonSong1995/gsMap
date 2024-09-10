@@ -286,7 +286,6 @@ class ConfigWithAutoPaths:
     def get_gsMap_html_plot_save_path(self, trait_name: str) -> Path:
         return self.get_gsMap_plot_save_dir(trait_name) / f'{self.sample_name}_{trait_name}_gsMap_plot.html'
 
-
 @dataclass
 class FindLatentRepresentationsConfig(ConfigWithAutoPaths):
     input_hdf5_path: str
