@@ -71,6 +71,7 @@ The following command will execute the entire pipeline in quick mode:
 ```bash
 gsmap quick_mode \
     --workdir './example/Mouse_Embryo' \
+    --homolog_file 'gsMap_resource/homologs/mouse_human_homologs.txt' \
     --sample_name 'E16.5_E1S1.MOSTA' \
     --gsMap_resource_dir 'gsMap_resource' \
     --hdf5_path 'example_data/ST/E16.5_E1S1.MOSTA.h5ad' \
@@ -83,13 +84,14 @@ gsmap quick_mode \
 ### Parameters:
 
 - `--workdir`: The working directory where output files will be saved.
+- `--homolog_file`: The homologous gene file for converting gene names from different species to human.
 - `--sample_name`: The name of the sample (e.g., `E16.5_E1S1.MOSTA`).
 - `--gsMap_resource_dir`: Path to the directory containing the `gsMap` resources.
 - `--hdf5_path`: Path to the input HDF5 file with spatial transcriptomics (ST) data.
 - `--annotation`: The name of the annotation column in the `adata.obs` of the input HDF5 file.
-- `--data_layer`: The layer of the gene expression matrix (e.g., `counts`).
-- `--sumstats_file`: Path to the GWAS summary statistics file for the trait of interest.
-- `--trait_name`: Name of the trait to be analyzed (e.g., `IQ`).
+- `--data_layer`: The layer of the gene expression matrix (e.g., `count`).
+- `--sumstats_file`: Path to the GWAS summary statistics file.
+- `--trait_name`: Name of the trait (e.g., `IQ`).
 
 ### Additional Options:
 
@@ -98,6 +100,7 @@ gsmap quick_mode \
 ```bash
 gsmap quick_mode \
     --workdir './example/Mouse_Embryo' \
+    --homolog_file 'gsMap_resource/homologs/mouse_human_homologs.txt' \
     --sample_name 'E16.5_E1S1.MOSTA' \
     --gsMap_resource_dir 'gsMap_resource' \
     --hdf5_path 'example_data/ST/E16.5_E1S1.MOSTA.h5ad' \
@@ -106,7 +109,7 @@ gsmap quick_mode \
     --sumstats_config_file 'example_data/GWAS/gwas_config.yaml'
 ```
 
-In this case, the `gwas_config.yaml` file should look like this:
+The `gwas_config.yaml` file includes the following:
 
 ```yaml
 Height: example_data/GWAS/GIANT_EUR_Height_2022_Nature.sumstats.gz
@@ -136,6 +139,6 @@ example/Mouse_Embryo
 │   └── cauchy_combination
 ```
 
-## Conclusion
+## Summary
 
-The `quick_mode` allows you to run the entire pipeline in one command, simplifying the process and reducing manual steps.
+The `quick_mode`  lets you run the entire pipeline with a single command, making the process easier and reducing the need for manual steps.

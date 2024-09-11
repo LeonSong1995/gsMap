@@ -46,19 +46,19 @@ class GNN_VAE_Model(nn.Module):
         self.encoder.add_module('encoder_L2', full_block(params.feat_hidden1, params.feat_hidden2, params.p_drop))
         
         # GNN (GAT)
-        self.gn1 = GNN(params.feat_hidden2, params.gcn_hidden1, params.p_drop, act=F.relu,heads = params.nheads)
-        self.gn2 = GNN(params.gcn_hidden1*params.nheads, params.gcn_hidden2, params.p_drop, act=lambda x: x)
-        self.gn3 = GNN(params.gcn_hidden1*params.nheads, params.gcn_hidden2, params.p_drop, act=lambda x: x) 
+        self.gn1 = GNN(params.feat_hidden2, params.gat_hidden1, params.p_drop, act=F.relu,heads = params.nheads)
+        self.gn2 = GNN(params.gat_hidden1*params.nheads, params.gat_hidden2, params.p_drop, act=lambda x: x)
+        self.gn3 = GNN(params.gat_hidden1*params.nheads, params.gat_hidden2, params.p_drop, act=lambda x: x) 
         
         # Decoder
         self.decoder = nn.Sequential()
-        self.decoder.add_module('decoder_L1', full_block(params.gcn_hidden2, params.feat_hidden2, params.p_drop))
+        self.decoder.add_module('decoder_L1', full_block(params.gat_hidden2, params.feat_hidden2, params.p_drop))
         self.decoder.add_module('decoder_L2', full_block(params.feat_hidden2, params.feat_hidden1, params.p_drop))
         self.decoder.add_module('decoder_output', nn.Sequential(nn.Linear(params.feat_hidden1, input_dim)))
         
         # Cluster
         self.cluster = nn.Sequential()
-        self.cluster.add_module('cluster_L1', full_block(params.gcn_hidden2, params.feat_hidden2, params.p_drop))
+        self.cluster.add_module('cluster_L1', full_block(params.gat_hidden2, params.feat_hidden2, params.p_drop))
         self.cluster.add_module('cluster_output', nn.Linear(params.feat_hidden2, self.num_classes))
            
     def encode(self, x, adj):

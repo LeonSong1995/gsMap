@@ -45,7 +45,7 @@ class Model_Train:
         # Set Model 
         self.model = GNN_VAE_Model(self.params.feat_cell,self.params,self.num_classes).to(device)
         self.optimizer = torch.optim.Adam(params = list(self.model.parameters()),
-                                          lr = self.params.gcn_lr, weight_decay = self.params.gcn_decay)               
+                                          lr = self.params.gat_lr, weight_decay = self.params.gcn_decay)               
     
     # Train    
     def run_train(self):

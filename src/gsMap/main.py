@@ -20,7 +20,7 @@ def main():
     )
 
 def create_parser():
-    parser = argparse.ArgumentParser(description=" gsMap: Genetics-informed pathogenic spatial mapping",
+    parser = argparse.ArgumentParser(description=" gsMap: genetically informed spatial mapping of cells for complex traits",
                                      formatter_class=argparse.RawTextHelpFormatter,
                                      prog='gsMap'
                                      )

@@ -48,19 +48,19 @@ def add_shared_args(parser):
 
 def add_find_latent_representations_args(parser):
     add_shared_args(parser)
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input HDF5 file.')
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input ST data (HDF5 format).')
     parser.add_argument('--annotation', type=str, help='Name of the annotation in adata.obs to use.')
     parser.add_argument('--data_layer', type=str, help='Data layer for gene expression (e.g., "counts", "log1p").')
     parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs (default: 300).')
     parser.add_argument('--feat_hidden1', type=int, default=256, help='Neurons in the first hidden layer (default: 256).')
     parser.add_argument('--feat_hidden2', type=int, default=128, help='Neurons in the second hidden layer (default: 128).')
-    parser.add_argument('--gcn_hidden1', type=int, default=64, help='Units in the first GCN hidden layer (default: 64).')
-    parser.add_argument('--gcn_hidden2', type=int, default=30, help='Units in the second GCN hidden layer (default: 30).')
+    parser.add_argument('--gat_hidden1', type=int, default=64, help='Units in the first GAT hidden layer (default: 64).')
+    parser.add_argument('--gat_hidden2', type=int, default=30, help='Units in the second GAT hidden layer (default: 30).')
     parser.add_argument('--p_drop', type=float, default=0.1, help='Dropout rate (default: 0.1).')
-    parser.add_argument('--gcn_lr', type=float, default=0.001, help='Learning rate for the GCN (default: 0.001).')
-    parser.add_argument('--n_neighbors', type=int, default=11, help='Number of neighbors for GCN (default: 11).')
+    parser.add_argument('--gat_lr', type=float, default=0.001, help='Learning rate for the GAT (default: 0.001).')
+    parser.add_argument('--n_neighbors', type=int, default=11, help='Number of neighbors for GAT (default: 11).')
     parser.add_argument('--n_comps', type=int, default=300, help='Number of principal components for PCA (default: 300).')
-    parser.add_argument('--weighted_adj', action='store_true', help='Use weighted adjacency in GCN.')
+    parser.add_argument('--weighted_adj', action='store_true', help='Use weighted adjacency in GAT.')
     parser.add_argument('--var', action='store_true', help='Enable variance calculations.')
     parser.add_argument('--convergence_threshold', type=float, default=1e-4, help='Threshold for convergence (default: 1e-4).')
     parser.add_argument('--hierarchically', action='store_true', help='Enable hierarchical latent representation finding.')
@@ -88,26 +88,9 @@ def get_dataclass_from_parser(args: argparse.Namespace, data_class: dataclass):
     return data_class(**remain_kwargs)
 
 
-def add_generate_ldscore_args(parser):
-    add_shared_args(parser)
-    parser.add_argument('--chrom', type=str, required=True, help='Chromosome number (1-22) or "all".')
-    parser.add_argument('--bfile_root', type=str, required=True, help='Root path for bfiles.')
-    parser.add_argument('--keep_snp_root', type=str, required=True, help='Root path for SNP files.')
-    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='Path to GTF annotation file.')
-    parser.add_argument('--gene_window_size', type=int, default=50000, help='Gene window size in base pairs (default: 50,000).')
-    parser.add_argument('--enhancer_annotation_file', type=str, help='Path to enhancer annotation file (optional).')
-    parser.add_argument('--snp_multiple_enhancer_strategy', type=str, choices=['max_mkscore', 'nearest_TSS'], default='max_mkscore',
-                        help='Strategy for handling multiple enhancers per SNP (default: max_mkscore).')
-    parser.add_argument('--gene_window_enhancer_priority', type=str, choices=['gene_window_first', 'enhancer_first', 'enhancer_only'],
-                        help='Priority between gene window and enhancer annotations.')
-    parser.add_argument('--spots_per_chunk', type=int, default=5000, help='Number of spots per chunk (default: 5,000).')
-    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size (default: 1).')
-    parser.add_argument('--ld_unit', type=str, choices=['SNP', 'KB', 'CM'], default='CM', help='Unit for LD window (default: CM).')
-
-
 def add_latent_to_gene_args(parser):
     add_shared_args(parser)
-    parser.add_argument('--annotation', type=str, help='Name of the annotation layer (optional).')
+    parser.add_argument('--annotation', type=str, help='Name of the annotation in adata.obs to use. (optional).')
     parser.add_argument('--no_expression_fraction', action='store_true', help='Skip expression fraction filtering.')
     parser.add_argument('--latent_representation', type=str, choices=['latent_GVAE', 'latent_PCA'], default='latent_GVAE',
                         help='Type of latent representation (default: latent_GVAE).')
@@ -117,9 +100,25 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--homolog_file', type=str, help='Path to homologous gene conversion file (optional).')
 
 
+def add_generate_ldscore_args(parser):
+    add_shared_args(parser)
+    parser.add_argument('--chrom', type=str, required=True, help='Chromosome id (1-22) or "all".')
+    parser.add_argument('--bfile_root', type=str, required=True, help='Root path for genotype plink bfiles (.bim, .bed, .fam).')
+    parser.add_argument('--keep_snp_root', type=str, required=True, help='Root path for SNP files.')
+    parser.add_argument('--gtf_annotation_file', type=str, required=True, help='Path to GTF annotation file.')
+    parser.add_argument('--gene_window_size', type=int, default=50000, help='Gene window size in base pairs (default: 50,000).')
+    parser.add_argument('--enhancer_annotation_file', type=str, help='Path to enhancer annotation file (optional).')
+    parser.add_argument('--snp_multiple_enhancer_strategy', type=str, choices=['max_mkscore', 'nearest_TSS'], default='max_mkscore',
+                        help='Strategy for handling multiple enhancers per SNP (default: max_mkscore).')
+    parser.add_argument('--gene_window_enhancer_priority', type=str, choices=['gene_window_first', 'enhancer_first', 'enhancer_only'],
+                        help='Priority between gene window and enhancer annotations.')
+    parser.add_argument('--spots_per_chunk', type=int, default=1000, help='Number of spots per chunk (default: 1,000).')
+    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size (default: 1).')
+    parser.add_argument('--ld_unit', type=str, choices=['SNP', 'KB', 'CM'], default='CM', help='Unit for LD window (default: CM).')
+
+
 def add_spatial_ldsc_args(parser):
     add_shared_args(parser)
-
     parser.add_argument('--sumstats_file', type=str, required=True, help='Path to GWAS summary statistics file.')
     parser.add_argument('--w_file', type=str, required=True, help='Path to regression weight file.')
     parser.add_argument('--trait_name', type=str, help='Name of the trait being analyzed.')
@@ -130,18 +129,16 @@ def add_spatial_ldsc_args(parser):
 
 def add_Cauchy_combination_args(parser):
     add_shared_args(parser)
-
     parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait being analyzed.')
-    parser.add_argument('--annotation', type=str, required=True, help='Annotation layer name.')
+    parser.add_argument('--annotation', type=str, required=True, help='Name of the annotation in adata.obs to use.')
     parser.add_argument('--meta', type=str, help='Optional meta information.')
     parser.add_argument('--slide', type=str, help='Optional slide information.')
 
 
 def add_report_args(parser):
     add_shared_args(parser)
-
     parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait to generate the report for.')
-    parser.add_argument('--annotation', type=str, help='Annotation layer name (optional).')
+    parser.add_argument('--annotation', type=str, help='Name of the annotation in adata.obs to use. (optional).')
     # parser.add_argument('--plot_type', type=str, choices=['manhattan', 'GSS', 'gsMap', 'all'], default='all',
     #                     help="Type of diagnostic plot to generate (default: all). Choose from 'manhattan', 'GSS', 'gsMap', or 'all'.")
     parser.add_argument('--top_corr_genes', type=int, default=50,
@@ -217,9 +214,9 @@ def add_run_all_mode_args(parser):
     parser.add_argument('--gsMap_resource_dir', type=str, required=True,
                         help='Directory containing gsMap resources (e.g., genome annotations, LD reference panel, etc.).')
     parser.add_argument('--hdf5_path', type=str, required=True,
-                        help='Path to the input H5AD file containing spatial transcriptomics data.')
+                        help='Path to the input spatial transcriptomics data (H5AD format).')
     parser.add_argument('--annotation', type=str, required=True,
-                        help='Name of the annotation layer to use in analysis.')
+                        help='Name of the annotation in adata.obs to use.')
     parser.add_argument('--data_layer', type=str, default='X',
                         help='Data layer in H5AD file for gene expression (default: X).')
 
@@ -232,7 +229,7 @@ def add_run_all_mode_args(parser):
 
     # Homolog Data Parameters
     parser.add_argument('--homolog_file', type=str,
-                        help='Path to homologous gene conversion file (optional, used for cross-species analysis).')
+                        help='Path to homologous gene for converting gene names from different species to human (optional, used for cross-species analysis).')
 
     # Maximum number of processes
     parser.add_argument('--max_processes', type=int, default=10,
@@ -351,10 +348,10 @@ class FindLatentRepresentationsConfig(ConfigWithAutoPaths):
     feat_hidden1: int = 256
     feat_hidden2: int = 128
     feat_cell: int = 3000
-    gcn_hidden1: int = 64
-    gcn_hidden2: int = 30
+    gat_hidden1: int = 64
+    gat_hidden2: int = 30
     p_drop: float = 0.1
-    gcn_lr: float = 0.001
+    gat_lr: float = 0.001
     gcn_decay: float = 0.01
     n_neighbors: int = 11
     label_w: float = 1
