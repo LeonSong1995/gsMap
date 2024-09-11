@@ -191,8 +191,9 @@ def generate_GSS_distribution(config: DiagnosisConfig):
     config.get_GSS_plot_select_gene_file(config.trait_name).write_text('\n'.join(plot_genes))
 
     for selected_gene in plot_genes:
-        expression_series = pd.Series(adata[:, selected_gene].X.toarray().flatten(), index=adata.obs.index,
-                                      name='Expression')
+        expression_series = pd.Series(adata[:, selected_gene].X.toarray().flatten(), index=adata.obs.index,name='Expression')
+        threshold = np.quantile(expression_series,0.9999)
+        expression_series[expression_series > threshold] = threshold
         generate_and_save_plots(adata, mk_score, expression_series, selected_gene, point_size, pixel_width,
                                 pixel_height, sub_fig_save_dir, config.sample_name, config.annotation)
 
@@ -262,6 +263,10 @@ def run_Diagnosis(config: DiagnosisConfig):
     """Main function to run the diagnostic plot generation."""
     global adata
     adata = sc.read_h5ad(config.hdf5_with_latent_path)
+    if 'log1p' not in adata.uns.keys() and adata.X.max() > 14: 
+        sc.pp.normalize_total(adata, target_sum=1e4)
+        sc.pp.log1p(adata)
+
     if config.plot_type in ['manhattan', 'all']:
         generate_manhattan_plot(config)
     if config.plot_type in ['GSS', 'all']:
