@@ -48,9 +48,9 @@ def add_shared_args(parser):
 
 def add_find_latent_representations_args(parser):
     add_shared_args(parser)
-    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input ST data (HDF5 format).')
-    parser.add_argument('--annotation', type=str, help='Name of the annotation in adata.obs to use.')
-    parser.add_argument('--data_layer', type=str, help='Data layer for gene expression (e.g., "counts", "log1p").')
+    parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input HDF5 file.')
+    parser.add_argument('--annotation', required=True, type=str, help='Name of the annotation in adata.obs to use.')
+    parser.add_argument('--data_layer', required=True, type=str, help='Data layer for gene expression (e.g., "counts", "log1p").')
     parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs (default: 300).')
     parser.add_argument('--feat_hidden1', type=int, default=256, help='Neurons in the first hidden layer (default: 256).')
     parser.add_argument('--feat_hidden2', type=int, default=128, help='Neurons in the second hidden layer (default: 128).')
@@ -117,11 +117,23 @@ def add_generate_ldscore_args(parser):
     parser.add_argument('--ld_unit', type=str, choices=['SNP', 'KB', 'CM'], default='CM', help='Unit for LD window (default: CM).')
 
 
+def add_latent_to_gene_args(parser):
+    add_shared_args(parser)
+    parser.add_argument('--annotation', type=str, required=True, help='Name of the annotation layer.')
+    parser.add_argument('--no_expression_fraction', action='store_true', help='Skip expression fraction filtering.')
+    parser.add_argument('--latent_representation', type=str, choices=['latent_GVAE', 'latent_PCA'], default='latent_GVAE',
+                        help='Type of latent representation (default: latent_GVAE).')
+    parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbors (default: 21).')
+    parser.add_argument('--num_neighbour_spatial', type=int, default=101, help='Number of spatial neighbors (default: 101).')
+    # parser.add_argument('--species', type=str, help='Species name for homolog gene mapping (optional).')
+    parser.add_argument('--homolog_file', type=str, help='Path to homologous gene conversion file (optional).')
+
+
 def add_spatial_ldsc_args(parser):
     add_shared_args(parser)
     parser.add_argument('--sumstats_file', type=str, required=True, help='Path to GWAS summary statistics file.')
     parser.add_argument('--w_file', type=str, required=True, help='Path to regression weight file.')
-    parser.add_argument('--trait_name', type=str, help='Name of the trait being analyzed.')
+    parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait being analyzed.')
     parser.add_argument('--n_blocks', type=int, default=200, help='Number of blocks for jackknife resampling (default: 200).')
     parser.add_argument('--chisq_max', type=int, help='Maximum chi-square value for filtering SNPs.')
     parser.add_argument('--num_processes', type=int, default=4, help='Number of processes for parallel computing (default: 4).')
@@ -138,7 +150,7 @@ def add_Cauchy_combination_args(parser):
 def add_report_args(parser):
     add_shared_args(parser)
     parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait to generate the report for.')
-    parser.add_argument('--annotation', type=str, help='Name of the annotation in adata.obs to use. (optional).')
+    parser.add_argument('--annotation', type=str, required=True, help='Annotation layer name.')
     # parser.add_argument('--plot_type', type=str, choices=['manhattan', 'GSS', 'gsMap', 'all'], default='all',
     #                     help="Type of diagnostic plot to generate (default: all). Choose from 'manhattan', 'GSS', 'gsMap', or 'all'.")
     parser.add_argument('--top_corr_genes', type=int, default=50,
@@ -218,7 +230,7 @@ def add_run_all_mode_args(parser):
     parser.add_argument('--annotation', type=str, required=True,
                         help='Name of the annotation in adata.obs to use.')
     parser.add_argument('--data_layer', type=str, default='X',
-                        help='Data layer in H5AD file for gene expression (default: X).')
+                        help='Data layer of h5ad for gene expression (e.g., "counts", "log1p", "X").')
 
     # GWAS Data Parameters
     parser.add_argument('--trait_name', type=str, help='Name of the trait for GWAS analysis (required if sumstats_file is provided).')

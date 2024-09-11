@@ -733,11 +733,3 @@ def generate_r2_matrix_cache(bfile_prefix, chromosome_list, r2_cache_dir, ld_win
                                      ld_wind_cm=ld_wind_cm,
                                      output_cache_file_dir=output_cache_file_prefix)
         print(f'Compute r2 matrix for chr{chr} done!')
-
-
-if __name__ == '__main__':
-    bfile_prefix = '/storage/yangjianLab/sharedata/LDSC_resource/1000G_EUR_Phase3_plink/1000G.EUR.QC'
-    chromosome_list = range(1, 22)
-    r2_cache_dir = Path('/storage/yangjianLab/chenwenhao/projects/202312_gsMap/data/gsMap_test/r2_matrix')
-    ld_wind_cm = 1
-    generate_r2_matrix_cache(bfile_prefix, chromosome_list, r2_cache_dir, ld_wind_cm)

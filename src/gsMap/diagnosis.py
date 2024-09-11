@@ -269,14 +269,3 @@ def run_Diagnosis(config: DiagnosisConfig):
     if config.plot_type in ['gsMap', 'all']:
         generate_gsMap_plot(config)
 
-# # Uncomment for running
-# if __name__ == '__main__':
-#     config = DiagnosisConfig(
-#         sample_name='E16.5_E1S1.MOSTA',
-#         annotation='annotation',
-#         trait_name='Depression_2023_NatureMed',
-#         top_corr_genes=5,
-#         sumstats_file='path_to_sumstats.gz',
-#         plot_type='both',
-#     )
-#     run_Diagnosis(config)
