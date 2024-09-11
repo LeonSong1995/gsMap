@@ -122,6 +122,12 @@ def gwas_checkname(gwas,config):
         if value is not None and value in gwas.columns:
             gwas.rename(columns={value: key}, inplace=True)
     new_name = gwas.columns
+    # check the name duplication
+    for head in new_name:
+        numc = list(new_name).count(head)
+        if numc > 1:
+            raise ValueError(f"Found {numc} different {head} columns, please check your {head} column.")
+        
     name_dict = {new_name[i]: old_name[i] for i in range(len(new_name))}
 
     # When at OR scale
@@ -368,9 +374,8 @@ def gwas_format(config:FormatSumstatsConfig):
     Format GWAS data
     '''
     print(f'------Formating gwas data for {config.sumstats}...')
-    # gwas_file="/storage/yangjianLab/songliyang/GWAS_trait/COJO/Alcohol_Dependence.txt"
-    gwas = pd.read_csv(config.sumstats,delim_whitespace=True, 
-                header=0,compression=get_compression(config.sumstats),na_values=['.', 'NA'])
+    compression_type = get_compression(config.sumstats)
+    gwas = pd.read_csv(config.sumstats,delim_whitespace=True, header=0,compression=compression_type,na_values=['.', 'NA'])
     print(f'Read {len(gwas)} SNPs from {config.sumstats}.')
     
     # Check name and format
@@ -388,7 +393,7 @@ def gwas_format(config:FormatSumstatsConfig):
         keep = ['SNP','A1','A2','FRQ','BETA','SE','P','N']
         appendix = '.cojo'
     elif config.format=='gsMap':
-        keep = ["A1","A2","Z","N","SNP"]
+        keep = ["SNP","A1","A2","Z","N"]
         appendix = '.sumstats'
 
     if 'Chr' in gwas.columns and 'Pos' in gwas.columns and config.keep_chr_pos is True:
