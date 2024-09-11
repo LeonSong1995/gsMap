@@ -2,7 +2,7 @@
 
 ## Preparation
 
-Please ensure you have installed the `gsMap` package before proceeding.
+Please ensure you have installed the `gsMap` package.
 
 ### 1. Download dependencies
 
@@ -11,7 +11,7 @@ Please ensure you have installed the `gsMap` package before proceeding.
 - **LD reference panel (PLINK bfile)**, for computing LD scores.
 - **SNP weight file**, to adjust correlations between SNP statistics.
 - **Homologous gene transformations file** (optional), to map genes between species.
-- **Enhancer-gene mapping file** (optional), for linking SNPs to genes based on enhancer regions.
+- **Enhancer-gene mapping file** (optional), for linking SNPs to genes based on enhancer annotations.
 
 To download the resources:
 ```bash

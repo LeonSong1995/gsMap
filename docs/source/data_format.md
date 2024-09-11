@@ -69,7 +69,7 @@ You can convert the GWAS summary data into the required format using customized 
 
 First, download the human height GWAS data and decompress it.
 ```bash
-wegt https://portals.broadinstitute.org/collaboration/giant/images/4/4e/GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_ALL.gz
+wget https://portals.broadinstitute.org/collaboration/giant/images/4/4e/GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_ALL.gz
 gzip -d GIANT_HEIGHT_YENGO_2022_GWAS_SUMMARY_STATS_ALL.gz
 ```
 The first 5 lines of the file should look like this:
