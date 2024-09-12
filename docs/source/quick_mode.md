@@ -76,7 +76,7 @@ Quick mode allows you to run the entire `gsMap` pipeline in a streamlined manner
 
 The quick mode executes the entire gsMap with a single command, simplifying the process and minimizing manual steps.
 
-<span style="color:#31a354"> Required memory: 80G (120K cells) </span>.
+<span style="color:#31a354"> Required memory: 80G (120K cells) </span>
 
 ```bash
 gsmap quick_mode \

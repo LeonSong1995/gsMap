@@ -21,17 +21,25 @@ tar -xvzf gsMap_running_dependencies.tar.gz
 
 Directory structure:
 ```bash
-tree -L 2
+tree -L 3
 
 gsMap_resource
-├── genome_annotation
-│   ├── enhancer
-│   └── gtf
-├── LD_Reference_Panel
-│   └── 1000G_EUR_Phase3_plink
-└── LDSC_resource
-    ├── hapmap3_snps
-    └── weights_hm3_no_hla
+    ├── genome_annotation
+    │   ├── enhancer
+    │   └── gtf
+    ├── homologs
+    │   ├── macaque_human_homologs.txt
+    │   └── mouse_human_homologs.txt
+    ├── LD_Reference_Panel
+    │   └── 1000G_EUR_Phase3_plink
+    ├── LDSC_resource
+    │   ├── hapmap3_snps
+    │   └── weights_hm3_no_hla
+    └── quick_mode
+        ├── baseline
+        ├── SNP_gene_pair
+        ├── SNP_gene_pair.bak
+        └── snp_gene_weight_matrix.h5ad
 ```
 
 ### 2. Download example data
@@ -43,14 +51,14 @@ tar -xvzf gsMap_example_data.tar.gz
 
 Directory structure:
 ```bash
-tree -L 2
+tree -L 3
 
-example_data
+example_data/
 ├── GWAS
-│   ├── GIANT_EUR_Height_2022_Nature.sumstats.gz
-│   ├── gwas_config.yaml
-│   ├── IQ_NG_2018.sumstats.gz
-│   └── BCX2_MCHC_EA_GWAMA.sumstats.gz
+│   ├── BCX2_MCHC_EA_GWAMA.sumstats.gz
+│   ├── GIANT_EUR_Height_2022_Nature.sumstats.gz
+│   ├── gwas_config.yaml
+│   └── IQ_NG_2018.sumstats.gz
 └── ST
     └── E16.5_E1S1.MOSTA.h5ad
 ```
@@ -59,9 +67,10 @@ example_data
 
 ### 1. find_latent_representations
 
-**Objective**: Use GNN model to handle technical noise and find latent representations of each spot.
+**Objective**: Learn latent representations for spots.
 
-**Execution**:
+**Execution**: <span style="color:#31a354"> required memory: ~80G (120K cells) </span>
+
 ```bash
 gsmap run_find_latent_representations \
     --workdir './example/Mouse_Embryo' \
@@ -73,9 +82,10 @@ gsmap run_find_latent_representations \
 
 ### 2. latent_to_gene
 
-**Objective**: Generate gene marker scores by aggregating information from latent representations of neighboring spots.
+**Objective**: Identify homogeneous spots for each spot based on their latent representations, and then generate gene specificity scores (GSS) for each spot by aggregating information from its homogeneous spots.
 
-**Execution**:
+**Execution**: <span style="color:#31a354"> required memory: ~30G (120K cells) </span>
+
 ```bash
 gsmap run_latent_to_gene \
     --workdir './example/Mouse_Embryo' \
