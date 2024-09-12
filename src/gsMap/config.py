@@ -684,6 +684,7 @@ class RunAllModeConfig(ConfigWithAutoPaths):
                 config = yaml.load(f, Loader=yaml.FullLoader)
             for trait_name, sumstats_file in config.items():
                 assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
+                self.sumstats_config_dict[trait_name] = sumstats_file
         # load the sumstats file
         elif self.sumstats_file is not None and self.trait_name is not None:
             self.sumstats_config_dict[self.trait_name] = self.sumstats_file
