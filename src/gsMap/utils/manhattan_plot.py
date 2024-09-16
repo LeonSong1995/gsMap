@@ -600,11 +600,11 @@ class _ManhattanPlot():
                     annotationname=self.annotationName
                 )
 
+                tmp[self.pName] = np.where(tmp[self.pName] <= 0, 1e-300, tmp[self.pName])
                 data_to_plot.append(
                     go.Scattergl(
                         x=tmp[self.pos].values,
-                        y=-np.log10(tmp[self.pName].values) if self.logp
-                        else tmp[self.pName].values,
+                        y=-np.log10(tmp[self.pName].values) if self.logp else tmp[self.pName].values,
                         mode="markers",
                         showlegend=showlegend,
                         name="Chr%i" % chromo,

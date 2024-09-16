@@ -303,9 +303,9 @@ class S_LDSC_Boost:
             self.keep_snp_mask = None
             self.snp_name = self.snp_gene_pair_dummy.index.to_list()
 
-        if self.config.additional_baseline_annotation_dir_path is not None:
-            additional_baseline_annotation_dir_path = Path(self.config.additional_baseline_annotation_dir_path)
-            additional_baseline_annotation_file_path = additional_baseline_annotation_dir_path / f'baseline.{chrom}.annot.gz'
+        if self.config.additional_baseline_annotation is not None:
+            additional_baseline_annotation = Path(self.config.additional_baseline_annotation)
+            additional_baseline_annotation_file_path = additional_baseline_annotation / f'baseline.{chrom}.annot.gz'
             assert additional_baseline_annotation_file_path.exists(), f'additional_baseline_annotation_file_path not exists: {additional_baseline_annotation_file_path}'
             additional_baseline_annotation_df = pd.read_csv(additional_baseline_annotation_file_path, sep='\t')
             additional_baseline_annotation_df.set_index('SNP', inplace=True)

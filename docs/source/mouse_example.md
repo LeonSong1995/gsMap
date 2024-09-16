@@ -84,7 +84,7 @@ gsmap run_find_latent_representations \
 
 **Objective**: Identify homogeneous spots for each spot based on their latent representations, and then generate gene specificity scores (GSS) for each spot by aggregating information from its homogeneous spots.
 
-**Execution**: <span style="color:#31a354"> required memory: ~30G (120K cells) </span>
+**Execution**: <span style="color:#31a354"> required memory: ~45G (120K cells) </span>
 
 ```bash
 gsmap run_latent_to_gene \
@@ -99,14 +99,15 @@ gsmap run_latent_to_gene \
 
 ### 3. generate_ldscore
 
-**Objective**: Assign gene specificity scores to SNPs using LD scores based on the GTF data.
+**Objective**: Assign gene specificity scores (GSS) to SNPs and compute the stratified LD score.
 
-**Execution**:
+**Execution**: <span style="color:#31a354"> required memory: ~40G </span>
 
 #### Method 1: Use TSS Only
 
 ```bash
-for CHROM in {1..22}; do
+for CHROM in {1..22}
+do
     gsmap run_generate_ldscore \
         --workdir './example/Mouse_Embryo' \
         --sample_name 'E16.5_E1S1.MOSTA' \
@@ -121,7 +122,8 @@ done
 #### Method 2: Use Enhancer-Gene Linking Only
 
 ```bash
-for CHROM in {1..22}; do
+for CHROM in {1..22}
+do
     gsmap run_generate_ldscore \
         --workdir './example/Mouse_Embryo' \
         --sample_name 'E16.5_E1S1.MOSTA' \
@@ -138,7 +140,8 @@ done
 #### Method 3: Use Both TSS and Enhancer-Gene Linking
 
 ```bash
-for CHROM in {1..22}; do
+for CHROM in {1..22}
+do
     gsmap run_generate_ldscore \
         --workdir './example/Mouse_Embryo' \
         --sample_name 'E16.5_E1S1.MOSTA' \
@@ -155,8 +158,9 @@ done
 
 ### 4. spatial_ldsc
 
-**Objective**: Run spatial LDSC to map traits-associated spots.
+**Objective**: Run spatial LDSC to associate spots with traits. 
 
+**Execution**: <span style="color:#31a354"> required memory: ~40G </span>
 
 ```bash
 gsmap run_spatial_ldsc \
@@ -171,7 +175,9 @@ gsmap run_spatial_ldsc \
 
 ### 5. cauchy_combination (Optional)
 
-**Objective**: Aggregate P values for spatial regions using the Cauchy Combination Test.
+**Objective**: Aggregate P values for spatial regions (cell types) using the Cauchy Combination Test.
+
+**Execution**: <span style="color:#31a354"> required memory: ~10G </span>
 
 ```bash
 gsmap run_cauchy_combination \
@@ -183,7 +189,9 @@ gsmap run_cauchy_combination \
 
 ### 6. Report Generation
 
-Generate diagnostic reports and plots:
+**Objective**: Generate diagnostic reports and plots:
+
+**Execution**: <span style="color:#31a354"> required memory: ~10G </span>
 
 ```bash
 gsmap run_report \

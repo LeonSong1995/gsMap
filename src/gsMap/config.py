@@ -441,7 +441,7 @@ class GenerateLDScoreConfig(ConfigWithAutoPaths):
     gene_window_enhancer_priority: Optional[Literal['gene_window_first', 'enhancer_first', 'enhancer_only',]] = None
 
     # for calculating ld score
-    additional_baseline_annotation_dir_path: str = None
+    additional_baseline_annotation: str = None
     spots_per_chunk: int = 5_000
     ld_wind: int = 1
     ld_unit: str = 'CM'
@@ -481,27 +481,27 @@ class GenerateLDScoreConfig(ConfigWithAutoPaths):
                 f'Only gene window annotation will be used to calculate LD score. SNP within +-{self.gene_window_size} bp of gene body will be used. ')
 
         # remind for baseline annotation
-        if self.additional_baseline_annotation_dir_path is None:
+        if self.additional_baseline_annotation is None:
             logger.info(f'------Baseline annotation is not provided. Default baseline annotation will be used.')
         else:
             logger.info(
                 f'------Baseline annotation is provided. Additional baseline annotation will be used with the default baseline annotation.')
-            logger.info(f'------Baseline annotation directory: {self.additional_baseline_annotation_dir_path}')
+            logger.info(f'------Baseline annotation directory: {self.additional_baseline_annotation}')
             # check the existence of baseline annotation
             if self.chrom == 'all':
                 for chrom in range(1, 23):
                     chrom = str(chrom)
                     baseline_annotation_path = Path(
-                        self.additional_baseline_annotation_dir_path) / f'baseline.{chrom}.annot.gz'
+                        self.additional_baseline_annotation) / f'baseline.{chrom}.annot.gz'
                     if not baseline_annotation_path.exists():
                         raise FileNotFoundError(
-                            f'baseline.{chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
+                            f'baseline.{chrom}.annot.gz is not found in {self.additional_baseline_annotation}.')
             else:
                 baseline_annotation_path = Path(
-                    self.additional_baseline_annotation_dir_path) / f'baseline.{self.chrom}.annot.gz'
+                    self.additional_baseline_annotation) / f'baseline.{self.chrom}.annot.gz'
                 if not baseline_annotation_path.exists():
                     raise FileNotFoundError(
-                        f'baseline.{self.chrom}.annot.gz is not found in {self.additional_baseline_annotation_dir_path}.')
+                        f'baseline.{self.chrom}.annot.gz is not found in {self.additional_baseline_annotation}.')
 
         # set the default zarr chunk size
         if self.ldscore_save_format == 'zarr' and self.zarr_chunk_size is None:
@@ -560,8 +560,8 @@ class SpatialLDSCConfig(ConfigWithAutoPaths):
         self.process_additional_baseline_annotation()
 
     def process_additional_baseline_annotation(self):
-        additional_baseline_annotation_dir_path = Path(self.ldscore_save_dir) / 'additional_baseline'
-        dir_exists = additional_baseline_annotation_dir_path.exists()
+        additional_baseline_annotation = Path(self.ldscore_save_dir) / 'additional_baseline'
+        dir_exists = additional_baseline_annotation.exists()
 
         if not dir_exists:
             if self.use_additional_baseline_annotation:
@@ -587,14 +587,14 @@ class SpatialLDSCConfig(ConfigWithAutoPaths):
         else:
             logger.info(
                 f'------Additional baseline annotation is provided. It will be used with the default baseline annotation.')
-            logger.info(f'------Additional baseline annotation directory: {additional_baseline_annotation_dir_path}')
+            logger.info(f'------Additional baseline annotation directory: {additional_baseline_annotation}')
 
             chrom_list = range(1, 23)
             for chrom in chrom_list:
-                baseline_annotation_path = additional_baseline_annotation_dir_path / f'baseline.{chrom}.l2.ldscore.feather'
+                baseline_annotation_path = additional_baseline_annotation / f'baseline.{chrom}.l2.ldscore.feather'
                 if not baseline_annotation_path.exists():
                     raise FileNotFoundError(
-                        f'baseline.{chrom}.annot.gz is not found in {additional_baseline_annotation_dir_path}.')
+                        f'baseline.{chrom}.annot.gz is not found in {additional_baseline_annotation}.')
 
 
 @dataclass
