@@ -130,14 +130,14 @@ SCZ: example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
 ### Output
 
 - The output will be saved in the `--workdir` directory and will include all intermediate files: representations, gene marker scores, LD scores, and LDSC results
-- A web report (html) will be presented in the report file, including visualizations of cell-trait associations and model diagnostic plots.
+- A web report will be presented in the report file, including visualizations of cell-trait associations and model diagnostic plots.
 
 ### Example Output Structure
 
 After running in quick mode, the following directory will be generated:
 
 ```bash
-tree -L 2
+tree -L 3
 
 example_quick_mode/Mouse_Embryo
 ├── E16.5_E1S1.MOSTA

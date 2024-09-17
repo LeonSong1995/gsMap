@@ -325,7 +325,7 @@ class S_LDSC_Boost:
                 additional_baseline_annotation_df = additional_baseline_annotation_df.reindex(
                     self.snp_gene_pair_dummy.index)
 
-            # do this for saving the cpu time, by only calculate r2 once
+            # do this for saving the cpu time, only calculate r2 once
             self.snp_gene_weight_matrix, additional_baseline_annotation_ldscore = (
                 calculate_ldscore_from_multiple_annotation(
                     [self.snp_gene_pair_dummy, additional_baseline_annotation_df],
@@ -333,6 +333,9 @@ class S_LDSC_Boost:
                     self.config.bfile_root,
                     ld_wind=self.config.ld_wind,
                     ld_unit=self.config.ld_unit))
+            
+            additional_baseline_annotation_ldscore = additional_baseline_annotation_ldscore.loc[self.snp_name]
+            # print(additional_baseline_annotation_ldscore.index.to_list()==self.snp_name)
 
             ld_score_file = f'{self.config.ldscore_save_dir}/additional_baseline/baseline.{chrom}.l2.ldscore.feather'
             M_file_path = f'{self.config.ldscore_save_dir}/additional_baseline/baseline.{chrom}.l2.M'

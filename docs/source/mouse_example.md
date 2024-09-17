@@ -156,6 +156,13 @@ do
 done
 ```
 
+```{caution}
+If you runout of memory in this step or the next step,
+you can reduce the `--spots_per_chunk` parameter to a smaller value.
+
+In general, 40GB memory is required when `--spots_per_chunk` is set to 1000.
+```
+
 ### 4. spatial_ldsc
 
 **Objective**: Run spatial LDSC to associate spots with traits. 

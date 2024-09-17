@@ -115,6 +115,7 @@ def add_generate_ldscore_args(parser):
     parser.add_argument('--spots_per_chunk', type=int, default=1000, help='Number of spots per chunk (default: 1,000).')
     parser.add_argument('--ld_wind', type=int, default=1, help='LD window size (default: 1).')
     parser.add_argument('--ld_unit', type=str, choices=['SNP', 'KB', 'CM'], default='CM', help='Unit for LD window (default: CM).')
+    parser.add_argument('--additional_baseline_annotation', type=str, default=None, help='Path of additional baseline annotations')
 
 
 def add_latent_to_gene_args(parser):
@@ -442,7 +443,7 @@ class GenerateLDScoreConfig(ConfigWithAutoPaths):
 
     # for calculating ld score
     additional_baseline_annotation: str = None
-    spots_per_chunk: int = 5_000
+    spots_per_chunk: int = 1_000
     ld_wind: int = 1
     ld_unit: str = 'CM'
 
