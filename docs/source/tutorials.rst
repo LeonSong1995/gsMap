@@ -1,5 +1,5 @@
 gsMap Tutorials
-=============
+=================
 
 
 Welcome to the gsMap Tutorials. In this section, we provide detailed examples and guides to help you understand and utilize gsMap effectively. Our tutorials include mouse embryo ST data and three sets of cleaned GWAS summary statistics to demonstrate the application of gsMap in spatially mapping trait-associated cells (spots).
@@ -22,6 +22,8 @@ Tutorials
 The tutorials are organized as follows:
 
 .. toctree::
+    :maxdepth: 1
+
     quick_mode.md
     mouse
     data_format.md

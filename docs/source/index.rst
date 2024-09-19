@@ -1,5 +1,5 @@
 Welcome to gsMap's documentation!
-===============================
+===================================
 
 
 Introduction
@@ -11,7 +11,7 @@ Introduction
 How to Cite
 ------------
 If you use ``gsMap`` in your studies, please cite:
-.. citation::
+
    Liyang Song, Wenhao Chen, Junren Hou, Minmin Guo, Jian Yang (2024) Spatially resolved mapping of cells associated with human complex traits. (Under review)
 
 Key Features
@@ -23,7 +23,7 @@ Key Features
 
 
 Overview of ``gsMap`` Method
---------------------------
+-----------------------------
 
 ``gsMap`` operates on a four-step process:
 
@@ -51,9 +51,9 @@ How to use ``gsMap``, check out the `tutorials <tutorials.rst>`__
 
 
 Online Analysis Service (coming soon)
-+++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++++++
 
-Please check out our `gsMap online application <not available yet>`__ for a user-friendly online analysis. Users could upload their own GWAS summary statistics data to perform the analysis.
+Users could upload their own GWAS summary statistics data to perform the analysis.
 
 
 .. toctree::

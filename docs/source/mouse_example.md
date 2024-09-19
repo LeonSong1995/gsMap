@@ -1,8 +1,10 @@
-# Mouse Embryo Example
+# Mouse Embryo (Step by Step)
+
+The `Step by Step` mode offers the ability to run `gsMap` with user-defined parameters and resources, granting greater flexibility and control over the analysis. This mode is suited for users who require detailed customization of their pipeline. For a faster, one-command execution, please see the {doc}`Quick Mode <quick_mode>` tutorial.
 
 ## Preparation
 
-Please ensure you have installed the `gsMap`. This tutorial guides you through using gsMap in a step-by-step manner.
+Please ensure you have {doc}`installed <install>` the `gsMap`. This tutorial guides you through using gsMap in a step-by-step manner.
 
 ### 1. Download dependencies
 
@@ -38,7 +40,6 @@ gsMap_resource
     └── quick_mode
         ├── baseline
         ├── SNP_gene_pair
-        ├── SNP_gene_pair.bak
         └── snp_gene_weight_matrix.h5ad
 ```
 If you want to use your own reference files, please ensure that the genome build versions (e.g., Hg37 or Hg38) are consistent between the GTF file and the LD reference panel.

@@ -600,7 +600,6 @@ class _ManhattanPlot():
                     annotationname=self.annotationName
                 )
 
-                tmp[self.pName] = np.where(tmp[self.pName] <= 0, 1e-300, tmp[self.pName])
                 data_to_plot.append(
                     go.Scattergl(
                         x=tmp[self.pos].values,

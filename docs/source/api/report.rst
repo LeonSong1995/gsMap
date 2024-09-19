@@ -1,5 +1,5 @@
 Step 6: gsMap report (optional)
-=====================
+===============================
 
 .. argparse::
    :module: gsMap.main

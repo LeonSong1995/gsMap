@@ -1,11 +1,10 @@
-Here is the updated documentation for running `gsMap` in **quick mode** using the new `config.py` structure:
+# Mouse Embryo (Quick Mode)
 
-```markdown
-# Quick Mode Example
+The `Quick Mode` option allows you to execute the entire `gsMap` pipeline in a simplified and efficient way, utilizing pre-calculated resources to minimize running time and configuration complexity. This mode is ideal for users who prefer a streamlined approach. For a more customizable experience with adjustable parameters, please refer to the {doc}`Step by Step <mouse_example>` guide.
 
 ## Preparation
 
-Make sure you have installed the `gsMap` package before proceeding.
+Make sure you have {doc}`installed <install>` the `gsMap` package before proceeding.
 
 ### 1. Download Dependencies
 
@@ -40,7 +39,6 @@ gsMap_resource
     └── quick_mode
         ├── baseline
         ├── SNP_gene_pair
-        ├── SNP_gene_pair.bak
         └── snp_gene_weight_matrix.h5ad
 ```
 
@@ -68,12 +66,6 @@ gsMap_example_data/
 ```
 
 ## Running `gsMap` in Quick Mode
-
-Quick mode allows you to run the entire `gsMap` pipeline in a streamlined manner, using pre-defined resources and configuration.
-
-### Execution
-
-The quick mode executes the entire gsMap with a single command, simplifying the process and minimizing manual steps.
 
 <span style="color:#31a354"> Required memory: 80G (120K cells) </span>
 
@@ -129,7 +121,7 @@ SCZ: gsMap_example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
 ### Output
 
 - The output will be saved in the `--workdir` directory and will include all intermediate files: representations, gene marker scores, LD scores, and LDSC results
-- A web report will be presented in the report file, including visualizations of cell-trait associations and model diagnostic plots.
+- A web report will be presented in the report file in the `report` folder, including visualizations of cell-trait associations and model diagnostic plots.
 
 ### Example Output Structure
 

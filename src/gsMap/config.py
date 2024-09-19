@@ -138,7 +138,7 @@ def add_spatial_ldsc_args(parser):
     parser.add_argument('--n_blocks', type=int, default=200, help='Number of blocks for jackknife resampling (default: 200).')
     parser.add_argument('--chisq_max', type=int, help='Maximum chi-square value for filtering SNPs.')
     parser.add_argument('--num_processes', type=int, default=4, help='Number of processes for parallel computing (default: 4).')
-    parser.add_argument('--use_additional_baseline_annotation', type=bool, default=True, help='Use additional baseline annotations when provided')
+    parser.add_argument('--use_additional_baseline_annotation', type=bool, nargs='?', const=True, default=True, help='Use additional baseline annotations when provided')
 
 
 def add_Cauchy_combination_args(parser):

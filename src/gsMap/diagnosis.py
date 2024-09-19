@@ -24,6 +24,8 @@ logger.addHandler(handler)
 def convert_z_to_p(gwas_data):
     """Convert Z-scores to P-values."""
     gwas_data['P'] = norm.sf(abs(gwas_data['Z'])) * 2
+    min_p_value = 1e-300
+    gwas_data['P'] = gwas_data['P'].clip(lower=min_p_value)
     return gwas_data
 
 

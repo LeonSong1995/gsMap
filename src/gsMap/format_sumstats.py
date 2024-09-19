@@ -11,7 +11,7 @@ from scipy.stats import chi2
 from gsMap.config import FormatSumstatsConfig, add_format_sumstats_args
 
 
-VALID_SNPS = set(['AC', 'AG', 'CA', 'CT', 'GA', 'GT', 'TC', 'TG']) 
+VALID_SNPS = {'AC', 'AG', 'CA', 'CT', 'GA', 'GT', 'TC', 'TG'}
 logger = logging.getLogger(__name__)
 
 default_cnames = {

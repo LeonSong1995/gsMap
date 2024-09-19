@@ -2,181 +2,197 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ title }}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Custom Styles -->
     <style>
         body {
             padding: 20px;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
         }
         .plot-container {
-            margin-bottom: 30px;
+            margin-bottom: 50px;
+        }
+        .section-description {
+            color: #6c757d;
+            font-size: 0.95rem;
+            margin-bottom: 20px;
         }
         .scrollable-table {
-            max-height: 300px;
+            max-height: 400px;
             overflow-y: auto;
+        }
+        .table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #f8f9fa;
         }
         img {
             max-width: 100%;
             height: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
         }
-        iframe {
-            width: 100%;
-            height: 600px;
-            border: none;
+        .gene-select-label {
+            font-weight: bold;
+            margin-bottom: 10px;
         }
-        .section-description {
-            color: grey;
-            font-size: 0.9rem;
-            margin-bottom: 15px;
+        .collapse-toggle {
+            cursor: pointer;
+            color: #0d6efd;
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <h1>{{ title }}</h1>
+    <div class="container-fluid">
+        <h1 class="mb-4">{{ title }}</h1>
 
-    <!-- Genetic Spatial Mapping Plot -->
-    <div class="plot-container">
-        <h2>Genetic Spatial Mapping Plot</h2>
-        <p class="section-description">This plot shows the spatial genetic mapping results across different tissues.</p>
-        <div>
-            {{ genetic_mapping_plot|safe }}
-        </div>
-    </div>
-
-    <!-- Cauchy Combination Result Table -->
-    <div class="plot-container">
-        <h2>Cauchy Combination Result</h2>
-        <p class="section-description">This table presents the results of the Cauchy combination test, summarizing the genetic associations.</p>
-        <div class="scrollable-table">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Annotation</th>
-                        <th>P Cauchy</th>
-                        <th>P Median</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in cauchy_table %}
-                    <tr>
-                        <td>{{ row.annotation }}</td>
-                        <td>{{ "%.4e"|format(row.p_cauchy) }}</td>
-                        <td>{{ "%.4e"|format(row.p_median) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <!-- Manhattan Plot -->
-    <div class="plot-container">
-        <h2>Diagnosis Manhattan Plot</h2>
-        <p class="section-description">The Manhattan plot shows the association of SNPs with the top associated gene across the genome.</p>
-        <div>
-            {{ manhattan_plot|safe }}
-        </div>
-    </div>
-
-    <!-- Gene Expression and GSS Distribution (using PNG images) -->
-    <div class="plot-container">
-        <h2>Gene Expression and GSS Distribution</h2>
-        <p class="section-description">Select a gene to view its expression distribution and gene specificity score (GSS).</p>
-        <label for="geneSelect">Select a gene:</label>
-        <select id="geneSelect" class="form-select mb-3">
-            {% for gene in gene_plots %}
-            <option value="{{ gene.name }}">{{ gene.name }}</option>
-            {% endfor %}
-        </select>
-
-        <div id="genePlots" class="row">
-            <div id="expressionPlot" class="col-md-6">
-                <h5>Expression Distribution</h5>
-                <img src="{{ gene_plots[0].expression_plot }}" alt="{{ gene_plots[0].name }} Expression Distribution">
-            </div>
-            <div id="gssPlot" class="col-md-6">
-                <h5>Gene Specificity Score (GSS)</h5>
-                <img src="{{ gene_plots[0].gss_plot }}" alt="{{ gene_plots[0].name }} GSS Distribution">
+        <!-- Genetic Spatial Mapping Plot -->
+        <div class="plot-container">
+            <h2>Genetic Spatial Mapping Plot</h2>
+            <p class="section-description">This plot shows the spatial genetic mapping results across different tissues.</p>
+            <div class="border rounded p-3">
+                {{ genetic_mapping_plot|safe }}
             </div>
         </div>
-    </div>
 
-    <!-- Gene Diagnostic Info Table -->
-    <div class="plot-container">
-        <h2>Top 50 Gene Diagnostic Info</h2>
-        <p class="section-description">This table lists the top 50 genes based on diagnostic criteria, including the gene specificity score (GSS) and PCC.</p>
-        <div class="scrollable-table">
-            <table class="table table-striped">
-                <thead>
-                    <tr>
-                        <th>Gene</th>
-                        <th>Annotation</th>
-                        <th>Median GSS</th>
-                        <th>PCC</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in gene_diagnostic_info %}
-                    <tr>
-                        <td>{{ row.Gene }}</td>
-                        <td>{{ row.Annotation }}</td>
-                        <td>{{ "%.4f"|format(row.Median_GSS) }}</td>
-                        <td>{{ "%.4f"|format(row.PCC) }}</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <!-- Cauchy Combination Result Table -->
+        <div class="plot-container">
+            <h2>Cauchy Combination Result</h2>
+            <p class="section-description">This table presents the results of the Cauchy combination test, summarizing the genetic associations.</p>
+            <div class="scrollable-table">
+                <table class="table table-hover table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Annotation</th>
+                            <th>P Cauchy</th>
+                            <th>P Median</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in cauchy_table %}
+                        <tr>
+                            <td>{{ row.annotation }}</td>
+                            <td>{{ "%.4e"|format(row.p_cauchy) }}</td>
+                            <td>{{ "%.4e"|format(row.p_median) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <!-- Running Info (collapsible) -->
-    <div class="plot-container">
-        <h2>
-            <a class="btn btn-secondary" data-bs-toggle="collapse" href="#runningInfo" role="button" aria-expanded="false" aria-controls="runningInfo">
-                Running Info
-            </a>
-        </h2>
-        <div class="collapse" id="runningInfo">
-            <p><strong>gsMap Version:</strong> {{ gsmap_version }}</p>
-            <p><strong>Parameters:</strong></p>
-            <ul>
-                {% for key, value in parameters.items() %}
-                <li><strong>{{ key }}:</strong> {{ value }}</li>
+        <!-- Manhattan Plot -->
+        <div class="plot-container">
+            <h2>Diagnosis Manhattan Plot</h2>
+            <p class="section-description">The Manhattan plot shows the association of SNPs with the top associated gene across the genome.</p>
+            <div class="border rounded p-3">
+                {{ manhattan_plot|safe }}
+            </div>
+        </div>
+
+        <!-- Gene Expression and GSS Distribution -->
+        <div class="plot-container">
+            <h2>Gene Expression and GSS Distribution</h2>
+            <p class="section-description">Select a gene to view its expression distribution and gene specificity score (GSS).</p>
+            <label for="geneSelect" class="gene-select-label">Select a gene:</label>
+            <select id="geneSelect" class="form-select mb-4">
+                {% for gene in gene_plots %}
+                <option value="{{ gene.name }}">{{ gene.name }}</option>
                 {% endfor %}
-            </ul>
+            </select>
+            <div id="genePlots" class="row">
+                <div class="col-md-6 mb-4">
+                    <h5>Expression Distribution</h5>
+                    <img src="{{ gene_plots[0].expression_plot }}" alt="{{ gene_plots[0].name }} Expression Distribution" id="expressionPlotImg" class="img-fluid">
+                </div>
+                <div class="col-md-6 mb-4">
+                    <h5>Gene Specificity Score (GSS)</h5>
+                    <img src="{{ gene_plots[0].gss_plot }}" alt="{{ gene_plots[0].name }} GSS Distribution" id="gssPlotImg" class="img-fluid">
+                </div>
+            </div>
+        </div>
+
+        <!-- Gene Diagnostic Info Table -->
+        <div class="plot-container">
+            <h2>Top 50 Gene Diagnostic Info</h2>
+            <p class="section-description">This table lists the top 50 genes based on diagnostic criteria, including the gene specificity score (GSS) and PCC.</p>
+            <div class="scrollable-table">
+                <table class="table table-hover table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Gene</th>
+                            <th>Annotation</th>
+                            <th>Median GSS</th>
+                            <th>PCC</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in gene_diagnostic_info %}
+                        <tr>
+                            <td>{{ row.Gene }}</td>
+                            <td>{{ row.Annotation }}</td>
+                            <td>{{ "%.4f"|format(row.Median_GSS) }}</td>
+                            <td>{{ "%.4f"|format(row.PCC) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Running Info (collapsible) -->
+        <div class="plot-container">
+            <h2>Running Info</h2>
+            <p class="section-description">Click to view detailed run information and parameters.</p>
+            <p class="collapse-toggle" data-bs-toggle="collapse" href="#runningInfo" role="button" aria-expanded="false" aria-controls="runningInfo">
+                Show/Hide Running Info
+            </p>
+            <div class="collapse" id="runningInfo">
+                <div class="card card-body">
+                    <p><strong>gsMap Version:</strong> {{ gsmap_version }}</p>
+                    <p><strong>Parameters:</strong></p>
+                    <ul class="mb-0">
+                        {% for key, value in parameters.items() %}
+                        <li><strong>{{ key }}:</strong> {{ value }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- JavaScript for Gene Plots (change images based on dropdown selection) -->
+    <!-- JavaScript for Gene Plots -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const geneSelect = document.getElementById('geneSelect');
-        const expressionPlotImg = document.getElementById('expressionPlot').querySelector('img');
-        const gssPlotImg = document.getElementById('gssPlot').querySelector('img');
+        (function() {
+            const geneSelect = document.getElementById('geneSelect');
+            const expressionPlotImg = document.getElementById('expressionPlotImg');
+            const gssPlotImg = document.getElementById('gssPlotImg');
 
-        // We construct the gene_plots object directly from the template
-        const genePlots = [
-            {% for gene in gene_plots %}
-            {
-                name: "{{ gene.name }}",
-                expression_plot: "{{ gene.expression_plot }}",
-                gss_plot: "{{ gene.gss_plot }}"
-            }{% if not loop.last %},{% endif %}
-            {% endfor %}
-        ];
+            const genePlots = {
+                {% for gene in gene_plots %}
+                "{{ gene.name }}": {
+                    expression_plot: "{{ gene.expression_plot }}",
+                    gss_plot: "{{ gene.gss_plot }}"
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            };
 
-        geneSelect.addEventListener('change', function() {
-            const selectedGene = this.value;
-            const selectedGenePlots = genePlots.find(g => g.name === selectedGene);
+            geneSelect.addEventListener('change', function() {
+                const selectedGene = this.value;
+                const selectedGenePlots = genePlots[selectedGene];
 
-            // Update the expression and GSS plot images when a different gene is selected
-            expressionPlotImg.src = selectedGenePlots.expression_plot;
-            expressionPlotImg.alt = `${selectedGenePlots.name} Expression Distribution`;
-            gssPlotImg.src = selectedGenePlots.gss_plot;
-            gssPlotImg.alt = `${selectedGenePlots.name} GSS Distribution`;
-        });
+                // Update images
+                expressionPlotImg.src = selectedGenePlots.expression_plot;
+                expressionPlotImg.alt = `${selectedGene} Expression Distribution`;
+                gssPlotImg.src = selectedGenePlots.gss_plot;
+                gssPlotImg.alt = `${selectedGene} GSS Distribution`;
+            });
+        })();
     </script>
-
 </body>
 </html>
