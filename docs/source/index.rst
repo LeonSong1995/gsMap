@@ -35,6 +35,7 @@ Overview of ``gsMap`` Method
 .. image:: _static/architecture.svg
    :width: 600
    :alt: Model architecture
+
 Schmatics of ``gsMap`` method. For more details about the ``gsMap``, please check out our `publication <URL>`__.
 
 Installation
