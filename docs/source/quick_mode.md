@@ -10,11 +10,10 @@ Make sure you have installed the `gsMap` package before proceeding.
 ### 1. Download Dependencies
 
 The `gsMap` package in quick mode requires the following resources:
-- **Gene transfer format (GTF) file** for gene coordinates on the genome.
-- **LD reference panel (PLINK bfile)** for computing LD scores.
-- **SNP weight file** to adjust correlations between SNP statistics.
-- **Homologous gene transformations file** (optional) for cross-species mapping.
-- **Enhancer-gene mapping file** (optional) for SNP-to-gene enhancer linkages.
+- **Gene transfer format (GTF) file**, for gene coordinates on the genome.
+- **LD reference panel**, in quick mode, we provide a pre-built LD score snp-by-gene matrix based on 1000G_EUR_Phase3.
+- **SNP weight file**, to adjust correlations between SNP-trait association statistics.
+- **Homologous gene transformations file** (optional), to map genes between species.
 
 To download all the required files:
 ```bash
@@ -58,7 +57,7 @@ Directory structure:
 ```bash
 tree -L 3
 
-example_data/
+gsMap_example_data/
 ├── GWAS
 │   ├── BCX2_MCHC_EA_GWAMA.sumstats.gz
 │   ├── GIANT_EUR_Height_2022_Nature.sumstats.gz
@@ -84,10 +83,10 @@ gsmap quick_mode \
     --homolog_file 'gsMap_resource/homologs/mouse_human_homologs.txt' \
     --sample_name 'E16.5_E1S1.MOSTA' \
     --gsMap_resource_dir 'gsMap_resource' \
-    --hdf5_path 'example_data/ST/E16.5_E1S1.MOSTA.h5ad' \
+    --hdf5_path 'gsMap_example_data/ST/E16.5_E1S1.MOSTA.h5ad' \
     --annotation 'annotation' \
     --data_layer 'count' \
-    --sumstats_file 'example_data/GWAS/IQ_NG_2018.sumstats.gz' \
+    --sumstats_file 'gsMap_example_data/GWAS/IQ_NG_2018.sumstats.gz' \
     --trait_name 'IQ'
 ```
 
@@ -113,18 +112,18 @@ gsmap quick_mode \
     --homolog_file 'gsMap_resource/homologs/mouse_human_homologs.txt' \
     --sample_name 'E16.5_E1S1.MOSTA' \
     --gsMap_resource_dir 'gsMap_resource' \
-    --hdf5_path 'example_data/ST/E16.5_E1S1.MOSTA.h5ad' \
+    --hdf5_path 'gsMap_example_data/ST/E16.5_E1S1.MOSTA.h5ad' \
     --annotation 'annotation' \
     --data_layer 'count' \
-    --sumstats_config_file 'example_data/GWAS/gwas_config.yaml'
+    --sumstats_config_file 'gsMap_example_data/GWAS/gwas_config.yaml'
 ```
 
 The `gwas_config.yaml` file includes the following:
 
 ```yaml
-Height: example_data/GWAS/GIANT_EUR_Height_2022_Nature.sumstats.gz
-IQ: example_data/GWAS/IQ_NG_2018.sumstats.gz
-SCZ: example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
+Height: gsMap_example_data/GWAS/GIANT_EUR_Height_2022_Nature.sumstats.gz
+IQ: gsMap_example_data/GWAS/IQ_NG_2018.sumstats.gz
+SCZ: gsMap_example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
 ```
 
 ### Output

@@ -6,9 +6,9 @@ Download gsMap Running Resources
 
 You can download the necessary resources for running gsMap from the following link:
 
-.. _gsMap running dependencies: http://cnsgenomics.com/data/gsMap/gsMap_running_dependencies.tar.gz
+.. _gsMap running dependencies: http://cnsgenomics.com/data/gsMap/gsMap_resource.tar.gz
 
-`gsMap running dependencies <http://cnsgenomics.com/data/gsMap/gsMap_running_dependencies.tar.gz>`_
+`gsMap running dependencies <http://cnsgenomics.com/data/gsMap/gsMap_resource.tar.gz>`_
 
 
 - **LD Reference Panel**:
@@ -53,6 +53,7 @@ Data Available
        - You could download the GWAS summary statistics from the GWAS catalog: `https://www.ebi.ac.uk/gwas/ <https://www.ebi.ac.uk/gwas/>`_
    * - ST Data
      - - Mouse embryo and brain ST datasets: `https://db.cngb.org/search/project/CNP0001543/ <https://db.cngb.org/search/project/CNP0001543/>`_
+       - Human embryo ST datasets: `https://ngdc.cncb.ac.cn/gsa-human/browse/HRA005567`_
        - Macaque cortex ST datasets: `https://db.cngb.org/search/project/CNP0002035/ <https://db.cngb.org/search/project/CNP0002035/>`_
        - Human DLPFC ST datasets: `https://research.libd.org/globus/ <https://research.libd.org/globus/>`_
    * - LDSC Data

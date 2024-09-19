@@ -138,6 +138,7 @@ def add_spatial_ldsc_args(parser):
     parser.add_argument('--n_blocks', type=int, default=200, help='Number of blocks for jackknife resampling (default: 200).')
     parser.add_argument('--chisq_max', type=int, help='Maximum chi-square value for filtering SNPs.')
     parser.add_argument('--num_processes', type=int, default=4, help='Number of processes for parallel computing (default: 4).')
+    parser.add_argument('--use_additional_baseline_annotation', type=bool, default=True, help='Use additional baseline annotations when provided')
 
 
 def add_Cauchy_combination_args(parser):
@@ -513,7 +514,7 @@ class GenerateLDScoreConfig(ConfigWithAutoPaths):
 class SpatialLDSCConfig(ConfigWithAutoPaths):
     w_file: str
     # ldscore_save_dir: str
-    disable_additional_baseline_annotation: bool = False
+    use_additional_baseline_annotation: bool = True
     trait_name: Optional[str] = None
     sumstats_file: Optional[str] = None
     sumstats_config_file: Optional[str] = None
@@ -557,34 +558,27 @@ class SpatialLDSCConfig(ConfigWithAutoPaths):
             assert Path(sumstats_file).exists(), f'{sumstats_file} does not exist.'
 
         # check if additional baseline annotation is exist
-        self.use_additional_baseline_annotation = False
-        self.process_additional_baseline_annotation()
+        # self.use_additional_baseline_annotation = False
+        
+        if self.use_additional_baseline_annotation:
+            self.process_additional_baseline_annotation()
 
     def process_additional_baseline_annotation(self):
         additional_baseline_annotation = Path(self.ldscore_save_dir) / 'additional_baseline'
         dir_exists = additional_baseline_annotation.exists()
 
         if not dir_exists:
-            if self.use_additional_baseline_annotation:
-                logger.warning(f"additional_baseline directory is not found in {self.ldscore_save_dir}.")
-                print('''\
-                    if you want to use additional baseline annotation, 
-                    please provide additional baseline annotation when calculating ld score.
-                    ''')
-                raise FileNotFoundError(
-                    f'additional_baseline directory is not found. You should disable use_additional_baseline_annotation')
-            return
-
-        self.use_additional_baseline_annotation = self.use_additional_baseline_annotation or True
-
-        if self.disable_additional_baseline_annotation:
-            logger.warning(
-                f"additional_baseline directory is found in {self.ldscore_save_dir}, but use_additional_baseline_annotation is disabled.")
-            print('''\
-                if you want to use additional baseline annotation,
-                please enable by not adding --disable_additional_baseline_annotation.
-                ''')
             self.use_additional_baseline_annotation = False
+            # if self.use_additional_baseline_annotation:
+            #     logger.warning(f"additional_baseline directory is not found in {self.ldscore_save_dir}.")
+            #     print('''\
+            #         if you want to use additional baseline annotation, 
+            #         please provide additional baseline annotation when calculating ld score.
+            #         ''')
+            #     raise FileNotFoundError(
+            #         f'additional_baseline directory is not found.')
+            # return
+            # self.use_additional_baseline_annotation = self.use_additional_baseline_annotation or True
         else:
             logger.info(
                 f'------Additional baseline annotation is provided. It will be used with the default baseline annotation.')
@@ -596,6 +590,7 @@ class SpatialLDSCConfig(ConfigWithAutoPaths):
                 if not baseline_annotation_path.exists():
                     raise FileNotFoundError(
                         f'baseline.{chrom}.annot.gz is not found in {additional_baseline_annotation}.')
+        return None
 
 
 @dataclass

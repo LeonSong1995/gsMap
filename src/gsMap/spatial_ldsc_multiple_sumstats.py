@@ -251,6 +251,7 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
     # load additional baseline annotations
     if config.use_additional_baseline_annotation:
+        print('Using additional baseline annotations')
         ld_file_baseline_additional = f'{config.ldscore_save_dir}/additional_baseline/baseline.'
         ref_ld_baseline_additional = _read_ref_ld_v2(ld_file_baseline_additional)
         n_annot_baseline_additional = len(ref_ld_baseline_additional.columns)

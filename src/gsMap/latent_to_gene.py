@@ -148,6 +148,8 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         adata = adata[:, adata.var_names.isin(homologs.index)]
         # Log the number of genes left after homolog transformation
         print(f"{adata.shape[1]} genes retained after homolog transformation.")
+        if adata.shape[1] < 100:
+            raise ValueError("Too few genes retained in ST data (<100).")
         adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM'].values
         # drop duplicated genes
         adata = adata[:, ~adata.var_names.duplicated()]

@@ -1,7 +1,7 @@
-format_sumstats (tips)
+quick_mode (run entire pipeline)
 ==================================
 .. argparse::
    :module: gsMap.main
    :func: create_parser
    :prog: gsmap
-   :path: format_sumstats
+   :path: quick_mode
