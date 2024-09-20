@@ -1,7 +1,7 @@
 .. _api-documentation:
 
 gsMap Command Line Alphabets
-===========================
+==============================
 
 
 .. program:: gsmap

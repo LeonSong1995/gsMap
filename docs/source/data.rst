@@ -1,8 +1,8 @@
 gsMap Resources Download
-======================
+=========================
 
 Download gsMap Running Resources
-------------------------------
+----------------------------------
 
 You can download the necessary resources for running gsMap from the following link:
 
