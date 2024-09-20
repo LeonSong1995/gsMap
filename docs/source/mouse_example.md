@@ -23,7 +23,7 @@ tar -xvzf gsMap_resource.tar.gz
 
 Directory structure:
 ```bash
-tree -L 3
+tree -L 2
 
 gsMap_resource
     ├── genome_annotation
@@ -53,7 +53,7 @@ tar -xvzf gsMap_example_data.tar.gz
 
 Directory structure:
 ```bash
-tree -L 3
+tree -L 2
 
 gsMap_example_data/
 ├── GWAS
@@ -115,7 +115,7 @@ gsmap run_latent_to_gene \
 
 **Three SNP to gene linking strategies are available:**
 
-````{tab} 1. Use TSS Only (default)
+````{tab} 1. Use TSS
 This strategy uses TSS to assign GSS to SNPs. The --`gene_window_size parameter` defines the window size around the gene body for this assignment. If a SNP falls within the window of multiple genes, the GSS from the nearest gene will be used.
 
 ```bash
@@ -133,7 +133,7 @@ done
 ```
 ````
 
-`````{tab} 2. Use Enhancer-Gene Linking Only
+`````{tab} 2. Use Enhancer-Gene Linking
 This strategy uses enhancer-gene linking to assign GSS to SNPs. When a SNP maps to multiple enhancers, the GSS for the SNP is determined by the `--snp_multiple_enhancer_strategy` parameter. By default, this is set to `max_mkscore`, which assigns the SNP the maximum GSS among the enhancers it maps to. Another option is `nearest_TSS`.
 
 ```bash
@@ -153,7 +153,7 @@ done
 ```
 `````
 
-`````{tab} 3. Use Both TSS and Enhancer-Gene Linking
+`````{tab} 3. Use TSS and Enhancer-Gene Linking
 This strategy uses both TSS and enhancer-gene linking to assign GSS to SNPs. If a SNP maps to both a gene TSS window and an enhancer linked to a different gene, the `--gene_window_enhancer_priority` parameter decides which gene the SNP is assigned to. The options are `gene_window_first` or `enhancer_first`.
 
 ```bash
@@ -175,10 +175,7 @@ done
 `````
 
 ```{caution}
-If you runout of memory in this step or the next step,
-you can reduce the `--spots_per_chunk` parameter to a smaller value.
-
-In general, 40GB memory is required when `--spots_per_chunk` is set to 1000.
+If you run out of memory during this step or the next, you can reduce the `--spots_per_chunk` parameter to a smaller value. Generally, 40GB of memory is required when `--spots_per_chunk` is set to 1000.
 ```
 
 ### 4. spatial ldsc

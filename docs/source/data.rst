@@ -41,7 +41,7 @@ To illustrate how to use gsMap, we provide some example GWAS and ST data. You ca
 
 .. _data-availability:
 
-Data Available
+Data Availability
 ----------------
 .. list-table::
    :header-rows: 1

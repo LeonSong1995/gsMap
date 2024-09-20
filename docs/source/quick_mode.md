@@ -22,7 +22,7 @@ tar -xvzf gsMap_resource.tar.gz
 
 Directory structure:
 ```bash
-tree -L 3
+tree -L 2
 
 gsMap_resource
     ├── genome_annotation
@@ -53,7 +53,7 @@ tar -xvzf gsMap_example_data.tar.gz
 
 Directory structure:
 ```bash
-tree -L 3
+tree -L 2
 
 gsMap_example_data/
 ├── GWAS

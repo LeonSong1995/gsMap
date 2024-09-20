@@ -1,7 +1,7 @@
 Release notes
 =============
 
-v0.1.1
+v1.70
 ------
 
 First public release

@@ -32,7 +32,7 @@ Overview of ``gsMap`` Method
 3. **Spatial S-LDSC**: To estimate the relevance of spots to traits, ``gsMap`` associates stratified LD scores of individual spots with GWAS summary statistics using the S-LDSC framework.
 4. **Spatial Region Identification**: To evaluate the association of a specific spatial region with traits, ``gsMap`` employs the Cauchy combination test to aggregate p-values from individual spots within that spatial region.
 
-.. image:: _static/architecture.svg
+.. image:: _static/schematic.svg
    :width: 600
    :alt: Model architecture
 Schmatics of ``gsMap`` method. For more details about the ``gsMap``, please check out our `publication <URL>`__.
@@ -51,8 +51,7 @@ How to use ``gsMap``, check out the `tutorials <tutorials.rst>`__
 
 
 Online Analysis Service (coming soon)
-++++++++++++++++++++++++++++++++++++++++++++
-
+---------
 Users could upload their own GWAS summary statistics data to perform the analysis.
 
 
