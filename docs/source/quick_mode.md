@@ -16,7 +16,7 @@ The `gsMap` package in quick mode requires the following resources:
 
 To download all the required files:
 ```bash
-wget http://cnsgenomics.com/data/gsMap/gsMap_resource.tar.gz
+wget https://yanglab.westlake.edu.cn/data/gsMap/gsMap_resource.tar.gz
 tar -xvzf gsMap_resource.tar.gz
 ```
 
@@ -47,7 +47,7 @@ gsMap_resource
 To run the quick mode example, you can download the example data as follows:
 
 ```bash
-wget http://cnsgenomics.com/data/gsMap/gsMap_example_data.tar.gz
+wget https://yanglab.westlake.edu.cn/data/gsMap/gsMap_example_data.tar.gz
 tar -xvzf gsMap_example_data.tar.gz
 ```
 

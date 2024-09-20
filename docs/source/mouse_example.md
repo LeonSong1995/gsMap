@@ -17,7 +17,7 @@ Please ensure you have {doc}`installed <install>` the `gsMap`. This tutorial gui
 
 To download the resources:
 ```bash
-wget http://cnsgenomics.com/data/gsMap/gsMap_resource.tar.gz
+wget https://yanglab.westlake.edu.cn/data/gsMap/gsMap_resource.tar.gz
 tar -xvzf gsMap_resource.tar.gz
 ```
 
@@ -47,7 +47,7 @@ If you want to use your own reference files, please ensure that the genome build
 ### 2. Download example data
 
 ```bash
-wget http://cnsgenomics.com/data/gsMap/gsMap_example_data.tar.gz
+wget https://yanglab.westlake.edu.cn/data/gsMap/gsMap_example_data.tar.gz
 tar -xvzf gsMap_example_data.tar.gz
 ```
 
@@ -237,7 +237,7 @@ This step extends `step 3: generate ldscore`, by adding additional functional an
 
 Download the additional annotations:
 ```bash
-wget http://cnsgenomics.com/data/gsMap/gsMap_additional_annotation.tar.gz
+wget https://yanglab.westlake.edu.cn/data/gsMap/gsMap_additional_annotation.tar.gz
 tar -xvzf gsMap_additional_annotation.tar.gz
 ```
 The format of the additional annotation files is such that each line represents a SNP, with columns indicating the annotation values for that SNP. These values can be either binary or continuous.
