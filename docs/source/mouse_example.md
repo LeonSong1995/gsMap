@@ -1,6 +1,6 @@
 # Mouse Embryo (Step by Step)
 
-The `Step by Step` mode offers the ability to run `gsMap` with user-defined parameters and resources, granting greater flexibility and control over the analysis. This mode is suited for users who require detailed customization of their pipeline. For a faster, one-command execution, please see the {doc}`Quick Mode <quick_mode>` tutorial.
+This tutorial guides you through running `gsMap` step by step, with user-defined parameters and resources, granting greater flexibility and control over the analysis. This mode is suited for users who require detailed customization of their pipeline. For a faster, one-command execution, please see the {doc}`Quick Mode <quick_mode>` tutorial.
 
 ## Preparation
 
