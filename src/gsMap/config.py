@@ -51,18 +51,18 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input HDF5 file.')
     parser.add_argument('--annotation', required=True, type=str, help='Name of the annotation in adata.obs to use.')
     parser.add_argument('--data_layer', required=True, type=str, help='Data layer for gene expression (e.g., "counts", "log1p").')
-    parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs (default: 300).')
-    parser.add_argument('--feat_hidden1', type=int, default=256, help='Neurons in the first hidden layer (default: 256).')
-    parser.add_argument('--feat_hidden2', type=int, default=128, help='Neurons in the second hidden layer (default: 128).')
-    parser.add_argument('--gat_hidden1', type=int, default=64, help='Units in the first GAT hidden layer (default: 64).')
-    parser.add_argument('--gat_hidden2', type=int, default=30, help='Units in the second GAT hidden layer (default: 30).')
-    parser.add_argument('--p_drop', type=float, default=0.1, help='Dropout rate (default: 0.1).')
-    parser.add_argument('--gat_lr', type=float, default=0.001, help='Learning rate for the GAT (default: 0.001).')
-    parser.add_argument('--n_neighbors', type=int, default=11, help='Number of neighbors for GAT (default: 11).')
-    parser.add_argument('--n_comps', type=int, default=300, help='Number of principal components for PCA (default: 300).')
+    parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs.')
+    parser.add_argument('--feat_hidden1', type=int, default=256, help='Neurons in the first hidden layer.')
+    parser.add_argument('--feat_hidden2', type=int, default=128, help='Neurons in the second hidden layer.')
+    parser.add_argument('--gat_hidden1', type=int, default=64, help='Units in the first GAT hidden layer.')
+    parser.add_argument('--gat_hidden2', type=int, default=30, help='Units in the second GAT hidden layer.')
+    parser.add_argument('--p_drop', type=float, default=0.1, help='Dropout rate.')
+    parser.add_argument('--gat_lr', type=float, default=0.001, help='Learning rate for the GAT.')
+    parser.add_argument('--n_neighbors', type=int, default=11, help='Number of neighbors for GAT.')
+    parser.add_argument('--n_comps', type=int, default=300, help='Number of principal components for PCA.')
     parser.add_argument('--weighted_adj', action='store_true', help='Use weighted adjacency in GAT.')
     parser.add_argument('--var', action='store_true', help='Enable variance calculations.')
-    parser.add_argument('--convergence_threshold', type=float, default=1e-4, help='Threshold for convergence (default: 1e-4).')
+    parser.add_argument('--convergence_threshold', type=float, default=1e-4, help='Threshold for convergence.')
     parser.add_argument('--hierarchically', action='store_true', help='Enable hierarchical latent representation finding.')
 
 
@@ -93,9 +93,9 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--annotation', type=str, help='Name of the annotation in adata.obs to use. (optional).')
     parser.add_argument('--no_expression_fraction', action='store_true', help='Skip expression fraction filtering.')
     parser.add_argument('--latent_representation', type=str, choices=['latent_GVAE', 'latent_PCA'], default='latent_GVAE',
-                        help='Type of latent representation (default: latent_GVAE).')
-    parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbors (default: 21).')
-    parser.add_argument('--num_neighbour_spatial', type=int, default=101, help='Number of spatial neighbors (default: 101).')
+                        help='Type of latent representation.')
+    parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbors.')
+    parser.add_argument('--num_neighbour_spatial', type=int, default=101, help='Number of spatial neighbors.')
     # parser.add_argument('--species', type=str, help='Species name for homolog gene mapping (optional).')
     parser.add_argument('--homolog_file', type=str, help='Path to homologous gene conversion file (optional).')
 
@@ -106,15 +106,15 @@ def add_generate_ldscore_args(parser):
     parser.add_argument('--bfile_root', type=str, required=True, help='Root path for genotype plink bfiles (.bim, .bed, .fam).')
     parser.add_argument('--keep_snp_root', type=str, required=True, help='Root path for SNP files.')
     parser.add_argument('--gtf_annotation_file', type=str, required=True, help='Path to GTF annotation file.')
-    parser.add_argument('--gene_window_size', type=int, default=50000, help='Gene window size in base pairs (default: 50,000).')
+    parser.add_argument('--gene_window_size', type=int, default=50000, help='Gene window size in base pairs.')
     parser.add_argument('--enhancer_annotation_file', type=str, help='Path to enhancer annotation file (optional).')
     parser.add_argument('--snp_multiple_enhancer_strategy', type=str, choices=['max_mkscore', 'nearest_TSS'], default='max_mkscore',
-                        help='Strategy for handling multiple enhancers per SNP (default: max_mkscore).')
+                        help='Strategy for handling multiple enhancers per SNP.')
     parser.add_argument('--gene_window_enhancer_priority', type=str, choices=['gene_window_first', 'enhancer_first', 'enhancer_only'],
                         help='Priority between gene window and enhancer annotations.')
-    parser.add_argument('--spots_per_chunk', type=int, default=1000, help='Number of spots per chunk (default: 1,000).')
-    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size (default: 1).')
-    parser.add_argument('--ld_unit', type=str, choices=['SNP', 'KB', 'CM'], default='CM', help='Unit for LD window (default: CM).')
+    parser.add_argument('--spots_per_chunk', type=int, default=1000, help='Number of spots per chunk.')
+    parser.add_argument('--ld_wind', type=int, default=1, help='LD window size.')
+    parser.add_argument('--ld_unit', type=str, choices=['SNP', 'KB', 'CM'], default='CM', help='Unit for LD window.')
     parser.add_argument('--additional_baseline_annotation', type=str, default=None, help='Path of additional baseline annotations')
 
 
@@ -123,9 +123,9 @@ def add_latent_to_gene_args(parser):
     parser.add_argument('--annotation', type=str, required=True, help='Name of the annotation layer.')
     parser.add_argument('--no_expression_fraction', action='store_true', help='Skip expression fraction filtering.')
     parser.add_argument('--latent_representation', type=str, choices=['latent_GVAE', 'latent_PCA'], default='latent_GVAE',
-                        help='Type of latent representation (default: latent_GVAE).')
-    parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbors (default: 21).')
-    parser.add_argument('--num_neighbour_spatial', type=int, default=101, help='Number of spatial neighbors (default: 101).')
+                        help='Type of latent representation.')
+    parser.add_argument('--num_neighbour', type=int, default=21, help='Number of neighbors.')
+    parser.add_argument('--num_neighbour_spatial', type=int, default=101, help='Number of spatial neighbors.')
     # parser.add_argument('--species', type=str, help='Species name for homolog gene mapping (optional).')
     parser.add_argument('--homolog_file', type=str, help='Path to homologous gene conversion file (optional).')
 
@@ -135,9 +135,9 @@ def add_spatial_ldsc_args(parser):
     parser.add_argument('--sumstats_file', type=str, required=True, help='Path to GWAS summary statistics file.')
     parser.add_argument('--w_file', type=str, required=True, help='Path to regression weight file.')
     parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait being analyzed.')
-    parser.add_argument('--n_blocks', type=int, default=200, help='Number of blocks for jackknife resampling (default: 200).')
+    parser.add_argument('--n_blocks', type=int, default=200, help='Number of blocks for jackknife resampling.')
     parser.add_argument('--chisq_max', type=int, help='Maximum chi-square value for filtering SNPs.')
-    parser.add_argument('--num_processes', type=int, default=4, help='Number of processes for parallel computing (default: 4).')
+    parser.add_argument('--num_processes', type=int, default=4, help='Number of processes for parallel computing.')
     parser.add_argument('--use_additional_baseline_annotation', type=bool, nargs='?', const=True, default=True, help='Use additional baseline annotations when provided')
 
 
@@ -154,19 +154,19 @@ def add_report_args(parser):
     parser.add_argument('--trait_name', type=str, required=True, help='Name of the trait to generate the report for.')
     parser.add_argument('--annotation', type=str, required=True, help='Annotation layer name.')
     # parser.add_argument('--plot_type', type=str, choices=['manhattan', 'GSS', 'gsMap', 'all'], default='all',
-    #                     help="Type of diagnostic plot to generate (default: all). Choose from 'manhattan', 'GSS', 'gsMap', or 'all'.")
+    #                     help="Type of diagnostic plot to generate. Choose from 'manhattan', 'GSS', 'gsMap', or 'all'.")
     parser.add_argument('--top_corr_genes', type=int, default=50,
-                        help='Number of top correlated genes to display (default: 50).')
+                        help='Number of top correlated genes to display.')
     parser.add_argument('--selected_genes', type=str, nargs='*',
                         help='List of specific genes to include in the report (optional).')
     parser.add_argument('--sumstats_file', type=str, required=True, help='Path to GWAS summary statistics file.')
 
     # Optional arguments for customization
-    parser.add_argument('--fig_width', type=int, default=None, help='Width of the generated figures in pixels (default: 800).')
-    parser.add_argument('--fig_height', type=int, default=None, help='Height of the generated figures in pixels (default: 600).')
-    parser.add_argument('--point_size', type=int, default=None, help='Point size for the figures (default: 10).')
+    parser.add_argument('--fig_width', type=int, default=None, help='Width of the generated figures in pixels.')
+    parser.add_argument('--fig_height', type=int, default=None, help='Height of the generated figures in pixels.')
+    parser.add_argument('--point_size', type=int, default=None, help='Point size for the figures.')
     parser.add_argument('--fig_style', type=str, default='light', choices=['dark', 'light'],
-                        help='Style of the generated figures (default: light).')
+                        help='Style of the generated figures.')
 
 def add_format_sumstats_args(parser):
     # Required arguments
@@ -247,7 +247,7 @@ def add_run_all_mode_args(parser):
 
     # Maximum number of processes
     parser.add_argument('--max_processes', type=int, default=10,
-                        help='Maximum number of processes for parallel execution (default: 10).')
+                        help='Maximum number of processes for parallel execution.')
 
     # # Optional paths for customization
     # parser.add_argument('--bfile_root', type=str,
