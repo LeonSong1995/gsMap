@@ -1,9 +1,5 @@
-import argparse
 import logging
-import pprint
 import random
-import time
-from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -13,17 +9,9 @@ from sklearn import preprocessing
 
 from gsMap.GNN_VAE.adjacency_matrix import Construct_Adjacency_Matrix
 from gsMap.GNN_VAE.train import Model_Train
-from gsMap.config import add_find_latent_representations_args, FindLatentRepresentationsConfig
-
-# seed all
+from gsMap.config import FindLatentRepresentationsConfig
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(
-    '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
-logger.addHandler(handler)
-
 
 def set_seed(seed_value):
     """
@@ -33,13 +21,12 @@ def set_seed(seed_value):
     np.random.seed(seed_value)  # Set the seed for NumPy
     random.seed(seed_value)  # Set the seed for Python random module
     if torch.cuda.is_available():
-        print('Running use GPU')
+        logger.info('Running use GPU')
         torch.cuda.manual_seed(seed_value)  # Set seed for all CUDA devices
         torch.cuda.manual_seed_all(seed_value)  # Set seed for all CUDA devices
     else:
-        print('Running use CPU')
+        logger.info('Running use CPU')
 
-set_seed(2024)
 
 # The class for finding latent representations
 class Latent_Representation_Finder:
@@ -67,7 +54,7 @@ class Latent_Representation_Finder:
 
         # Process the feature matrix
         node_X = self.adata[:, self.adata.var.highly_variable].X
-        print(f'The shape of feature matrix is {node_X.shape}.')
+        logger.info(f'The shape of feature matrix is {node_X.shape}.')
         if self.Params.input_pca:
             node_X = sc.pp.pca(node_X, n_comps=self.Params.n_comps)
 
@@ -76,7 +63,7 @@ class Latent_Representation_Finder:
         self.Params.feat_cell = node_X.shape[1]
 
         # Run GNN-VAE
-        print(f'------Finding latent representations for {verbose}...')
+        logger.info(f'------Finding latent representations for {verbose}...')
         gvae = Model_Train(node_X, graph_dict, self.Params, label)
         gvae.run_train()
 
@@ -88,14 +75,15 @@ class Latent_Representation_Finder:
 
 
 def run_find_latent_representation(args:FindLatentRepresentationsConfig):
+    set_seed(2024)
     num_features = args.feat_cell
     args.hdf5_with_latent_path.parent.mkdir(parents=True, exist_ok=True,mode=0o755)
     # Load the ST data
-    print(f'------Loading ST data of {args.sample_name}...')
+    logger.info(f'------Loading ST data of {args.sample_name}...')
     adata = sc.read_h5ad(f'{args.input_hdf5_path}')
     adata.var_names_make_unique()
     adata.X = adata.layers[args.data_layer] if args.data_layer in adata.layers.keys() else adata.X
-    print('The ST data contains %d cells, %d genes.' % (adata.shape[0], adata.shape[1]))
+    logger.info('The ST data contains %d cells, %d genes.' % (adata.shape[0], adata.shape[1]))
     # Load the cell type annotation
     if not args.annotation is None:
         # remove cells without enough annotations
@@ -114,7 +102,7 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
     latent_GVAE = latent_rep.Run_GNN_VAE(label)
     latent_PCA = latent_rep.Run_PCA()
     # Add latent representations to the spe data
-    print(f'------Adding latent representations...')
+    logger.info(f'------Adding latent representations...')
     adata.obsm["latent_GVAE"] = latent_GVAE
     adata.obsm["latent_PCA"] = latent_PCA
     # Run umap based on latent representations
@@ -125,13 +113,13 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
 
         # Find the latent representations hierarchically (optionally)
     if not args.annotation is None and args.hierarchically:
-        print(f'------Finding latent representations hierarchically...')
+        logger.info(f'------Finding latent representations hierarchically...')
         PCA_all = pd.DataFrame()
         GVAE_all = pd.DataFrame()
 
         for ct in adata.obs[args.annotation].unique():
             adata_part = adata[adata.obs[args.annotation] == ct, :]
-            print(adata_part.shape)
+            logger.info(adata_part.shape)
 
             # Find latent representations for the selected ct
             latent_rep = Latent_Representation_Finder(adata_part, args)
@@ -152,6 +140,6 @@ def run_find_latent_representation(args:FindLatentRepresentationsConfig):
 
             adata.obsm["latent_GVAE_hierarchy"] = np.array(GVAE_all.loc[adata.obs_names,])
             adata.obsm["latent_PCA_hierarchy"] = np.array(PCA_all.loc[adata.obs_names,])
-    print(f'------Saving ST data...')
+    logger.info(f'------Saving ST data...')
     adata.write(args.hdf5_with_latent_path)
 

@@ -1,24 +1,19 @@
 import logging
+import warnings
 from pathlib import Path
-import zarr
+
 import numpy as np
-# %%
 import pandas as pd
 import pyranges as pr
+import zarr
 from scipy.sparse import csr_matrix
 from tqdm import trange
-import warnings
+
 from gsMap.config import GenerateLDScoreConfig
-# %%
 from gsMap.utils.generate_r2_matrix import PlinkBEDFileWithR2Cache, getBlockLefts, ID_List_Factory
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(
-    '[{asctime}] {levelname:6s} {message}', style='{'))
-logger.addHandler(handler)
 
 
 # %%
@@ -30,7 +25,7 @@ def load_gtf(gtf_file, mk_score, window_size):
     print("Loading gtf data")
     #
     # Load GTF file
-    gtf = pr.read_gtf(gtf_file,)
+    gtf = pr.read_gtf(gtf_file, )
     gtf = gtf.df
     #
     # Select the common genes
@@ -333,7 +328,7 @@ class S_LDSC_Boost:
                     self.config.bfile_root,
                     ld_wind=self.config.ld_wind,
                     ld_unit=self.config.ld_unit))
-            
+
             additional_baseline_annotation_ldscore = additional_baseline_annotation_ldscore.loc[self.snp_name]
             # print(additional_baseline_annotation_ldscore.index.to_list()==self.snp_name)
 
@@ -369,7 +364,8 @@ class S_LDSC_Boost:
             snp_gene_weight_matrix_save_dir = Path(self.config.ldscore_save_dir) / 'snp_gene_weight_matrix'
             snp_gene_weight_matrix_save_dir.mkdir(parents=True, exist_ok=True)
             logger.info(f'Saving snp_gene_weight_matrix for chr{chrom}...')
-            self.snp_gene_weight_matrix.reset_index().to_feather(snp_gene_weight_matrix_save_dir / f'{chrom}.snp_gene_weight_matrix.feather')
+            self.snp_gene_weight_matrix.reset_index().to_feather(
+                snp_gene_weight_matrix_save_dir / f'{chrom}.snp_gene_weight_matrix.feather')
 
         # convert to sparse
         self.snp_gene_weight_matrix = csr_matrix(self.snp_gene_weight_matrix)
@@ -599,6 +595,7 @@ class S_LDSC_Boost:
         SNP_gene_pair = overlaps_small[['SNP', 'gene_name']].set_index('SNP').join(annot.set_index('SNP'), how='right')
 
         return SNP_gene_pair
+
 
 def run_generate_ldscore(config: GenerateLDScoreConfig):
     if config.ldscore_save_format == 'quick_mode':

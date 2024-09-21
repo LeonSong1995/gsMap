@@ -1,12 +1,12 @@
-import argparse
 from pathlib import Path
 from typing import Literal
-from scipy.spatial import KDTree
 
-import scanpy as sc
 import numpy as np
 import pandas as pd
 import plotly.express as px
+import scanpy as sc
+from scipy.spatial import KDTree
+
 from gsMap.config import VisualizeConfig
 
 

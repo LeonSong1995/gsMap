@@ -1,14 +1,6 @@
 from gsMap import (__version__)
 from gsMap.config import *
 
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(
-    '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
-logger.addHandler(handler)
-
-
 def main():
     parser = create_parser()
     args = parser.parse_args()

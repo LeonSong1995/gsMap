@@ -14,11 +14,6 @@ from gsMap.visualize import draw_scatter, load_st_coord, estimate_point_size_for
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(
-    '[{asctime}] {name} {levelname:6s} {message}', style='{'))
-logger.addHandler(handler)
 
 
 def convert_z_to_p(gwas_data):

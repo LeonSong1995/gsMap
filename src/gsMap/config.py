@@ -14,13 +14,18 @@ from gsMap.__init__ import __version__
 # Global registry to hold functions
 cli_function_registry = OrderedDict()
 subcommand = namedtuple('subcommand', ['name', 'func', 'add_args_function', 'description'])
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(
-    '[{asctime}] {levelname:6s} {message}', style='{'))
-logger.addHandler(handler)
 
+
+def get_gsMap_logger(logger_name):
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(
+        '[{asctime}] {levelname:.5s} | {name} - {message}', style='{'))
+    logger.addHandler(handler)
+    return logger
+
+logger = get_gsMap_logger('gsMap')
 
 # Decorator to register functions for cli parsing
 def register_cli(name: str, description: str, add_args_function: Callable) -> Callable:
@@ -28,10 +33,10 @@ def register_cli(name: str, description: str, add_args_function: Callable) -> Ca
         def wrapper(*args, **kwargs):
             name.replace('_', ' ')
             gsMap_main_logo = pyfiglet.figlet_format("gsMap", font='doom', width=80, justify='center', ).rstrip()
-            print(gsMap_main_logo, )
+            print(gsMap_main_logo, flush=True)
             version_number = 'Version: ' + __version__
-            print(version_number.center(80))
-            print('=' * 80)
+            print(version_number.center(80), flush=True)
+            print('=' * 80, flush=True)
             logger.info(f"Running {name}...")
             func(*args, **kwargs)
             logger.info(f"Finished running {name}.")

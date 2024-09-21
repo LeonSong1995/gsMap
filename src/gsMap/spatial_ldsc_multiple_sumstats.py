@@ -1,20 +1,18 @@
 import gc
-import os
-import zarr
-import numpy as np
-import pandas as pd
-import anndata as ad
-
-import argparse
 import logging
+import os
 from collections import defaultdict
 from pathlib import Path
 
+import anndata as ad
+import numpy as np
+import pandas as pd
+import zarr
 from scipy.stats import norm
 from tqdm.contrib.concurrent import thread_map
 
 import gsMap.utils.jackknife as jk
-from gsMap.config import add_spatial_ldsc_args, SpatialLDSCConfig
+from gsMap.config import SpatialLDSCConfig
 from gsMap.utils.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2
 
 logger = logging.getLogger(__name__)
@@ -333,10 +331,10 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
             Nbar = sumstats.N.mean()
             chunk_size = spatial_annotation.shape[1]
             out_chunk = thread_map(jackknife_for_processmap, range(chunk_size),
-                                    max_workers=config.num_processes,
-                                    chunksize=10,
-                                    desc=f'Chunk-{chunk_index}/Total-chunk-{running_chunk_number} for {trait_name}',
-                                    )
+                                   max_workers=config.num_processes,
+                                   chunksize=10,
+                                   desc=f'Chunk-{chunk_index}/Total-chunk-{running_chunk_number} for {trait_name}',
+                                   )
 
             # cache the results
             out_chunk = pd.DataFrame.from_records(out_chunk,
@@ -344,7 +342,8 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
                                                   index=spatial_annotation_cnames)
             # get the spots with nan
             nan_spots = out_chunk[out_chunk.isna().any(axis=1)].index
-            logger.info(f'Nan spots: {nan_spots} in chunk-{chunk_index} for {trait_name}. They are removed.')
+            if len(nan_spots) > 0:
+                logger.info(f'Nan spots: {nan_spots} in chunk-{chunk_index} for {trait_name}. They are removed.')
             # drop the nan
             out_chunk = out_chunk.dropna()
 

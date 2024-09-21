@@ -1,8 +1,4 @@
-import argparse
 import logging
-import multiprocessing
-import pprint
-import time
 from pathlib import Path
 
 import numpy as np
@@ -14,14 +10,9 @@ from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
 from tqdm import tqdm
 
-from gsMap.config import add_latent_to_gene_args, LatentToGeneConfig
+from gsMap.config import LatentToGeneConfig
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(
-    '[{asctime}] {levelname:8s} {filename} {message}', style='{'))
-logger.addHandler(handler)
 
 
 def find_Neighbors(coor, num_neighbour):
@@ -49,31 +40,31 @@ def _build_spatial_net(adata, annotation, num_neighbour):
     """
     1 Build spatial neighbourhood matrix for each spot (cell) based on the spatial coord
     """
-    print(f'------Building spatial graph based on spatial coordinates...')
+    logger.info(f'------Building spatial graph based on spatial coordinates...')
 
     coor = pd.DataFrame(adata.obsm['spatial'])
     coor.index = adata.obs.index
 
     if not annotation is None:
-        print(f'Cell annotations are provided...')
+        logger.info(f'Cell annotations are provided...')
         spatial_net = pd.DataFrame()
         # Cells with annotations
         for ct in adata.obs[annotation].dropna().unique():
             coor_temp = coor.loc[adata.obs[annotation] == ct, :]
             spatial_net_temp = find_Neighbors(coor_temp, min(num_neighbour, coor_temp.shape[0]))
             spatial_net = pd.concat((spatial_net, spatial_net_temp), axis=0)
-            print(f'{ct}: {coor_temp.shape[0]} cells')
+            logger.info(f'{ct}: {coor_temp.shape[0]} cells')
 
         # Cells labeled as nan
         if pd.isnull(adata.obs[annotation]).any():
             cell_nan = adata.obs.index[np.where(pd.isnull(adata.obs[annotation]))[0]]
-            print(f'Nan: {len(cell_nan)} cells')
+            logger.info(f'Nan: {len(cell_nan)} cells')
 
             spatial_net_temp = find_Neighbors(coor, num_neighbour)
             spatial_net_temp = spatial_net_temp.loc[spatial_net_temp.Cell1.isin(cell_nan), :]
             spatial_net = pd.concat((spatial_net, spatial_net_temp), axis=0)
     else:
-        print(f'Cell annotations are not provided...')
+        logger.info(f'Cell annotations are not provided...')
         spatial_net = find_Neighbors(coor, num_neighbour)
 
     return spatial_net
@@ -125,19 +116,19 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     global adata, coor_latent, spatial_net, ranks, frac_whole, args, spatial_net_dict, expressed_mask
     args = config
     # Load and process the spatial data
-    print('------Loading the spatial data...')
+    logger.info('------Loading the spatial data...')
     adata = sc.read_h5ad(config.hdf5_with_latent_path)
 
-    print('------Ranking the spatial data...')
+    logger.info('------Ranking the spatial data...')
     adata.layers['rank'] = rankdata(adata.X.toarray().astype(np.float32), axis=1).astype(np.float32)
 
     if not config.annotation is None:
-        print(f'------Cell annotations are provided as {config.annotation}...')
+        logger.info(f'------Cell annotations are provided as {config.annotation}...')
         adata = adata[~pd.isnull(adata.obs[config.annotation]), :]
 
     # Homologs transformation
     if not config.homolog_file is None:
-        print(f'------Transforming the {config.species} to HUMAN_GENE_SYM...')
+        logger.info(f'------Transforming the {config.species} to HUMAN_GENE_SYM...')
         homologs = pd.read_csv(config.homolog_file, sep='\t')
         if homologs.shape[1] != 2:
             raise ValueError(
@@ -147,7 +138,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         homologs.set_index(config.species, inplace=True)
         adata = adata[:, adata.var_names.isin(homologs.index)]
         # Log the number of genes left after homolog transformation
-        print(f"{adata.shape[1]} genes retained after homolog transformation.")
+        logger.info(f"{adata.shape[1]} genes retained after homolog transformation.")
         if adata.shape[1] < 100:
             raise ValueError("Too few genes retained in ST data (<100).")
         adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM'].values
@@ -155,9 +146,9 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         adata = adata[:, ~adata.var_names.duplicated()]
 
     # Remove cells that do not express any genes after transformation, and genes that are not expressed in any cells.
-    print(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')
+    logger.info(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')
     adata = adata[adata.X.sum(axis=1) > 0, adata.X.sum(axis=0) > 0]
-    print(f'Number of cells, genes after transformation: {adata.shape[0]},{adata.shape[1]}')
+    logger.info(f'Number of cells, genes after transformation: {adata.shape[0]},{adata.shape[1]}')
     # Buid the spatial graph
     spatial_net = _build_spatial_net(adata, config.annotation, config.num_neighbour_spatial)
     spatial_net.set_index('Cell1', inplace=True)
@@ -172,7 +163,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
 
     # Load the geometrical mean across slices
     if config.gM_slices is not None:
-        print('Geometrical mean across multiple slices is provided.')
+        logger.info('Geometrical mean across multiple slices is provided.')
         gM = pd.read_parquet(config.gM_slices)
         if config.species is not None:
             homologs = pd.read_csv(config.homolog_file, sep='\t', header=None)
@@ -216,7 +207,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     # adata.layers['mkscore'] = mk_score.values.T
 
     # Save the marker scores
-    print(f'------Saving marker scores ...')
+    logger.info(f'------Saving marker scores ...')
     output_file_path = Path(config.mkscore_feather_path)
     output_file_path.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
     mk_score.reset_index(inplace=True)

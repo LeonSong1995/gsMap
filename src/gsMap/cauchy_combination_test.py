@@ -1,4 +1,4 @@
-import argparse
+import logging
 from pathlib import Path
 
 import numpy as np
@@ -6,7 +6,9 @@ import pandas as pd
 import scanpy as sc
 import scipy as sp
 
-from gsMap.config import CauchyCombinationConfig, add_Cauchy_combination_args
+from gsMap.config import CauchyCombinationConfig
+
+logger = logging.getLogger(__name__)
 
 # The fun of cauchy combination
 def acat_test(pvalues, weights=None):
@@ -32,10 +34,10 @@ def acat_test(pvalues, weights=None):
     if any([i == 1 for i in pvalues]) & any([i == 0 for i in pvalues]):
         raise Exception("Cannot have both 0 and 1 p-values.")
     if any([i == 0 for i in pvalues]):
-        print("Warn: p-values are exactly 0.")
+        logger.info("Warn: p-values are exactly 0.")
         return 0
     if any([i == 1 for i in pvalues]):
-        print("Warn: p-values are exactly 1.")
+        logger.info("Warn: p-values are exactly 1.")
         return 1
     if weights == None:
         weights = [1 / len(pvalues) for i in pvalues]
@@ -67,14 +69,14 @@ def acat_test(pvalues, weights=None):
 
 def run_Cauchy_combination(config:CauchyCombinationConfig):
     # Load the ldsc results
-    print(f'------Loading LDSC results of {config.ldsc_save_dir}...')
+    logger.info(f'------Loading LDSC results of {config.ldsc_save_dir}...')
     ldsc_input_file= config.get_ldsc_result_file(config.trait_name)
     ldsc = pd.read_csv(ldsc_input_file, compression='gzip')
     ldsc.spot = ldsc.spot.astype(str).replace('\.0', '', regex=True)
     ldsc.index = ldsc.spot
     if config.meta is None:
         # Load the spatial data
-        print(f'------Loading ST data of {config.hdf5_with_latent_path}...')
+        logger.info(f'------Loading ST data of {config.hdf5_with_latent_path}...')
         spe = sc.read_h5ad(f'{config.hdf5_with_latent_path}')
 
         common_cell = np.intersect1d(ldsc.index, spe.obs_names)
@@ -86,7 +88,7 @@ def run_Cauchy_combination(config:CauchyCombinationConfig):
 
     elif config.meta is not None:
         # Or Load the additional annotation (just for the macaque data at this stage: 2023Nov25)
-        print(f'------Loading additional annotation...')
+        logger.info(f'------Loading additional annotation...')
         meta = pd.read_csv(config.meta, index_col=0)
         meta = meta.loc[meta.slide == config.slide]
         meta.index = meta.cell_id.astype(str).replace('\.0', '', regex=True)
@@ -115,7 +117,7 @@ def run_Cauchy_combination(config:CauchyCombinationConfig):
         
         # Outlier: -log10(p) < median + 3IQR && len(outlier set) < 20
         if (0 < n_remove < 20):
-            print(f'Remove {n_remove}/{len(p_temp)} outliers (median + 3IQR) for {ct}.')
+            logger.info(f'Remove {n_remove}/{len(p_temp)} outliers (median + 3IQR) for {ct}.')
             p_cauchy_temp = acat_test(p_use)
         else:
              p_cauchy_temp = acat_test(p_temp)

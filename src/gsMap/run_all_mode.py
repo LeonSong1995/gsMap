@@ -23,20 +23,16 @@ def run_pipeline(config: RunAllModeConfig):
     # # Set up logging
     log_file = Path(config.workdir) / config.sample_name / 'gsMap_pipeline.log'
     log_file.parent.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(level=logging.INFO,
-                        format='[{asctime}] {levelname:8s} {name} {message}',
-                        handlers=[
-                            logging.FileHandler(log_file),
-                        ],
-                        style='{')
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[{asctime}] {levelname:.5s} | {name} - {message}',
+        handlers=[
+            logging.FileHandler(log_file),
+        ],
+        style='{'
+    )
 
-    logger = logging.getLogger('gsMap Pipeline')
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(
-        '[{asctime}] {name} {levelname:8s} {message}', style='{'))
-    logger.addHandler(handler)
-
+    logger = logging.getLogger('gsMap.pipeline')
     logger.info("Starting pipeline with configuration: %s", config)
 
     find_latent_config = FindLatentRepresentationsConfig(
