@@ -39,6 +39,7 @@ dependencies = [
     'zarr',
     'bitarray',
     'pyarrow',
+    'scikit-misc'
 ]
 
 [project.optional-dependencies]
