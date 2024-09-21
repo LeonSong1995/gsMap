@@ -2,7 +2,7 @@ from pathlib import Path
 import bitarray as ba
 import numpy as np
 import pandas as pd
-from scipy.sparse import csr_matrix,csc_matrix
+from scipy.sparse import csr_matrix
 from scipy.sparse import save_npz, load_npz
 from tqdm import trange, tqdm
 

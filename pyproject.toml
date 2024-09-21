@@ -35,6 +35,10 @@ dependencies = [
     'plotly',
     'kaleido',
     'jinja2',
+    'scanpy',
+    'zarr',
+    'bitarray',
+    'pyarrow',
 ]
 
 [project.optional-dependencies]

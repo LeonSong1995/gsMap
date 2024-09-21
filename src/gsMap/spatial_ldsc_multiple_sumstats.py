@@ -15,7 +15,7 @@ import gsMap.utils.jackknife as jk
 from gsMap.config import SpatialLDSCConfig
 from gsMap.utils.regression_read import _read_sumstats, _read_w_ld, _read_ref_ld_v2
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('gsMap.spatial_ldsc')
 
 
 # %%
@@ -204,7 +204,7 @@ def _get_sumstats_with_common_snp_from_sumstats_dict(sumstats_config_dict: dict,
     for trait_name, sumstats in sumstats_cleaned_dict.items():
         sumstats_cleaned_dict[trait_name] = sumstats.loc[common_snp_among_all_sumstats]
 
-    logger.info(f'!Common SNPs among all sumstats: {len(common_snp_among_all_sumstats)}')
+    logger.info(f'Common SNPs among all sumstats: {len(common_snp_among_all_sumstats)}')
     return sumstats_cleaned_dict, common_snp_among_all_sumstats
 
 
