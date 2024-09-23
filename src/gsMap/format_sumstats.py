@@ -150,10 +150,10 @@ def gwas_checkname(gwas, config):
         'Pos': 'SNP positions.'
     }
 
-    print(f'\nIterpreting column names as follows:')
+    logger.info(f'\nIterpreting column names as follows:')
     for key, value in interpreting.items():
         if key in new_name:
-            print(f'{name_dict[key]}: {interpreting[key]}')
+            logger.info(f'{name_dict[key]}: {interpreting[key]}')
 
     return gwas
 
@@ -242,7 +242,7 @@ def gwas_qc(gwas, config):
     Filter out SNPs based on INFO, FRQ, MAF, N, and Genotypes. 
     '''
     old = len(gwas)
-    print(f'\nFiltering SNPs as follows:')
+    logger.info(f'\nFiltering SNPs as follows:')
     # filter: SNPs with missing values
     drops = {'NA': 0, 'P': 0, 'INFO': 0, 'FRQ': 0, 'A': 0, 'SNP': 0, 'Dup': 0, 'N': 0}
 
@@ -250,28 +250,28 @@ def gwas_qc(gwas, config):
         lambda x: x != 'INFO', gwas.columns)).reset_index(drop=True)
 
     drops['NA'] = old - len(gwas)
-    print(f'Removed {drops["NA"]} SNPs with missing values.')
+    logger.info(f'Removed {drops["NA"]} SNPs with missing values.')
 
     # filter: SNPs with Info < 0.9
     if 'INFO' in gwas.columns:
         old = len(gwas)
         gwas = gwas.loc[filter_info(gwas['INFO'], config)]
         drops['INFO'] = old - len(gwas)
-        print(f'Removed {drops["INFO"]} SNPs with INFO <= 0.9.')
+        logger.info(f'Removed {drops["INFO"]} SNPs with INFO <= 0.9.')
 
     # filter: SNPs with MAF <= 0.01
     if 'FRQ' in gwas.columns:
         old = len(gwas)
         gwas = gwas.loc[filter_frq(gwas['FRQ'], config)]
         drops['FRQ'] += old - len(gwas)
-        print(f'Removed {drops["FRQ"]} SNPs with MAF <= 0.01.')
+        logger.info(f'Removed {drops["FRQ"]} SNPs with MAF <= 0.01.')
 
     # filter: P-value that out-of-bounds [0,1]
     if 'P' in gwas.columns:
         old = len(gwas)
         gwas = gwas.loc[filter_pvals(gwas['P'], config)]
         drops['P'] += old - len(gwas)
-        print(f'Removed {drops["P"]} SNPs with out-of-bounds p-values.')
+        logger.info(f'Removed {drops["P"]} SNPs with out-of-bounds p-values.')
 
     # filter: Variants that are strand-ambiguous
     if 'A1' in gwas.columns and 'A2' in gwas.columns:
@@ -279,21 +279,21 @@ def gwas_qc(gwas, config):
         gwas.A2 = gwas.A2.str.upper()
         gwas = gwas.loc[filter_alleles(gwas.A1 + gwas.A2)]
         drops['A'] += old - len(gwas)
-        print(f'Removed {drops["A"]} variants that were not SNPs or were strand-ambiguous.')
+        logger.info(f'Removed {drops["A"]} variants that were not SNPs or were strand-ambiguous.')
 
     # filter: Duplicated rs numbers
     if 'SNP' in gwas.columns:
         old = len(gwas)
         gwas = gwas.drop_duplicates(subset='SNP').reset_index(drop=True)
         drops['Dup'] += old - len(gwas)
-        print(f'Removed {drops["Dup"]} SNPs with duplicated rs numbers.')
+        logger.info(f'Removed {drops["Dup"]} SNPs with duplicated rs numbers.')
 
     # filter:Sample size
     n_min = gwas.N.quantile(0.9) / 1.5
     old = len(gwas)
     gwas = gwas[gwas.N >= n_min].reset_index(drop=True)
     drops['N'] += old - len(gwas)
-    print(f'Removed {drops["N"]} SNPs with N < {n_min}.')
+    logger.info(f'Removed {drops["N"]} SNPs with N < {n_min}.')
 
     return gwas
 
@@ -302,7 +302,7 @@ def variant_to_rsid(gwas, config):
     '''
     Convert variant id (Chr, Pos) to rsid
     '''
-    print("\nConverting the SNP position to rsid. This process may take some time.")
+    logger.info("\nConverting the SNP position to rsid. This process may take some time.")
     unique_ids = set(gwas['id'])
     chr_format = gwas['Chr'].unique().astype(str)
     chr_format = [re.sub(r'\d+', '', value) for value in chr_format][1]
@@ -347,7 +347,7 @@ def clean_SNP_id(gwas, config):
             gwas = gwas.loc[matching_id.id]
             gwas['SNP'] = matching_id.dbsnp
             num_fail = old - len(gwas)
-            print(f'Removed {num_fail} SNPs that did not convert to rsid.')
+            logger.info(f'Removed {num_fail} SNPs that did not convert to rsid.')
 
     return gwas
 
@@ -356,27 +356,27 @@ def gwas_metadata(gwas, config):
     '''
     Report key features of GWAS data
     '''
-    print('\nMetadata:')
+    logger.info('\nSummary of GWAS data:')
     CHISQ = (gwas.Z ** 2)
     mean_chisq = CHISQ.mean()
-    print('Mean chi^2 = ' + str(round(mean_chisq, 3)))
+    logger.info('Mean chi^2 = ' + str(round(mean_chisq, 3)))
     if mean_chisq < 1.02:
         logger.warning("Mean chi^2 may be too small.")
 
-    print('Lambda GC = ' + str(round(CHISQ.median() / 0.4549, 3)))
-    print('Max chi^2 = ' + str(round(CHISQ.max(), 3)))
-    print('{N} Genome-wide significant SNPs (some may have been removed by filtering).'.format(N=(CHISQ > 29).sum()))
+    logger.info('Lambda GC = ' + str(round(CHISQ.median() / 0.4549, 3)))
+    logger.info('Max chi^2 = ' + str(round(CHISQ.max(), 3)))
+    logger.info('{N} Genome-wide significant SNPs (some may have been removed by filtering).'.format(N=(CHISQ > 29).sum()))
 
 
 def gwas_format(config: FormatSumstatsConfig):
     '''
     Format GWAS data
     '''
-    print(f'------Formating gwas data for {config.sumstats}...')
+    logger.info(f'------Formating gwas data for {config.sumstats}...')
     compression_type = get_compression(config.sumstats)
     gwas = pd.read_csv(config.sumstats, delim_whitespace=True, header=0, compression=compression_type,
                        na_values=['.', 'NA'])
-    print(f'Read {len(gwas)} SNPs from {config.sumstats}.')
+    logger.info(f'Read {len(gwas)} SNPs from {config.sumstats}.')
 
     # Check name and format
     gwas = gwas_checkname(gwas, config)
@@ -402,6 +402,6 @@ def gwas_format(config: FormatSumstatsConfig):
     gwas = gwas[keep]
     out_name = config.out + appendix + '.gz'
 
-    print(f'\nWriting summary statistics for {len(gwas)} SNPs to {out_name}.')
+    logger.info(f'\nWriting summary statistics for {len(gwas)} SNPs to {out_name}.')
     gwas.to_csv(out_name, sep="\t", index=False,
                 float_format='%.3f', compression='gzip')
