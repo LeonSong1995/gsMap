@@ -242,7 +242,7 @@ def gwas_qc(gwas, config):
     Filter out SNPs based on INFO, FRQ, MAF, N, and Genotypes. 
     '''
     old = len(gwas)
-    print(f'\nFiltering SNPs as follows:')
+    logger.info(f'\nFiltering SNPs as follows:')
     # filter: SNPs with missing values
     drops = {'NA': 0, 'P': 0, 'INFO': 0, 'FRQ': 0, 'A': 0, 'SNP': 0, 'Dup': 0, 'N': 0}
 
@@ -250,7 +250,7 @@ def gwas_qc(gwas, config):
         lambda x: x != 'INFO', gwas.columns)).reset_index(drop=True)
 
     drops['NA'] = old - len(gwas)
-    print(f'Removed {drops["NA"]} SNPs with missing values.')
+    logger.info(f'Removed {drops["NA"]} SNPs with missing values.')
 
     # filter: SNPs with Info < 0.9
     if 'INFO' in gwas.columns:
@@ -356,7 +356,7 @@ def gwas_metadata(gwas, config):
     '''
     Report key features of GWAS data
     '''
-    logger.info('\nMetadata:')
+    logger.info('\nSummary of GWAS data:')
     CHISQ = (gwas.Z ** 2)
     mean_chisq = CHISQ.mean()
     logger.info('Mean chi^2 = ' + str(round(mean_chisq, 3)))
