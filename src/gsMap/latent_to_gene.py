@@ -225,9 +225,10 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     mk_score = np.vstack(mk_scores).T
 
     # Remove mitochondrial genes
-    mt_gene_mask = ~np.char.startswith(adata.var_names.values.astype(str), ('MT-', 'mt-'))
+    gene_names = adata.var_names.values.astype(str)
+    mt_gene_mask = ~(np.char.startswith(gene_names, 'MT-') | np.char.startswith(gene_names, 'mt-'))
     mk_score = mk_score[mt_gene_mask, :]
-    gene_names = adata.var_names[mt_gene_mask]
+    gene_names = gene_names[mt_gene_mask]
 
     # Save the marker scores
     logger.info(f'------Saving marker scores ...')
