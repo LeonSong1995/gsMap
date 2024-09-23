@@ -4,12 +4,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from scipy.sparse import csr_matrix
 from scipy.stats import gmean
 from scipy.stats import rankdata
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
-from joblib import Parallel, delayed
 from tqdm import tqdm
 
 from gsMap.config import LatentToGeneConfig

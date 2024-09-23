@@ -35,7 +35,7 @@ dependencies = [
     'plotly',
     'kaleido',
     'jinja2',
-    'scanpy',
+    'scanpy >=1.8.0',
     'zarr',
     'bitarray',
     'pyarrow',

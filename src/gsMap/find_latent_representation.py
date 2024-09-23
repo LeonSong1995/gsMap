@@ -1,16 +1,13 @@
 import logging
 import random
-from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import scanpy as sc
 import torch
 from sklearn import preprocessing
-from sklearn.decomposition import PCA
 
-from gsMap.GNN_VAE.adjacency_matrix import Construct_Adjacency_Matrix
-from gsMap.GNN_VAE.train import Model_Train
+from gsMap.GNN_VAE.adjacency_matrix import construct_adjacency_matrix
+from gsMap.GNN_VAE.train import ModelTrainer
 from gsMap.config import FindLatentRepresentationsConfig
 
 logger = logging.getLogger(__name__)
@@ -36,7 +33,7 @@ class LatentRepresentationFinder:
         self.adata = adata
         self.Params = args
 
-        # Preprocess data without copying the entire AnnData object
+        # Preprocess data and extract the feature matrix
         if self.Params.data_layer in ['count', 'counts']:
             self.adata.X = self.adata.layers[self.Params.data_layer]
             sc.pp.highly_variable_genes(
@@ -52,24 +49,29 @@ class LatentRepresentationFinder:
                 self.adata, n_top_genes=self.Params.feat_cell
             )
 
-        # Process the feature matrix
+        # Extract the feature matrix using highly variable genes
         self.node_X = self.adata[:, self.adata.var.highly_variable].X
         self.latent_pca = None  # Initialize latent_pca to None
 
     def compute_pca(self):
         """
-        Compute PCA if it hasn't been computed yet.
+        Compute PCA
         """
         if self.latent_pca is None:
-            logger.info('Computing PCA...')
-            pca = PCA(n_components=self.Params.n_comps)
-            self.latent_pca = pca.fit_transform(self.node_X)
+            logger.info('Computing PCA using sc.tl.pca...')
+            sc.tl.pca(
+                self.adata,
+                n_comps=self.Params.n_comps,
+                use_highly_variable=True,
+                svd_solver='arpack'
+            )
+            self.latent_pca = self.adata.obsm['X_pca']
             logger.info('PCA computation completed.')
         return self.latent_pca
 
     def run_gnn_vae(self, label, verbose='whole ST data'):
         # Construct the neighboring graph
-        graph_dict = Construct_Adjacency_Matrix(self.adata, self.Params)
+        graph_dict = construct_adjacency_matrix(self.adata, self.Params)
 
         # Use PCA if specified
         if self.Params.input_pca:
@@ -83,10 +85,9 @@ class LatentRepresentationFinder:
 
         # Run GNN-VAE
         logger.info(f'------Finding latent representations for {verbose}...')
-        gvae = Model_Train(node_X, graph_dict, self.Params, label)
+        gvae = ModelTrainer(node_X, graph_dict, self.Params, label)
         gvae.run_train()
 
-        # Clean up to free memory
         del graph_dict
 
         return gvae.get_latent()
@@ -98,13 +99,10 @@ class LatentRepresentationFinder:
 def run_find_latent_representation(args: FindLatentRepresentationsConfig):
     set_seed(2024)
     num_features = args.feat_cell
-    Path(args.hdf5_with_latent_path).parent.mkdir(
-        parents=True, exist_ok=True, mode=0o755
-    )
 
     # Load the ST data
     logger.info(f'------Loading ST data of {args.sample_name}...')
-    adata = sc.read_h5ad(f'{args.input_hdf5_path}')
+    adata = sc.read_h5ad(args.input_hdf5_path)
     adata.var_names_make_unique()
     adata.X = adata.layers[args.data_layer] if args.data_layer in adata.layers else adata.X
     logger.info(f'The ST data contains {adata.shape[0]} cells, {adata.shape[1]} genes.')
@@ -112,7 +110,7 @@ def run_find_latent_representation(args: FindLatentRepresentationsConfig):
     # Load the cell type annotation
     if args.annotation is not None:
         # Remove cells without enough annotations
-        adata = adata[~adata.obs[args.annotation].isnull(), :]
+        adata = adata[~adata.obs[args.annotation].isnull()]
         num = adata.obs[args.annotation].value_counts()
         valid_annotations = num[num >= 30].index.to_list()
         adata = adata[adata.obs[args.annotation].isin(valid_annotations)]
@@ -152,14 +150,12 @@ def run_find_latent_representation(args: FindLatentRepresentationsConfig):
         cell_indices = {cell: idx for idx, cell in enumerate(adata.obs_names)}
 
         for ct in adata.obs[args.annotation].unique():
-            adata_part = adata[adata.obs[args.annotation] == ct, :]
+            adata_part = adata[adata.obs[args.annotation] == ct].copy()
             logger.info(f'Processing {ct} with shape {adata_part.shape}')
 
             # Find latent representations for the selected cell type
             latent_rep_part = LatentRepresentationFinder(adata_part, args)
-
-            # Use the already computed PCA if possible
-            latent_pca_part = latent_rep_part.compute_pca()
+            latent_pca_part = latent_rep_part.run_pca()
 
             if adata_part.shape[0] <= args.n_comps:
                 latent_gvae_part = latent_pca_part
