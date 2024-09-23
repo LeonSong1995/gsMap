@@ -67,7 +67,10 @@ def build_spatial_net(adata, annotation, num_neighbour):
     return spatial_net
 
 
-def find_neighbors_regional(cell_pos, spatial_net_dict, coor_latent, annotations, num_neighbour, cell_annotations):
+def find_neighbors_regional(cell_pos, spatial_net_dict, coor_latent, config, cell_annotations):
+    num_neighbour = config.num_neighbour
+    annotations = config.annotation
+
     cell_use_pos = spatial_net_dict.get(cell_pos, [])
     if len(cell_use_pos) == 0:
         return []
@@ -94,13 +97,13 @@ def find_neighbors_regional(cell_pos, spatial_net_dict, coor_latent, annotations
     return cell_select_pos
 
 
-def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, annotations, num_neighbour, cell_annotations,
+def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, config, cell_annotations,
                              ranks, frac_whole, adata_X_bool):
     """
     Compute gmean ranks of a region.
     """
     cell_select_pos = find_neighbors_regional(
-        cell_pos, spatial_net_dict, coor_latent, annotations, num_neighbour, cell_annotations
+        cell_pos, spatial_net_dict, coor_latent, config, cell_annotations
     )
     if len(cell_select_pos) == 0:
         return np.zeros(ranks.shape[1], dtype=np.float16)
@@ -110,14 +113,15 @@ def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, annotation
     gene_ranks_region = gmean(ranks_tg, axis=0)
     gene_ranks_region[gene_ranks_region <= 1] = 0
 
-    # Ratio of expression fractions
-    frac_focal = adata_X_bool[cell_select_pos, :].sum(axis=0).A1 / len(cell_select_pos)
-    frac_region = frac_focal / frac_whole
-    frac_region[frac_region <= 1] = 0
-    frac_region[frac_region > 1] = 1
+    if not config.no_expression_fraction:
+        # Ratio of expression fractions
+        frac_focal = adata_X_bool[cell_select_pos, :].sum(axis=0).A1 / len(cell_select_pos)
+        frac_region = frac_focal / frac_whole
+        frac_region[frac_region <= 1] = 0
+        frac_region[frac_region > 1] = 1
 
-    # Simultaneously consider the ratio of expression fractions and ranks
-    gene_ranks_region = gene_ranks_region * frac_region
+        # Simultaneously consider the ratio of expression fractions and ranks
+        gene_ranks_region = gene_ranks_region * frac_region
 
     mkscore = np.exp(gene_ranks_region ** 1.5) - 1
     return mkscore.astype(np.float16, copy=False)
@@ -209,19 +213,13 @@ def run_latent_to_gene(config: LatentToGeneConfig):
 
     # Compute marker scores in parallel
     logger.info('------Computing marker scores...')
-    num_jobs = config.num_jobs if hasattr(config, 'num_jobs') else 1
 
     def compute_mk_score_wrapper(cell_pos):
         return compute_regional_mkscore(
-            cell_pos, spatial_net_dict, coor_latent, config.annotation, config.num_neighbour,
-            cell_annotations, ranks, frac_whole, adata_X_bool
+            cell_pos, spatial_net_dict, coor_latent, config, cell_annotations, ranks, frac_whole, adata_X_bool
         )
 
-    mk_scores = Parallel(n_jobs=num_jobs)(
-        delayed(compute_mk_score_wrapper)(cell_pos)
-        for cell_pos in tqdm(range(n_cells), desc="Finding markers (Rank-based approach) | cells")
-    )
-
+    mk_scores = [compute_mk_score_wrapper(cell_pos) for cell_pos in tqdm(range(n_cells), desc="Calculating marker scores")]
     mk_score = np.vstack(mk_scores).T
 
     # Remove mitochondrial genes
