@@ -209,7 +209,7 @@ gsmap run_cauchy_combination \
     --annotation 'annotation'
 ```
 
-### 6. report generation
+### 6. report generation (optional)
 
 **Objective**: Generate gsMap reports, including visualizations of mapping results and diagnostic plots.
 
