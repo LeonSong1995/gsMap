@@ -4,10 +4,12 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import scanpy as sc
+from scipy.sparse import csr_matrix
 from scipy.stats import gmean
 from scipy.stats import rankdata
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.neighbors import NearestNeighbors
+from joblib import Parallel, delayed
 from tqdm import tqdm
 
 from gsMap.config import LatentToGeneConfig
@@ -15,119 +17,122 @@ from gsMap.config import LatentToGeneConfig
 logger = logging.getLogger(__name__)
 
 
-def find_Neighbors(coor, num_neighbour):
+def find_neighbors(coor, num_neighbour):
     """
-    find Neighbors of each cell (based on spatial coordinates)
+    Find Neighbors of each cell (based on spatial coordinates).
     """
     nbrs = NearestNeighbors(n_neighbors=num_neighbour).fit(coor)
     distances, indices = nbrs.kneighbors(coor, return_distance=True)
-
-    KNN_list = [pd.DataFrame(zip([it] * indices[it].shape[0], indices[it], distances[it])) for it in
-                range(indices.shape[0])]
-    KNN_df = pd.concat(KNN_list)
-    KNN_df.columns = ['Cell1', 'Cell2', 'Distance']
-
-    spatial_net = KNN_df.copy()
-    id_cell_trans = dict(zip(range(coor.shape[0]), np.array(coor.index)))
-
-    spatial_net['Cell1'] = spatial_net['Cell1'].map(id_cell_trans)
-    spatial_net['Cell2'] = spatial_net['Cell2'].map(id_cell_trans)
-
+    cell_indices = np.arange(coor.shape[0])
+    cell1 = np.repeat(cell_indices, indices.shape[1])
+    cell2 = indices.flatten()
+    distance = distances.flatten()
+    spatial_net = pd.DataFrame({'Cell1': cell1, 'Cell2': cell2, 'Distance': distance})
     return spatial_net
 
 
-def _build_spatial_net(adata, annotation, num_neighbour):
+def build_spatial_net(adata, annotation, num_neighbour):
     """
-    1 Build spatial neighbourhood matrix for each spot (cell) based on the spatial coord
+    Build spatial neighbourhood matrix for each spot (cell) based on the spatial coordinates.
     """
     logger.info(f'------Building spatial graph based on spatial coordinates...')
 
-    coor = pd.DataFrame(adata.obsm['spatial'])
-    coor.index = adata.obs.index
-
-    if not annotation is None:
+    coor = adata.obsm['spatial']
+    if annotation is not None:
         logger.info(f'Cell annotations are provided...')
-        spatial_net = pd.DataFrame()
+        spatial_net_list = []
         # Cells with annotations
         for ct in adata.obs[annotation].dropna().unique():
-            coor_temp = coor.loc[adata.obs[annotation] == ct, :]
-            spatial_net_temp = find_Neighbors(coor_temp, min(num_neighbour, coor_temp.shape[0]))
-            spatial_net = pd.concat((spatial_net, spatial_net_temp), axis=0)
+            idx = np.where(adata.obs[annotation] == ct)[0]
+            coor_temp = coor[idx, :]
+            spatial_net_temp = find_neighbors(coor_temp, min(num_neighbour, coor_temp.shape[0]))
+            # Map back to original indices
+            spatial_net_temp['Cell1'] = idx[spatial_net_temp['Cell1'].values]
+            spatial_net_temp['Cell2'] = idx[spatial_net_temp['Cell2'].values]
+            spatial_net_list.append(spatial_net_temp)
             logger.info(f'{ct}: {coor_temp.shape[0]} cells')
 
         # Cells labeled as nan
         if pd.isnull(adata.obs[annotation]).any():
-            cell_nan = adata.obs.index[np.where(pd.isnull(adata.obs[annotation]))[0]]
-            logger.info(f'Nan: {len(cell_nan)} cells')
-
-            spatial_net_temp = find_Neighbors(coor, num_neighbour)
-            spatial_net_temp = spatial_net_temp.loc[spatial_net_temp.Cell1.isin(cell_nan), :]
-            spatial_net = pd.concat((spatial_net, spatial_net_temp), axis=0)
+            idx_nan = np.where(pd.isnull(adata.obs[annotation]))[0]
+            logger.info(f'Nan: {len(idx_nan)} cells')
+            spatial_net_temp = find_neighbors(coor, num_neighbour)
+            spatial_net_temp = spatial_net_temp[spatial_net_temp['Cell1'].isin(idx_nan)]
+            spatial_net_list.append(spatial_net_temp)
+        spatial_net = pd.concat(spatial_net_list, axis=0)
     else:
         logger.info(f'Cell annotations are not provided...')
-        spatial_net = find_Neighbors(coor, num_neighbour)
+        spatial_net = find_neighbors(coor, num_neighbour)
 
     return spatial_net
 
 
-def find_Neighbors_Regional(cell):
-    cell_use = spatial_net_dict[cell]
-    similarity = cosine_similarity(coor_latent.loc[cell].values.reshape(1, -1),
-                                   coor_latent.loc[cell_use].values).reshape(-1)
-    if not args.annotation is None:
-        annotation = adata.obs[args.annotation]
-        df = pd.DataFrame({'Cell2': cell_use, 'Similarity': similarity, 'Annotation': annotation[cell_use]})
-        df = df.loc[df.loc[cell_use, 'Annotation'] == df.loc[cell, 'Annotation']]
-    else:
-        df = pd.DataFrame({'Cell2': cell_use, 'Similarity': similarity})
+def find_neighbors_regional(cell_pos, spatial_net_dict, coor_latent, annotations, num_neighbour, cell_annotations):
+    cell_use_pos = spatial_net_dict.get(cell_pos, [])
+    if len(cell_use_pos) == 0:
+        return []
 
-    df = df.sort_values(by='Similarity', ascending=False)
-    cell_select = df.Cell2[0:args.num_neighbour].to_list()
+    cell_latent = coor_latent[cell_pos, :].reshape(1, -1)
+    neighbors_latent = coor_latent[cell_use_pos, :]
+    similarity = cosine_similarity(cell_latent, neighbors_latent).reshape(-1)
 
-    return cell_select
+    if annotations is not None:
+        cell_annotation = cell_annotations[cell_pos]
+        neighbor_annotations = cell_annotations[cell_use_pos]
+        mask = neighbor_annotations == cell_annotation
+        if not np.any(mask):
+            return []
+        similarity = similarity[mask]
+        cell_use_pos = cell_use_pos[mask]
+
+    if len(similarity) == 0:
+        return []
+
+    indices = np.argsort(-similarity)  # descending order
+    top_indices = indices[:num_neighbour]
+    cell_select_pos = cell_use_pos[top_indices]
+    return cell_select_pos
 
 
-def _compute_regional_mkscore(cell_tg, ):
+def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, annotations, num_neighbour, cell_annotations,
+                             ranks, frac_whole, adata_X_bool):
     """
-    compute gmean ranks of a region
+    Compute gmean ranks of a region.
     """
-    cell_select = find_Neighbors_Regional(cell_tg)
+    cell_select_pos = find_neighbors_regional(
+        cell_pos, spatial_net_dict, coor_latent, annotations, num_neighbour, cell_annotations
+    )
+    if len(cell_select_pos) == 0:
+        return np.zeros(ranks.shape[1], dtype=np.float16)
 
     # Ratio of expression ranks
-    ranks_tg = ranks.loc[cell_select]
+    ranks_tg = ranks[cell_select_pos, :]
     gene_ranks_region = gmean(ranks_tg, axis=0)
     gene_ranks_region[gene_ranks_region <= 1] = 0
 
-    if not args.no_expression_fraction:
-        # Ratio of expression fractions
-        frac_focal = expressed_mask.loc[cell_select].sum(0) / len(cell_select)
-        frac_region = frac_focal / frac_whole
-        frac_region[frac_region <= 1] = 0
-        frac_region[frac_region > 1] = 1
+    # Ratio of expression fractions
+    frac_focal = adata_X_bool[cell_select_pos, :].sum(axis=0).A1 / len(cell_select_pos)
+    frac_region = frac_focal / frac_whole
+    frac_region[frac_region <= 1] = 0
+    frac_region[frac_region > 1] = 1
 
-        # Simultaneously consider the ratio of expression fractions and ranks
-        gene_ranks_region = (gene_ranks_region * frac_region).values
+    # Simultaneously consider the ratio of expression fractions and ranks
+    gene_ranks_region = gene_ranks_region * frac_region
 
     mkscore = np.exp(gene_ranks_region ** 1.5) - 1
     return mkscore.astype(np.float16, copy=False)
 
 
 def run_latent_to_gene(config: LatentToGeneConfig):
-    global adata, coor_latent, spatial_net, ranks, frac_whole, args, spatial_net_dict, expressed_mask
-    args = config
-    # Load and process the spatial data
     logger.info('------Loading the spatial data...')
     adata = sc.read_h5ad(config.hdf5_with_latent_path)
 
-    logger.info('------Ranking the spatial data...')
-    adata.layers['rank'] = rankdata(adata.X.toarray().astype(np.float32), axis=1).astype(np.float32)
-
-    if not config.annotation is None:
+    if config.annotation is not None:
         logger.info(f'------Cell annotations are provided as {config.annotation}...')
         adata = adata[~pd.isnull(adata.obs[config.annotation]), :]
 
     # Homologs transformation
-    if not config.homolog_file is None:
+    if config.homolog_file is not None:
         logger.info(f'------Transforming the {config.species} to HUMAN_GENE_SYM...')
         homologs = pd.read_csv(config.homolog_file, sep='\t')
         if homologs.shape[1] != 2:
@@ -137,34 +142,47 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         homologs.columns = [config.species, 'HUMAN_GENE_SYM']
         homologs.set_index(config.species, inplace=True)
         adata = adata[:, adata.var_names.isin(homologs.index)]
-        # Log the number of genes left after homolog transformation
         logger.info(f"{adata.shape[1]} genes retained after homolog transformation.")
         if adata.shape[1] < 100:
             raise ValueError("Too few genes retained in ST data (<100).")
         adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM'].values
-        # drop duplicated genes
         adata = adata[:, ~adata.var_names.duplicated()]
 
-    # Remove cells that do not express any genes after transformation, and genes that are not expressed in any cells.
+    # Remove cells and genes that are not expressed
     logger.info(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')
     adata = adata[adata.X.sum(axis=1) > 0, adata.X.sum(axis=0) > 0]
     logger.info(f'Number of cells, genes after transformation: {adata.shape[0]},{adata.shape[1]}')
-    # Buid the spatial graph
-    spatial_net = _build_spatial_net(adata, config.annotation, config.num_neighbour_spatial)
-    spatial_net.set_index('Cell1', inplace=True)
-    # convert the spatial graph to a dictionary cell1 to cells in the neighbourhood
-    spatial_net_dict = spatial_net.groupby(spatial_net.index).Cell2.apply(list).to_dict()
+
+    # Create mappings
+    n_cells = adata.n_obs
+    n_genes = adata.n_vars
+
+    if config.annotation is not None:
+        cell_annotations = adata.obs[config.annotation].values
+    else:
+        cell_annotations = None
+
+    # Build the spatial graph
+    spatial_net = build_spatial_net(adata, config.annotation, config.num_neighbour_spatial)
+    spatial_net_dict = spatial_net.groupby('Cell1')['Cell2'].apply(np.array).to_dict()
 
     # Extract the latent representation
-    coor_latent = pd.DataFrame(adata.obsm[config.latent_representation])
-    coor_latent.index = adata.obs.index
-    # Find marker genes
-    cell_list = adata.obs.index.tolist()
+    coor_latent = adata.obsm[config.latent_representation]
+    coor_latent = coor_latent.astype(np.float32)
 
-    # Load the geometrical mean across slices
+    # Compute ranks
+    logger.info('------Ranking the spatial data...')
+    adata_X = adata.X.tocsr()
+    ranks = np.zeros((n_cells, n_genes), dtype=np.float32)
+
+    for i in tqdm(range(n_cells), desc="Computing ranks per cell"):
+        data = adata_X[i, :].toarray().flatten()
+        ranks[i, :] = rankdata(data, method='average')
+
+    # Geometric mean across slices
     if config.gM_slices is not None:
         logger.info('Geometrical mean across multiple slices is provided.')
-        gM = pd.read_parquet(config.gM_slices)
+        gM_df = pd.read_parquet(config.gM_slices)
         if config.species is not None:
             homologs = pd.read_csv(config.homolog_file, sep='\t', header=None)
             if homologs.shape[1] < 2:
@@ -172,47 +190,53 @@ def run_latent_to_gene(config: LatentToGeneConfig):
                     "Homologs file must have at least two columns: one for the species and one for the human gene symbol.")
             homologs.columns = [config.species, 'HUMAN_GENE_SYM']
             homologs.set_index(config.species, inplace=True)
-            gM = gM.loc[gM.index.isin(homologs.index)]
-            gM.index = homologs.loc[gM.index, 'HUMAN_GENE_SYM'].values
-        common_gene = np.intersect1d(adata.var_names, gM.index)
-        gM = gM.loc[common_gene]
-        gM = gM['G_Mean'].to_numpy()
-        adata = adata[:, common_gene]
+            gM_df = gM_df.loc[gM_df.index.isin(homologs.index)]
+            gM_df.index = homologs.loc[gM_df.index, 'HUMAN_GENE_SYM'].values
+        common_genes = np.intersect1d(adata.var_names, gM_df.index)
+        gM_df = gM_df.loc[common_genes]
+        gM = gM_df['G_Mean'].values
+        adata = adata[:, common_genes]
+        ranks = ranks[:, np.isin(adata.var_names, common_genes)]
     else:
-        gM = gmean(adata.layers['rank'], axis=0)
+        gM = gmean(ranks, axis=0)
 
     # Compute the fraction of each gene across cells
-    expressed_mask = pd.DataFrame((adata.X > 0).toarray(), index=adata.obs.index, columns=adata.var.index)
-    # frac_whole = np.array((adata_layer > 0).sum(axis=0))[0] / (adata.shape[0])
-    frac_whole = np.array(expressed_mask.sum(axis=0)) / (adata.shape[0])
-    # Normalize the geometrical mean
-    ranks = adata.layers['rank'] / gM
-    ranks = pd.DataFrame(ranks, index=adata.obs_names)
-    ranks.columns = adata.var.index
-    mk_score = [
-        _compute_regional_mkscore(cell_tg)
-        for cell_tg in tqdm(cell_list,
-                            desc="Finding markers (Rank-based approach) | cells")
-    ]
-    # Normalize the marker scores
-    mk_score = pd.DataFrame(np.vstack(mk_score).T, index=adata.var_names, columns=cell_list)
-    # mk_score_normalized = mk_score.div(mk_score.sum())*1e+2
+    adata_X_bool = adata_X.astype(bool)
+    frac_whole = np.asarray(adata_X_bool.sum(axis=0)).flatten() / n_cells
 
-    # Remove the mitochondrial genes from mk_score
-    mt_gene_mask = ~adata.var_names.str.startswith(('MT-', 'mt-'))
-    mk_score = mk_score[mt_gene_mask]
-    adata = adata[:, mt_gene_mask]
+    # Normalize the ranks
+    ranks = ranks / gM
 
-    # # Save the mk_score DataFrame to an adata layer
-    # adata.layers['mkscore'] = mk_score.values.T
+    # Compute marker scores in parallel
+    logger.info('------Computing marker scores...')
+    num_jobs = config.num_jobs if hasattr(config, 'num_jobs') else 1
+
+    def compute_mk_score_wrapper(cell_pos):
+        return compute_regional_mkscore(
+            cell_pos, spatial_net_dict, coor_latent, config.annotation, config.num_neighbour,
+            cell_annotations, ranks, frac_whole, adata_X_bool
+        )
+
+    mk_scores = Parallel(n_jobs=num_jobs)(
+        delayed(compute_mk_score_wrapper)(cell_pos)
+        for cell_pos in tqdm(range(n_cells), desc="Finding markers (Rank-based approach) | cells")
+    )
+
+    mk_score = np.vstack(mk_scores).T
+
+    # Remove mitochondrial genes
+    mt_gene_mask = ~np.char.startswith(adata.var_names.values.astype(str), ('MT-', 'mt-'))
+    mk_score = mk_score[mt_gene_mask, :]
+    gene_names = adata.var_names[mt_gene_mask]
 
     # Save the marker scores
     logger.info(f'------Saving marker scores ...')
     output_file_path = Path(config.mkscore_feather_path)
     output_file_path.parent.mkdir(parents=True, exist_ok=True, mode=0o755)
-    mk_score.reset_index(inplace=True)
-    mk_score.rename(columns={mk_score.columns[0]: 'HUMAN_GENE_SYM'}, inplace=True)
-    mk_score.to_feather(output_file_path)
+    mk_score_df = pd.DataFrame(mk_score, index=gene_names, columns=adata.obs_names)
+    mk_score_df.reset_index(inplace=True)
+    mk_score_df.rename(columns={'index': 'HUMAN_GENE_SYM'}, inplace=True)
+    mk_score_df.to_feather(output_file_path)
 
     # Save the modified adata object to disk
     adata.write(config.hdf5_with_latent_path)
