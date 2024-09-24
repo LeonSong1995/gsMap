@@ -118,27 +118,24 @@ IQ: gsMap_example_data/GWAS/IQ_NG_2018.sumstats.gz
 SCZ: gsMap_example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
 ```
 
-### Output
+### Output Description
 
-- The output will be saved in the `--workdir` and will include intermediate files: latent representations, gene marker scores, LD scores. These intermediate files will be reused when you're running another GWAS trait of the same sample in this `--workdir`.
-- A web report will be presented in the `report` folder, including visualizations of cell-trait associations and model diagnostic plots. Copy this folder to your local machine to open the HTML report in a web browser. This is a [example report](https://yanglab.westlake.edu.cn/data/gsMap/IQ/E16.5_E1S1.MOSTA_IQ_gsMap_Report.html) for the `IQ` trait.
-
-```bash
+- The output files will be saved in the specified `--workdir` directory and will include intermediate files such as latent representations, gene marker scores, and LD scores. These intermediate files will be reused if you analyze another GWAS trait of the same sample within this `--workdir`.
+- A web report will be generated in the `report` folder, which includes visualizations of spatial cell-trait associations and diagnostic plots. To view the report, copy this folder to your local machine and open the HTML file in a web browser. You can refer to this [example report](https://yanglab.westlake.edu.cn/data/gsMap/IQ/E16.5_E1S1.MOSTA_IQ_gsMap_Report.html) for the `IQ` trait.
 
 ### Example Output Structure
 
-After running in quick mode, the following directory will be generated:
+After running the analysis in quick mode, the following directory structure will be created:
 
 ```bash
 tree -L 3
 
 example_quick_mode/Mouse_Embryo
 ├── E16.5_E1S1.MOSTA
-│   ├── find_latent_representations # h5ad which contains latent representations
-│   ├── latent_to_gene # gene marker scores
-│   ├── generate_ldscore # LD scores
-│   ├── spatial_ldsc # spatial cell-trait association results
-│   ├── cauchy_combination # region-level or cell type-level association results
-│   └── report # web report
-
+│   ├── find_latent_representations  # Contains latent representations in h5ad format
+│   ├── latent_to_gene               # Gene marker scores
+│   ├── generate_ldscore             # LD scores
+│   ├── spatial_ldsc                 # Spatial cell-trait association results
+│   ├── cauchy_combination           # Region-level or cell type-level association results
+│   └── report                       # Web report with visualizations and diagnostics
 ```
