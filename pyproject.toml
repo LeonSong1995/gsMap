@@ -67,7 +67,7 @@ doc = [
 
 [project.urls]
 Home = "https://github.com/LeonSong1995/gsMap"
-Documentation = "https://yanglab.westlake.edu.cn/gsmap/document"
+Documentation = "https://yanglab.westlake.edu.cn/gsmap/document/software"
 Website = "https://yanglab.westlake.edu.cn/gsmap/home"
 
 [project.scripts]
