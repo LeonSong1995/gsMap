@@ -24,6 +24,7 @@ jobs:
         flit build
         ls -lh dist
     - name: Store the distribution packages
+      if: startsWith(github.ref, 'refs/tags/') # store only on tag pushes
       uses: actions/upload-artifact@v3
       with:
         name: python-package-distributions
