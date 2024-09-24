@@ -1,22 +1,35 @@
-# gsMap (genetically informed spatial mapping of cells for complex traits)
-[![stars-badge](https://img.shields.io/github/stars/LeonSong1995/gsMap?logo=GitHub&color=yellow)](https://github.com/LeonSong1995/gsMap/stargazers)
-[![pypi-badge](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/p/gsMap)
-[![license-badge](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+# gsMap: Genetically Informed Spatial Mapping of Cells for Complex Traits
 
-![Model architecture](schematic.png)
+[![GitHub Stars](https://img.shields.io/github/stars/LeonSong1995/gsMap?logo=GitHub&color=yellow)](https://github.com/LeonSong1995/gsMap/stargazers)
+[![PyPI Version](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/project/gsMap)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## 1.Citation
-Liyang Song, Wenhao Chen, Junren Hou, Minmin Guo, Jian Yang (2024) Spatially resolved mapping of cells associated with human complex traits. (Under review)
+---
 
-## 2.Installation
+![Model Architecture](schematic.png)
 
-install use pip:
+## Table of Contents
+
+- [Citation](#citation)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Online Visualization](#online-visualization)
+
+## Citation
+
+**Liyang Song, Wenhao Chen, Junren Hou, Minmin Guo, Jian Yang (2024).**  
+*Spatially Resolved Mapping of Cells Associated with Human Complex Traits.*  
+*(Under review)*
+
+## Installation
+
+Install using pip:
 
 ```bash
 pip install gsMap
 ```
 
-install from source:
+Install from source:
 
 ```bash
 git clone https://github.com/LeonSong1995/gsMap.git
@@ -24,16 +37,12 @@ cd gsMap
 pip install -e .
 ```
 
-## 3.Usage
+## Usage
 
-Please checkout the documentations and tutorials at
-[gsMap.docs](https://yanglab.westlake.edu.cn/gsmap/document).
+Please check out the documentation and tutorials at [gsMap Documentation](https://yanglab.westlake.edu.cn/gsmap/document).
 
+## Online Visualization
 
-## 4.Online visualization
-
-To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsmap.visualization](https://yanglab.westlake.edu.cn/gsmap/visualize).
-
-....
+To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsMap Visualization](https://yanglab.westlake.edu.cn/gsmap/visualize).
 
 ---

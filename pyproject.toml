@@ -26,7 +26,6 @@ dependencies = [
     "matplotlib",
     "seaborn",
     "tqdm",
-    "progress",
     "pyyaml",
     "torch",
     "torch-geometric",
@@ -65,7 +64,6 @@ doc = [
     'myst-parser',
     'nbsphinx',
 ]
-
 
 [project.urls]
 Home = "https://github.com/LeonSong1995/gsMap"
