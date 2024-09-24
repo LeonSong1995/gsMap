@@ -43,10 +43,4 @@ Please check out the documentation and tutorials at [gsMap Documentation](https:
 
 ## Online Visualization
 
-To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsMap Visualization](https://yanglab.westlake.edu.cn/gsmap/visualize).
-
-## How to Cite
-
-If you use `gsMap` in your studies, please cite:
-
-    Liyang Song, Wenhao Chen, Junren Hou, Minmin Guo, Jian Yang (2024) Spatially resolved mapping of cells associated with human complex traits. (Under review)
+To visualize the traits-cell association spatial maps, please refer to [gsMap Visualization](https://yanglab.westlake.edu.cn/gsmap/visualize).
