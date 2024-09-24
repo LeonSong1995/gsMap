@@ -135,10 +135,10 @@ def run_find_latent_representation(args: FindLatentRepresentationsConfig):
     adata.obsm["latent_PCA"] = latent_pca
 
     # Run UMAP based on latent representations
-    for name in ['latent_GVAE', 'latent_PCA']:
-        sc.pp.neighbors(adata, n_neighbors=10, use_rep=name)
-        sc.tl.umap(adata)
-        adata.obsm['X_umap_' + name] = adata.obsm['X_umap']
+    #for name in ['latent_GVAE', 'latent_PCA']:
+    #    sc.pp.neighbors(adata, n_neighbors=10, use_rep=name)
+    #    sc.tl.umap(adata)
+    #    adata.obsm['X_umap_' + name] = adata.obsm['X_umap']
 
     # Save the AnnData object
     logger.info('Saving ST data...')
