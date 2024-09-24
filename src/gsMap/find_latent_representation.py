@@ -5,8 +5,8 @@ import scanpy as sc
 import torch
 from sklearn.decomposition import PCA
 from sklearn.preprocessing import LabelEncoder
-from gsMap.GNN_VAE.adjacency_matrix import construct_adjacency_matrix
-from gsMap.GNN_VAE.train import ModelTrainer
+from gsMap.GNN.adjacency_matrix import construct_adjacency_matrix
+from gsMap.GNN.train import ModelTrainer
 from gsMap.config import FindLatentRepresentationsConfig
 
 logger = logging.getLogger(__name__)
@@ -49,6 +49,7 @@ def preprocess_data(adata, params):
             adata,
             flavor="seurat_v3",
             n_top_genes=params.feat_cell,
+            layer=params.data_layer,
         )
 
     elif params.data_layer in adata.layers.keys():
@@ -117,8 +118,7 @@ def run_find_latent_representation(args: FindLatentRepresentationsConfig):
         adata = adata[adata.obs[args.annotation].isin(valid_annotations)]
 
         le = LabelEncoder()
-        adata.obs['categorical_label'] = le.fit_transform(adata.obs[args.annotation])
-        label = adata.obs['categorical_label'].to_numpy()
+        label =  le.fit_transform(adata.obs[args.annotation])
     else:
         label = None
 
@@ -127,7 +127,7 @@ def run_find_latent_representation(args: FindLatentRepresentationsConfig):
 
     latent_rep = LatentRepresentationFinder(adata, args)
     latent_gvae = latent_rep.run_gnn_vae(label)
-    latent_pca = latent_rep.compute_pca()
+    latent_pca = latent_rep.latent_pca
 
     # Add latent representations to the AnnData object
     logger.info('Adding latent representations...')

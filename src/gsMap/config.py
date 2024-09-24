@@ -1,3 +1,4 @@
+import sys
 import argparse
 import logging
 from collections import OrderedDict, namedtuple
@@ -88,8 +89,9 @@ def filter_args_for_dataclass(args_dict, data_class: dataclass):
 
 def get_dataclass_from_parser(args: argparse.Namespace, data_class: dataclass):
     remain_kwargs = filter_args_for_dataclass(vars(args), data_class)
-    print(f'Using the following arguments for {data_class.__name__}:')
-    pprint(remain_kwargs)
+    print(f'Using the following arguments for {data_class.__name__}:', flush=True)
+    pprint(remain_kwargs, indent=4)
+    sys.stdout.flush()
     return data_class(**remain_kwargs)
 
 
