@@ -1,7 +1,6 @@
 [![GitHub Stars](https://img.shields.io/github/stars/LeonSong1995/gsMap?logo=GitHub&color=yellow)](https://github.com/LeonSong1995/gsMap/stargazers)
 [![PyPI Version](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/project/gsMap)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-# gsMap
 
 ## Introduction
 
@@ -9,9 +8,9 @@
 
 
 ## Key Features
-- **Spatially-aware High-Resolution Trait Mapping**: Maps trait-associated cells at single-cell resolution, offering insights into their spatial distributions.
-- **Spatial Region Identification**: Aggregates trait-cell association p-values into trait-tissue region association p-values, prioritizing tissue regions relevant to traits of interest.
-- **Putative Causal Genes Identification**: Prioritizes putative causal genes by associating gene expression levels with cell-trait relevance.
+- **Spatially-aware High-Resolution Trait Mapping**
+- **Spatial Region Identification**
+- **Putative Causal Genes Identification**
 
 ![Model Architecture](schematic.png)
 
