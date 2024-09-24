@@ -23,4 +23,4 @@ Verify the installation by running the following command:
 
 .. code-block:: bash
 
-    gsMap -v
+    gsmap -v
