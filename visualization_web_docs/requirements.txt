@@ -1,0 +1,2 @@
+sphinx==6
+gsMap[doc]

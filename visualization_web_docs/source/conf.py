@@ -1,5 +1,5 @@
-import gsMap
-project = 'gsMap'
+# import gsMap
+project = 'gsMap portal'
 copyright = '2024, Liyang, Wenhao'
 author = 'Liyang, Wenhao'
 # release = gsMap.__version__
@@ -52,4 +52,6 @@ html_theme_options = {
 html_js_files = [
     'https://cdn.plot.ly/plotly-latest.min.js',
 ]
+
+rst_epilog = "\n.. include:: .special.rst\n"
 

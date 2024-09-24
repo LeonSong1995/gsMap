@@ -121,7 +121,7 @@ SCZ: gsMap_example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
 ### Output
 
 - The output will be saved in the `--workdir` directory and will include all intermediate files: representations, gene marker scores, LD scores, and LDSC results
-- A web report will be presented in the report file in the `report` folder, including visualizations of cell-trait associations and model diagnostic plots.
+- A web report will be presented in the `report` folder, including visualizations of cell-trait associations and model diagnostic plots.
 
 ### Example Output Structure
 
