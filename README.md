@@ -27,7 +27,7 @@ pip install -e .
 ## 3.Usage
 
 Please checkout the documentations and tutorials at
-[gsMap.docs](https://yanglab.westlake.edu.cn/gsmap/document).
+[gsMap.docs](https://yanglab.westlake.edu.cn/gsmap/document/software).
 
 
 ## 4.Online visualization
