@@ -120,8 +120,10 @@ SCZ: gsMap_example_data/GWAS/PGC3_SCZ_wave3_public_INFO80.sumstats.gz
 
 ### Output
 
-- The output will be saved in the `--workdir` directory and will include all intermediate files: representations, gene marker scores, LD scores, and LDSC results
-- A web report will be presented in the `report` folder, including visualizations of cell-trait associations and model diagnostic plots.
+- The output will be saved in the `--workdir` and will include intermediate files: latent representations, gene marker scores, LD scores. These intermediate files will be reused when you're running another GWAS trait of the same sample in this `--workdir`.
+- A web report will be presented in the `report` folder, including visualizations of cell-trait associations and model diagnostic plots. Copy this folder to your local machine to open the HTML report in a web browser. This is a [example report](https://yanglab.westlake.edu.cn/data/gsMap/IQ/E16.5_E1S1.MOSTA_IQ_gsMap_Report.html) for the `IQ` trait.
+
+```bash
 
 ### Example Output Structure
 
@@ -132,10 +134,11 @@ tree -L 3
 
 example_quick_mode/Mouse_Embryo
 ├── E16.5_E1S1.MOSTA
-│   ├── find_latent_representations
-│   ├── latent_to_gene
-│   ├── generate_ldscore
-│   ├── spatial_ldsc
-│   ├── report
-│   └── cauchy_combination
+│   ├── find_latent_representations # h5ad which contains latent representations
+│   ├── latent_to_gene # gene marker scores
+│   ├── generate_ldscore # LD scores
+│   ├── spatial_ldsc # spatial cell-trait association results
+│   ├── cauchy_combination # region-level or cell type-level association results
+│   └── report # web report
+
 ```
