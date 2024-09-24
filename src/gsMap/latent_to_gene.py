@@ -150,11 +150,6 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         adata.var_names = homologs.loc[adata.var_names, 'HUMAN_GENE_SYM'].values
         adata = adata[:, ~adata.var_names.duplicated()]
 
-    # Remove cells and genes that are not expressed
-    logger.info(f'Number of cells, genes of the input data: {adata.shape[0]},{adata.shape[1]}')
-    adata = adata[adata.X.sum(axis=1) > 0, adata.X.sum(axis=0) > 0]
-    logger.info(f'Number of cells, genes after transformation: {adata.shape[0]},{adata.shape[1]}')
-
     # Create mappings
     n_cells = adata.n_obs
     n_genes = adata.n_vars

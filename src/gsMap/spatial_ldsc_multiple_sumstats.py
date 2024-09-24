@@ -20,8 +20,6 @@ logger = logging.getLogger('gsMap.spatial_ldsc')
 
 # %%
 def _coef_new(jknife):
-    # return coef[0], coef_se[0], z[0]]
-    # est_ = jknife.est[0, 0] / Nbar
     est_ = jknife.jknife_est[0, 0] / Nbar
     se_ = jknife.jknife_se[0, 0] / Nbar
     return est_, se_

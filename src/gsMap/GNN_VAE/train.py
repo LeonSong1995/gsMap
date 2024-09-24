@@ -5,7 +5,7 @@ import torch
 import torch.nn.functional as F
 from progress.bar import Bar
 
-from gsMap.GNN_VAE.model import GNNVAEModel
+from gsMap.GNN_VAE.model import GATModel
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +19,10 @@ def label_loss(pred_label, true_label):
     """Compute the cross-entropy loss."""
     return F.cross_entropy(pred_label, true_label)
 
-
 class ModelTrainer:
     def __init__(self, node_x, graph_dict, params, label=None):
         """Initialize the ModelTrainer with data and hyperparameters."""
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        # torch.cuda.empty_cache()  # Uncomment if necessary
-
         self.params = params
         self.epochs = params.epochs
         self.node_x = torch.FloatTensor(node_x).to(self.device)
@@ -38,7 +35,7 @@ class ModelTrainer:
             self.num_classes = len(torch.unique(self.label))
 
         # Set up the model
-        self.model = GNNVAEModel(self.params.feat_cell, self.params, self.num_classes).to(self.device)
+        self.model = GATModel(self.params.feat_cell, self.params, self.num_classes).to(self.device)
         self.optimizer = torch.optim.Adam(
             self.model.parameters(),
             lr=self.params.gat_lr,
@@ -79,7 +76,6 @@ class ModelTrainer:
                 break
 
             prev_loss = loss.item()
-
         bar.finish()
 
     def get_latent(self):

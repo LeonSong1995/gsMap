@@ -4,7 +4,6 @@ import torch.nn.functional as F
 from torch_geometric.nn import GATConv
 
 def full_block(in_features, out_features, p_drop):
-    """Create a fully connected block with BatchNorm, ELU activation, and Dropout."""
     return nn.Sequential(
         nn.Linear(in_features, out_features),
         nn.BatchNorm1d(out_features),
@@ -12,8 +11,7 @@ def full_block(in_features, out_features, p_drop):
         nn.Dropout(p=p_drop)
     )
 
-class GNNVAEModel(nn.Module):
-    """Graph Neural Network Variational Autoencoder Model."""
+class GATModel(nn.Module):
     def __init__(self, input_dim, params, num_classes=1):
         super().__init__()
         self.var = params.var
@@ -63,7 +61,6 @@ class GNNVAEModel(nn.Module):
         )
 
     def encode(self, x, edge_index):
-        """Encode the input features into latent space."""
         x = self.encoder(x)
         x = self.gat1(x, edge_index)
         x = F.relu(x)
@@ -77,7 +74,6 @@ class GNNVAEModel(nn.Module):
             return mu, None
 
     def reparameterize(self, mu, logvar):
-        """Reparameterization trick for sampling."""
         if self.training and logvar is not None:
             std = torch.exp(0.5 * logvar)
             eps = torch.randn_like(std)
@@ -86,7 +82,6 @@ class GNNVAEModel(nn.Module):
             return mu
 
     def forward(self, x, edge_index):
-        """Forward pass through the model."""
         mu, logvar = self.encode(x, edge_index)
         z = self.reparameterize(mu, logvar)
         x_reconstructed = self.decoder(z)

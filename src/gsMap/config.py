@@ -55,7 +55,8 @@ def add_find_latent_representations_args(parser):
     add_shared_args(parser)
     parser.add_argument('--input_hdf5_path', required=True, type=str, help='Path to the input HDF5 file.')
     parser.add_argument('--annotation', required=True, type=str, help='Name of the annotation in adata.obs to use.')
-    parser.add_argument('--data_layer', required=True, type=str, help='Data layer for gene expression (e.g., "counts", "log1p").')
+    parser.add_argument('--data_layer', type=str, default='counts', required=True,
+                        help='Data layer for gene expression (e.g., "count", "counts", "log1p").')
     parser.add_argument('--epochs', type=int, default=300, help='Number of training epochs.')
     parser.add_argument('--feat_hidden1', type=int, default=256, help='Neurons in the first hidden layer.')
     parser.add_argument('--feat_hidden2', type=int, default=128, help='Neurons in the second hidden layer.')
@@ -66,7 +67,6 @@ def add_find_latent_representations_args(parser):
     parser.add_argument('--n_neighbors', type=int, default=11, help='Number of neighbors for GAT.')
     parser.add_argument('--n_comps', type=int, default=300, help='Number of principal components for PCA.')
     parser.add_argument('--weighted_adj', action='store_true', help='Use weighted adjacency in GAT.')
-    parser.add_argument('--var', action='store_true', help='Enable variance calculations.')
     parser.add_argument('--convergence_threshold', type=float, default=1e-4, help='Threshold for convergence.')
     parser.add_argument('--hierarchically', action='store_true', help='Enable hierarchical latent representation finding.')
 
@@ -236,8 +236,8 @@ def add_run_all_mode_args(parser):
                         help='Path to the input spatial transcriptomics data (H5AD format).')
     parser.add_argument('--annotation', type=str, required=True,
                         help='Name of the annotation in adata.obs to use.')
-    parser.add_argument('--data_layer', type=str, default='X',
-                        help='Data layer of h5ad for gene expression (e.g., "counts", "log1p", "X").')
+    parser.add_argument('--data_layer', type=str, default='counts', required=True,
+                        help='Data layer for gene expression (e.g., "count", "counts", "log1p").')
 
     # GWAS Data Parameters
     parser.add_argument('--trait_name', type=str, help='Name of the trait for GWAS analysis (required if sumstats_file is provided).')
