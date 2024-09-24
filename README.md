@@ -20,6 +20,8 @@
 Install using pip:
 
 ```bash
+conda create -n gsMap python>3.8
+conda activate gsMap
 pip install gsMap
 ```
 
@@ -31,6 +33,11 @@ cd gsMap
 pip install -e .
 ```
 
+Verify the installation by running the following command:
+```bash
+gsmap --help
+```
+
 ## Usage
 
 Please check out the documentation and tutorials at [gsMap Documentation](https://yanglab.westlake.edu.cn/gsmap/document/software).
@@ -39,7 +46,6 @@ Please check out the documentation and tutorials at [gsMap Documentation](https:
 
 To visualize the traits-embryo or traits-brain association spatial maps, please refer to [gsMap Visualization](https://yanglab.westlake.edu.cn/gsmap/visualize).
 
----
 ## How to Cite
 
 If you use `gsMap` in your studies, please cite:
