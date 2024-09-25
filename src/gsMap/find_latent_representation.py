@@ -42,7 +42,6 @@ def preprocess_data(adata, params):
     if params.data_layer in ['count', 'counts']:
         
         adata.X = adata.layers[params.data_layer].copy()
-        logger.warning()
         # HVGs based on count 
         sc.pp.highly_variable_genes(adata,flavor="seurat_v3",n_top_genes=params.feat_cell)
         # Normalize the data
