@@ -40,25 +40,20 @@ def preprocess_data(adata, params):
         raise ValueError(f'Invalid data layer: {params.data_layer}, please check the input data.')
 
     if params.data_layer in ['count', 'counts']:
-
+        
+        adata.X = adata.layers[params.data_layer].copy()
+        logger.warning()
+        # HVGs based on count 
+        sc.pp.highly_variable_genes(adata,flavor="seurat_v3",n_top_genes=params.feat_cell)
+        # Normalize the data
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 
-        # Identify highly variable genes
-        sc.pp.highly_variable_genes(
-            adata,
-            flavor="seurat_v3",
-            n_top_genes=params.feat_cell,
-            layer=params.data_layer,
-        )
-
     elif params.data_layer in adata.layers.keys():
         logger.info(f'Using {params.data_layer} data...')
-        sc.pp.highly_variable_genes(
-            adata,
-            flavor="seurat",
-            n_top_genes=params.feat_cell,
-        )
+        adata.X = adata.layers[params.data_layer].copy()
+        # HVGs based on normalzied data
+        sc.pp.highly_variable_genes(adata,flavor="seurat",n_top_genes=params.feat_cell)
 
     return adata
 
@@ -68,9 +63,7 @@ class LatentRepresentationFinder:
         self.params = args
 
         self.expression_array = adata[:, adata.var.highly_variable].X.copy()
-
-        if self.params.data_layer in ['count', 'counts']:
-            self.expression_array = sc.pp.scale(self.expression_array, max_value=10)
+        self.expression_array = sc.pp.scale(self.expression_array, max_value=10)
 
         # Construct the neighboring graph
         self.graph_dict = construct_adjacency_matrix(adata, self.params)
