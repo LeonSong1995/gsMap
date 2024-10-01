@@ -2,6 +2,9 @@
 [![PyPI Version](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/project/gsMap)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+## Branch Notes
+This branch extends the gsMap to allow it to use the scRNA-seq data. Please set the `--data_type` as scRNA if you want to map GWAS traits to scRNA-seq data. 
+
 ## Introduction
 
 `gsMap` (genetically informed spatial mapping of cells for complex traits) integrates spatial transcriptomics (ST) data with genome-wide association study (GWAS) summary statistics to map cells to human complex traits, including diseases, in a spatially resolved manner.
