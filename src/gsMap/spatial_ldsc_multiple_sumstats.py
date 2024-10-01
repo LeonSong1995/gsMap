@@ -213,8 +213,15 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
         ref_ld_baseline = pd.concat([ref_ld_baseline, ref_ld_baseline_additional], axis=1)
         del ref_ld_baseline_additional
 
-    # Determine chunk settings
-    total_chunk_number_found = determine_total_chunks(config)
+    # Initialize s_ldsc once if quick_mode
+    s_ldsc = None
+    if config.ldscore_save_format == 'quick_mode':
+        s_ldsc = S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix(config, common_snp_among_all_sumstats_pos)
+        total_chunk_number_found = len(s_ldsc.chunk_starts)
+        logger.info(f'Split data into {total_chunk_number_found} chunks')
+    else:
+        total_chunk_number_found = determine_total_chunks(config)
+
     start_chunk, end_chunk = determine_chunk_range(config, total_chunk_number_found)
     running_chunk_number = end_chunk - start_chunk + 1
 
@@ -229,7 +236,14 @@ def run_spatial_ldsc(config: SpatialLDSCConfig):
 
     output_dict = defaultdict(list)
     for chunk_index in range(start_chunk, end_chunk + 1):
-        ref_ld_spatial, spatial_annotation_cnames = load_ldscore_chunk(chunk_index, common_snp_among_all_sumstats_pos, config, zarr_file, spots_name)
+        ref_ld_spatial, spatial_annotation_cnames = load_ldscore_chunk(
+            chunk_index,
+            common_snp_among_all_sumstats_pos,
+            config,
+            zarr_file,
+            spots_name,
+            s_ldsc  # Pass s_ldsc to the function
+        )
         ref_ld_baseline_column_sum = ref_ld_baseline.sum(axis=1).values
 
         for trait_name, sumstats in sumstats_cleaned_dict.items():
@@ -308,7 +322,7 @@ def determine_chunk_range(config, total_chunk_number_found):
     return start_chunk, end_chunk
 
 
-def load_ldscore_chunk(chunk_index, common_snp_among_all_sumstats_pos, config, zarr_file=None, spots_name=None):
+def load_ldscore_chunk(chunk_index, common_snp_among_all_sumstats_pos, config, zarr_file=None, spots_name=None, s_ldsc=None):
     """Load LD score chunk based on save format."""
     if config.ldscore_save_format == 'feather':
         return load_ldscore_chunk_from_feather(chunk_index, common_snp_among_all_sumstats_pos, config)
@@ -319,7 +333,9 @@ def load_ldscore_chunk(chunk_index, common_snp_among_all_sumstats_pos, config, z
         spatial_annotation_cnames = spots_name[start_spot:start_spot + zarr_file.chunks[1]]
         return ref_ld_spatial, spatial_annotation_cnames
     elif config.ldscore_save_format == 'quick_mode':
-        s_ldsc = S_LDSC_Boost_with_pre_calculate_SNP_Gene_weight_matrix(config, common_snp_among_all_sumstats_pos)
+        # Use the pre-initialized s_ldsc
+        if s_ldsc is None:
+            raise ValueError("s_ldsc must be provided in quick_mode")
         return s_ldsc.fetch_ldscore_by_chunk(chunk_index - 1)
     else:
         raise ValueError(f'Invalid ld score save format: {config.ldscore_save_format}')
