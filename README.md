@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## Branch Notes
-This branch extends the gsMap to allow it to use the scRNA-seq data. Please set the `--data_type` as scRNA if you want to map GWAS traits to scRNA-seq data. 
+This branch extends gsMap to allow the use of scRNA-seq data. Please set `--data_type` to `scRNA` if you want to map GWAS traits to scRNA-seq data.
 
 ## Introduction
 
