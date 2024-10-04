@@ -37,11 +37,17 @@ def preprocess_data(adata, params):
         logger.info(f'Using data layer: {params.data_layer}...')
         adata.X = adata.layers[params.data_layer]
         sc.pp.filter_genes(adata, min_cells=30)
+    elif params.data_layer == 'X':
+        logger.info(f'Using data layer: {params.data_layer}...')
+        if adata.X.dtype == 'float32' or adata.X.dtype == 'float64':
+            logger.warning(f'The data layer should be raw count data')
+        sc.pp.filter_genes(adata, min_cells=30)
     else:
         raise ValueError(f'Invalid data layer: {params.data_layer}, please check the input data.')
 
-    if params.data_layer in ['count', 'counts']:
+    if params.data_layer in ['count', 'counts', 'X']:
         # HVGs based on count
+        logger.info('Dealing with count data...')
         sc.pp.highly_variable_genes(adata,flavor="seurat_v3",n_top_genes=params.feat_cell)
         # Normalize the data
         sc.pp.normalize_total(adata, target_sum=1e4)
