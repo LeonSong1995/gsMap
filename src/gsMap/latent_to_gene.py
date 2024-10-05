@@ -4,6 +4,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import scanpy as sc
+import scipy
 from scipy.stats import gmean
 from scipy.stats import rankdata
 from sklearn.metrics.pairwise import cosine_similarity
@@ -167,21 +168,12 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     coor_latent = adata.obsm[config.latent_representation]
     coor_latent = coor_latent.astype(np.float32)
 
-    # Compute ranks
-    logger.info('------Ranking the spatial data...')
-    adata_X = adata.X.tocsr()
-    ranks = np.zeros((n_cells, n_genes), dtype=np.float32)
-
-    for i in tqdm(range(n_cells), desc="Computing ranks per cell"):
-        data = adata_X[i, :].toarray().flatten()
-        ranks[i, :] = rankdata(data, method='average')
-
     # Geometric mean across slices
     if config.gM_slices is not None:
         logger.info('Geometrical mean across multiple slices is provided.')
         gM_df = pd.read_parquet(config.gM_slices)
         if config.species is not None:
-            homologs = pd.read_csv(config.homolog_file, sep='\t', header=None)
+            homologs = pd.read_csv(config.homolog_file, sep='\t')
             if homologs.shape[1] < 2:
                 raise ValueError(
                     "Homologs file must have at least two columns: one for the species and one for the human gene symbol.")
@@ -192,9 +184,26 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         common_genes = np.intersect1d(adata.var_names, gM_df.index)
         gM_df = gM_df.loc[common_genes]
         gM = gM_df['G_Mean'].values
-        ranks = ranks[:, np.isin(adata.var_names, common_genes)]
         adata = adata[:, common_genes]
     else:
+        gM = None
+
+    # Compute ranks after taking common genes with gM_slices
+    logger.info('------Ranking the spatial data...')
+    if not scipy.sparse.issparse(adata.X):
+        adata_X = scipy.sparse.csr_matrix(adata.X)
+    elif isinstance(adata.X, scipy.sparse.csr_matrix):
+        adata_X = adata.X  # Avoid copying if already CSR
+    else:
+        adata_X = adata.X.tocsr()
+
+    ranks = np.zeros((n_cells, adata.n_vars), dtype=np.float32)
+
+    for i in tqdm(range(n_cells), desc="Computing ranks per cell"):
+        data = adata_X[i, :].toarray().flatten()
+        ranks[i, :] = rankdata(data, method='average')
+
+    if gM is None:
         gM = gmean(ranks, axis=0)
 
     # Compute the fraction of each gene across cells
@@ -202,7 +211,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     frac_whole = np.asarray(adata_X_bool.sum(axis=0)).flatten() / n_cells
 
     # Normalize the ranks
-    ranks = ranks / gM
+    ranks = ranks / (gM + 1e-10)  # Avoid division by zero
 
     # Compute marker scores in parallel
     logger.info('------Computing marker scores...')
