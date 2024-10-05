@@ -63,7 +63,7 @@ def build_spatial_net(adata, annotation, num_neighbour):
         logger.info(f'Cell annotations are not provided...')
         spatial_net = find_neighbors(coor, num_neighbour)
 
-    return spatial_net
+    return spatial_net.groupby('Cell1')['Cell2'].apply(np.array).to_dict()
 
 
 def find_neighbors_regional(cell_pos, spatial_net_dict, coor_latent, config, cell_annotations):
@@ -129,18 +129,20 @@ def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, config, ce
 def run_latent_to_gene(config: LatentToGeneConfig):
     logger.info('------Loading the spatial data...')
     adata = sc.read_h5ad(config.hdf5_with_latent_path)
+    logger.info(f'Loaded spatial data with {adata.n_obs} cells and {adata.n_vars} genes.')
 
     if config.annotation is not None:
         logger.info(f'------Cell annotations are provided as {config.annotation}...')
+        initial_cell_count = adata.n_obs
         adata = adata[~pd.isnull(adata.obs[config.annotation]), :]
+        logger.info(f'Removed null annotations. Cells retained: {adata.n_obs} (initial: {initial_cell_count}).')
 
     # Homologs transformation
     if config.homolog_file is not None:
         logger.info(f'------Transforming the {config.species} to HUMAN_GENE_SYM...')
         homologs = pd.read_csv(config.homolog_file, sep='\t')
         if homologs.shape[1] != 2:
-            raise ValueError(
-                "Homologs file must have two columns: one for the species and one for the human gene symbol.")
+            raise ValueError("Homologs file must have two columns: one for the species and one for the human gene symbol.")
 
         homologs.columns = [config.species, 'HUMAN_GENE_SYM']
         homologs.set_index(config.species, inplace=True)
@@ -157,26 +159,30 @@ def run_latent_to_gene(config: LatentToGeneConfig):
 
     if config.annotation is not None:
         cell_annotations = adata.obs[config.annotation].values
+        logger.info(f'Using cell annotations for {len(cell_annotations)} cells.')
     else:
         cell_annotations = None
 
     # Build the spatial graph
-    spatial_net = build_spatial_net(adata, config.annotation, config.num_neighbour_spatial)
-    spatial_net_dict = spatial_net.groupby('Cell1')['Cell2'].apply(np.array).to_dict()
+    logger.info('------Building the spatial graph...')
+    spatial_net_dict = build_spatial_net(adata, config.annotation, config.num_neighbour_spatial)
+    logger.info('Spatial graph built successfully.')
 
     # Extract the latent representation
+    logger.info('------Extracting the latent representation...')
     coor_latent = adata.obsm[config.latent_representation]
     coor_latent = coor_latent.astype(np.float32)
+    logger.info('Latent representation extracted.')
 
     # Geometric mean across slices
+    gM = None
     if config.gM_slices is not None:
         logger.info('Geometrical mean across multiple slices is provided.')
         gM_df = pd.read_parquet(config.gM_slices)
         if config.species is not None:
             homologs = pd.read_csv(config.homolog_file, sep='\t')
             if homologs.shape[1] < 2:
-                raise ValueError(
-                    "Homologs file must have at least two columns: one for the species and one for the human gene symbol.")
+                raise ValueError("Homologs file must have at least two columns: one for the species and one for the human gene symbol.")
             homologs.columns = [config.species, 'HUMAN_GENE_SYM']
             homologs.set_index(config.species, inplace=True)
             gM_df = gM_df.loc[gM_df.index.isin(homologs.index)]
@@ -185,8 +191,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         gM_df = gM_df.loc[common_genes]
         gM = gM_df['G_Mean'].values
         adata = adata[:, common_genes]
-    else:
-        gM = None
+        logger.info(f'{len(common_genes)} common genes retained after loading the cross slice geometric mean.')
 
     # Compute ranks after taking common genes with gM_slices
     logger.info('------Ranking the spatial data...')
@@ -209,13 +214,13 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     # Compute the fraction of each gene across cells
     adata_X_bool = adata_X.astype(bool)
     frac_whole = np.asarray(adata_X_bool.sum(axis=0)).flatten() / n_cells
+    logger.info('Gene expression proportion of each gene across cells computed.')
 
     # Normalize the ranks
     ranks = ranks / (gM + 1e-10)  # Avoid division by zero
 
     # Compute marker scores in parallel
     logger.info('------Computing marker scores...')
-
     def compute_mk_score_wrapper(cell_pos):
         return compute_regional_mkscore(
             cell_pos, spatial_net_dict, coor_latent, config, cell_annotations, ranks, frac_whole, adata_X_bool
@@ -223,12 +228,14 @@ def run_latent_to_gene(config: LatentToGeneConfig):
 
     mk_scores = [compute_mk_score_wrapper(cell_pos) for cell_pos in tqdm(range(n_cells), desc="Calculating marker scores")]
     mk_score = np.vstack(mk_scores).T
+    logger.info('Marker scores computed.')
 
     # Remove mitochondrial genes
     gene_names = adata.var_names.values.astype(str)
     mt_gene_mask = ~(np.char.startswith(gene_names, 'MT-') | np.char.startswith(gene_names, 'mt-'))
     mk_score = mk_score[mt_gene_mask, :]
     gene_names = gene_names[mt_gene_mask]
+    logger.info(f'Removed mitochondrial genes. Remaining genes: {len(gene_names)}.')
 
     # Save the marker scores
     logger.info(f'------Saving marker scores ...')
@@ -238,6 +245,8 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     mk_score_df.reset_index(inplace=True)
     mk_score_df.rename(columns={'index': 'HUMAN_GENE_SYM'}, inplace=True)
     mk_score_df.to_feather(output_file_path)
+    logger.info(f'Marker scores saved to {output_file_path}.')
 
     # Save the modified adata object to disk
     adata.write(config.hdf5_with_latent_path)
+    logger.info(f'Modified adata object saved to {config.hdf5_with_latent_path}.')
