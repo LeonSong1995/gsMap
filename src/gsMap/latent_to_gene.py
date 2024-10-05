@@ -217,7 +217,7 @@ def run_latent_to_gene(config: LatentToGeneConfig):
     logger.info('Gene expression proportion of each gene across cells computed.')
 
     # Normalize the ranks
-    ranks = ranks / (gM + 1e-10)  # Avoid division by zero
+    ranks /= gM
 
     # Compute marker scores in parallel
     logger.info('------Computing marker scores...')

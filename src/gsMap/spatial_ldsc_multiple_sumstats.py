@@ -353,5 +353,8 @@ def save_results(output_dict, config, running_chunk_number, start_chunk, end_chu
             out_file_name = out_dir / f'{sample_name}_{trait_name}_chunk{start_chunk}-{end_chunk}.csv.gz'
         out_all['spot'] = out_all.index
         out_all = out_all[['spot', 'beta', 'se', 'z', 'p']]
+
+        # clip the p-values
+        out_all['p'] = out_all['p'].clip(1e-300, 1)
         out_all.to_csv(out_file_name, compression='gzip', index=False)
         logger.info(f'Output saved to {out_file_name} for {trait_name}')
