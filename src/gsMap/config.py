@@ -412,6 +412,7 @@ class LatentToGeneConfig(ConfigWithAutoPaths):
     homolog_file: str = None
     gM_slices: str = None
     annotation: str = None
+    species: str = None
 
     def __post_init__(self):
         if self.homolog_file is not None:

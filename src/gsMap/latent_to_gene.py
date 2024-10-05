@@ -192,8 +192,8 @@ def run_latent_to_gene(config: LatentToGeneConfig):
         common_genes = np.intersect1d(adata.var_names, gM_df.index)
         gM_df = gM_df.loc[common_genes]
         gM = gM_df['G_Mean'].values
-        adata = adata[:, common_genes]
         ranks = ranks[:, np.isin(adata.var_names, common_genes)]
+        adata = adata[:, common_genes]
     else:
         gM = gmean(ranks, axis=0)
 
