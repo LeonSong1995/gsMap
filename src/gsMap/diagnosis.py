@@ -85,17 +85,18 @@ def compute_gene_diagnostic_info(config: DiagnosisConfig):
     gene_diagnostic_info.to_csv(gene_diagnostic_info_save_path, index=False)
     logger.info(f'Gene diagnostic information saved to {gene_diagnostic_info_save_path}.')
 
-    # Save to adata.var with the trait_name prefix
-    logger.info('Saving gene diagnostic info to adata.var...')
-    gene_diagnostic_info.set_index('Gene', inplace=True)  # Use 'Gene' as the index to align with adata.var
-    adata.var[f'{config.trait_name}_Annotation'] = gene_diagnostic_info['Annotation']
-    adata.var[f'{config.trait_name}_Median_GSS'] = gene_diagnostic_info['Median_GSS']
-    adata.var[f'{config.trait_name}_PCC'] = gene_diagnostic_info['PCC']
-
-    # Save trait_ldsc_result to adata.obs
-    logger.info(f'Saving trait LDSC results to adata.obs as gsMap_{config.trait_name}_p_value...')
-    adata.obs[f'gsMap_{config.trait_name}_p_value'] = trait_ldsc_result['p']
-    adata.write(config.hdf5_with_latent_path, )
+    # TODO: A new script is needed to save the gene diagnostic info to adata.var and trait_ldsc_result to adata.obs when running multiple traits
+    # # Save to adata.var with the trait_name prefix
+    # logger.info('Saving gene diagnostic info to adata.var...')
+    # gene_diagnostic_info.set_index('Gene', inplace=True)  # Use 'Gene' as the index to align with adata.var
+    # adata.var[f'{config.trait_name}_Annotation'] = gene_diagnostic_info['Annotation']
+    # adata.var[f'{config.trait_name}_Median_GSS'] = gene_diagnostic_info['Median_GSS']
+    # adata.var[f'{config.trait_name}_PCC'] = gene_diagnostic_info['PCC']
+    #
+    # # Save trait_ldsc_result to adata.obs
+    # logger.info(f'Saving trait LDSC results to adata.obs as gsMap_{config.trait_name}_p_value...')
+    # adata.obs[f'gsMap_{config.trait_name}_p_value'] = trait_ldsc_result['p']
+    # adata.write(config.hdf5_with_latent_path, )
 
     return gene_diagnostic_info.reset_index()
 
