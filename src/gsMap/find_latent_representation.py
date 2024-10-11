@@ -64,7 +64,7 @@ class LatentRepresentationFinder:
         self.graph_dict = construct_adjacency_matrix(adata, self.params)
 
     def compute_pca(self):
-        self.latent_pca = PCA(n_components=self.params.feat_cell).fit_transform(self.expression_array)
+        self.latent_pca = PCA(n_components=self.params.n_comps).fit_transform(self.expression_array)
         return self.latent_pca
 
     def run_gnn_vae(self, label, verbose='whole ST data'):
