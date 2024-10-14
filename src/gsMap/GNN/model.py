@@ -85,5 +85,6 @@ class GATModel(nn.Module):
         mu, logvar = self.encode(x, edge_index)
         z = self.reparameterize(mu, logvar)
         x_reconstructed = self.decoder(z)
-        pred_label = F.softmax(self.cluster(z), dim=1)
+        # pred_label = F.softmax(self.cluster(z), dim=1)
+        pred_label = self.cluster(z)
         return pred_label, x_reconstructed, z, mu, logvar
