@@ -36,7 +36,7 @@ dependencies = [
     'jinja2',
     'scanpy >=1.8.0',
     'zarr',
-    'bitarray',
+    'bitarray >=2.9.2, <3.0.0',
     'pyarrow',
     'scikit-misc'
 ]
