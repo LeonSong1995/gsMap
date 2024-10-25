@@ -33,10 +33,10 @@ def preprocess_data(adata, params):
     logger.info('Preprocessing data...')
     adata.var_names_make_unique()
 
-    sc.pp.filter_genes(adata, min_cells=30)
     if params.data_layer in adata.layers.keys():
         logger.info(f'Using data layer: {params.data_layer}...')
         adata.X = adata.layers[params.data_layer]
+        sc.pp.filter_genes(adata, min_cells=30)
     else:
         raise ValueError(f'Invalid data layer: {params.data_layer}, please check the input data.')
 
