@@ -96,7 +96,7 @@ def find_neighbors_regional(cell_pos, spatial_net_dict, coor_latent, config, cel
 
 
 def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, config, cell_annotations,
-                             ranks, frac_whole, adata_X_bool):
+                             ranks, frac_whole, adata_X_bool, eps=1e-6):
     """
     Compute gmean ranks of a region.
     """
@@ -110,10 +110,13 @@ def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, config, ce
     ranks_tg = ranks[cell_select_pos, :]
     gene_ranks_region = gmean(ranks_tg, axis=0)
     gene_ranks_region[gene_ranks_region <= 1] = 0
+    mask = (frac_whole < eps)
+    frac_whole[mask] = 1
 
     if not config.no_expression_fraction:
         # Ratio of expression fractions
         frac_focal = adata_X_bool[cell_select_pos, :].sum(axis=0).A1 / len(cell_select_pos)
+        print(f"frac_focal: {frac_focal} | type: {type(frac_focal)}")
         frac_region = frac_focal / frac_whole
         frac_region[frac_region <= 1] = 0
         frac_region[frac_region > 1] = 1
