@@ -116,7 +116,7 @@ def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, config, ce
     if not config.no_expression_fraction:
         # Ratio of expression fractions
         frac_focal = adata_X_bool[cell_select_pos, :].sum(axis=0).A1 / len(cell_select_pos)
-        print(f"frac_focal: {frac_focal} | type: {type(frac_focal)}")
+        # print(f"frac_focal: {frac_focal} | type: {type(frac_focal)}")
         frac_region = frac_focal / frac_whole
         frac_region[frac_region <= 1] = 0
         frac_region[frac_region > 1] = 1
