@@ -96,7 +96,7 @@ def find_neighbors_regional(cell_pos, spatial_net_dict, coor_latent, config, cel
 
 
 def compute_regional_mkscore(cell_pos, spatial_net_dict, coor_latent, config, cell_annotations,
-                             ranks, frac_whole, adata_X_bool, eps=1e-6):
+                             ranks, frac_whole, adata_X_bool, eps=1e-10):
     """
     Compute gmean ranks of a region.
     """
