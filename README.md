@@ -45,6 +45,7 @@ Please check out the documentation and tutorials at [gsMap Documentation](https:
 
 To visualize the traits-cell association spatial maps, please refer to [gsMap Visualization](https://yanglab.westlake.edu.cn/gsmap/visualize).
 
+
 ## Citation 
 Song, L., Chen, W., Hou, J., Guo, M. & Yang, J. [Spatially resolved mapping of cells associated with human complex traits.](https://www.medrxiv.org/content/10.1101/2024.10.31.24316538v1) medRxiv, 2024.2010.2031.24316538 (2024).
 
