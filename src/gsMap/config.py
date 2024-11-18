@@ -294,19 +294,23 @@ def add_run_all_mode_args(parser):
     parser.add_argument('--max_processes', type=int, default=10,
                         help='Maximum number of processes for parallel execution.')
 
-    # # Optional paths for customization
-    # parser.add_argument('--bfile_root', type=str,
-    #                     help='Root path to PLINK bfiles (LD reference panel). If not provided, it will use the default in gsMap_resource_dir.')
-    # parser.add_argument('--keep_snp_root', type=str,
-    #                     help='Root path for SNP filtering. If not provided, it will use the default in gsMap_resource_dir.')
-    # parser.add_argument('--w_file', type=str,
-    #                     help='Path to the regression weight file. If not provided, it will use the default in gsMap_resource_dir.')
-    # parser.add_argument('--snp_gene_weight_adata_path', type=str,
-    #                     help='Path to the SNP-gene weight matrix file. If not provided, it will use the default in gsMap_resource_dir.')
-    # parser.add_argument('--baseline_annotation_dir', type=str,
-    #                     help='Directory containing the baseline annotations for quick mode. If not provided, it will use the default in gsMap_resource_dir.')
-    # parser.add_argument('--SNP_gene_pair_dir', type=str,
-    #                     help='Directory for SNP-gene pair data. If not provided, it will use the default in gsMap_resource_dir.')
+
+    parser.add_argument(
+        '--latent_representation', type=str, default=None,
+        help='Type of latent representation. This should exist in the h5ad obsm.'
+    )
+    parser.add_argument(
+        '--num_neighbour', type=int, default=21,
+        help='Number of neighbors.'
+    )
+    parser.add_argument(
+        '--num_neighbour_spatial', type=int, default=101,
+        help='Number of spatial neighbors.'
+    )
+    parser.add_argument(
+        '--gM_slices', type=str, default=None,
+        help='Path to the slice mean file (optional).'
+    )
 
 
 def ensure_path_exists(func):

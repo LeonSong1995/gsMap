@@ -181,6 +181,12 @@ def run_pipeline(config: RunAllModeConfig):
             selected_genes=None,
             sumstats_file=sumstats_config[trait_name],
         )
+        gsMap_report_file = report_config.get_gsMap_report_file(trait_name)
+        if Path(gsMap_report_file).exists():
+            logger.info(
+                f"Final report already generated for trait {trait_name}. Results saved at {gsMap_report_file}. Skipping...")
+            continue
+
         # Create the run parameters dictionary for each trait
         run_parameter_dict = {
             "Sample Name": config.sample_name,
