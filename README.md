@@ -19,7 +19,7 @@
 Install using pip:
 
 ```bash
-conda create -n gsMap python>3.8
+conda create -n gsMap python>=3.10
 conda activate gsMap
 pip install gsMap
 ```

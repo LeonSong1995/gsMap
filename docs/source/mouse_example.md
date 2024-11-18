@@ -75,7 +75,7 @@ gsMap_example_data/
 The `--workdir` parameter specifies the working directory for gsMap, where all outputs will be saved.
 ```
 
-**Execution**: <span style="color:#31a354"> required memory: ~80G (120K cells) </span>
+**Execution**: <span style="color:#31a354"> required memory: ~60G (120K cells) </span>
 
 ```bash
 gsmap run_find_latent_representations \
@@ -217,7 +217,7 @@ gsmap run_cauchy_combination \
 The default genes for visualization are the top 50 genes whose GSS shows the highest correlation with the -log10 p-values of the trait-cell associations. To select specific genes for visualization, use the `--selected_genes` parameter.
 ```
 
-**Execution**: <span style="color:#31a354"> required memory: ~50G </span>
+**Execution**: <span style="color:#31a354"> required memory: ~60G </span>
 
 ```bash
 gsmap run_report \
@@ -229,8 +229,9 @@ gsmap run_report \
     --top_corr_genes 50
 ```
 
+## gsMap Advanced Usage
 
-### 7. conditional analysis (optional)
+### Conditional analysis (optional)
 **Objective**: Perform conditional analysis by adjusting for other functional annotations or cell-type-level annotations. 
 
 This step extends `step 3: generate ldscore`, by adding additional functional annotations to the baseline with the aim of conducting a conditional analysis. The directory of additional annotations can be specified using the parameter `--additional_baseline_annotation`. The other steps are same to the tutorials above. 
@@ -263,8 +264,8 @@ do
 done
 ```
 
-### 8. create slice mean for multiple samples (optional)
-**Objective**: Generate slice mean for multiple samples, and then use this gene expression mean to calculate the GSS. 
+### Create slice mean for multiple samples (optional)
+**Objective**: Generate slice mean for multiple samples, and then use this gene expression slice mean rank to calculate the GSS. 
 
 ```bash
 gsmap create_slice_mean \
@@ -283,10 +284,27 @@ gsmap run_latent_to_gene \
     --latent_representation 'latent_GVAE'
 ```
 
-### 8. cauchy combination for multiple samples (optional)
+### Cauchy combination for multiple samples (optional)
+
+```bash
 gsmap run_cauchy_combination \
     --workdir './workdir' \
     --sample_name_list 'sample1' 'sample2' 'sample3' \
     --trait_name 'IQ' \
     --annotation 'annotation' \
     --output_file './workdir/multiple_samples_IQ_cauchy_combination.csv.gz'
+```
+
+### Using Customized latent representations (optional)
+
+```bash
+
+# This could be any key in the obsm field of the AnnData object.
+latent_customized = 'latent_customized'
+gsmap run_latent_to_gene \
+    --input_hdf5_path 'sample1.h5ad' \
+    --workdir './workdir' \
+    --sample_name 'sample1' \
+    --annotation 'annotation' \
+    --latent_representation $latent_customized
+```

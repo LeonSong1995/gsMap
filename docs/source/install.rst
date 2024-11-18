@@ -8,8 +8,9 @@ The ``gsMap`` package can be installed via pip:
 
 .. code-block:: bash
 
+    conda create -n gsMap python>=3.10
+    conda activate gsMap
     pip install gsMap
-
 
 or via the source code:
 
