@@ -64,6 +64,10 @@ Subcommands
 
     Run entire gsMap Pipeline. 
 
+.. option:: create_slice_mean
+
+    Create Slice Mean using multiple slices.
+
 -----
 
 .. toctree::
@@ -78,4 +82,5 @@ Subcommands
     api/spatial_ldsc
     api/cauchy_combination
     api/report
+    api/create_slice_mean
 
