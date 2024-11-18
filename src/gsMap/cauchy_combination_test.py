@@ -130,6 +130,7 @@ def run_Cauchy_combination(config: CauchyCombinationConfig):
         'p_cauchy': p_cauchy,
         'p_median': p_median
     })
+    results.sort_values(by='p_cauchy', inplace=True)
 
     # Save the results
     Path(config.output_file).parent.mkdir(parents=True, exist_ok=True, mode=0o755)
