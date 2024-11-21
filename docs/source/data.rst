@@ -6,9 +6,9 @@ Download gsMap Running Resources
 
 You can download the necessary resources for running gsMap from the following link:
 
-.. _gsMap running dependencies: http://cnsgenomics.com/data/gsMap/gsMap_resource.tar.gz
+.. _gsMap running dependencies: https://yanglab.westlake.edu.cn/data/gsMap/gsMap_resource.tar.gz
 
-`gsMap running dependencies <http://cnsgenomics.com/data/gsMap/gsMap_resource.tar.gz>`_
+`gsMap running dependencies <https://yanglab.westlake.edu.cn/data/gsMap/gsMap_resource.tar.gz>`_
 
 
 - **LD Reference Panel**:
@@ -37,7 +37,7 @@ Download Example Data
 
 To illustrate how to use gsMap, we provide some example GWAS and ST data. You can download the example data from the following link:
 
-`gsMap Example Data <http://cnsgenomics.com/data/gsMap/gsMap_example_data.tar.gz>`_
+`gsMap Example Data <https://yanglab.westlake.edu.cn/data/gsMap/gsMap_example_data.tar.gz>`_
 
 .. _data-availability:
 
