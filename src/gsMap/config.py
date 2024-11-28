@@ -787,9 +787,8 @@ class RunAllModeConfig(ConfigWithAutoPaths):
     annotation: str
     data_layer: str = 'X'
 
-
     # == latent 2 Gene PARAMETERS ==
-    gM_slices: str = None
+    gM_slices: Optional[str] = None
     latent_representation: str = None
     num_neighbour: int = 21
     num_neighbour_spatial: int = 101
