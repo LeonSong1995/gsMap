@@ -265,10 +265,9 @@ def run_Diagnosis(config: DiagnosisConfig):
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 
+    if config.plot_type in ['gsMap', 'all']:
+        generate_gsMap_plot(config)
     if config.plot_type in ['manhattan', 'all']:
         generate_manhattan_plot(config)
     if config.plot_type in ['GSS', 'all']:
         generate_GSS_distribution(config)
-    if config.plot_type in ['gsMap', 'all']:
-        generate_gsMap_plot(config)
-
