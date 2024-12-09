@@ -134,19 +134,22 @@ def _read_ref_ld_v2(ld_file):
     ref_ld.set_index('SNP', inplace=True)
     return ref_ld
 
+
 def _read_M_v2(ld_file, n_annot, not_M_5_50):
     suffix = '.l2.M'
     if not not_M_5_50:
         suffix += '_5_50'
-    M_annot= np.array(
+    M_annot = np.array(
         [
             np.loadtxt(f'{ld_file}{chr}{suffix}', )
-         for chr in range(1, 23)]
+            for chr in range(1, 23)]
 
     )
     assert M_annot.shape == (22, n_annot)
     return M_annot.sum(axis=0).reshape((1, n_annot))
-# Fun for reading M annotations 
+
+
+# Fun for reading M annotations
 def _read_M(ld_file, n_annot, not_M_5_50):
     '''
     Read M (--M, --M-file, etc).
@@ -193,6 +196,8 @@ def _check_variance(M_annot, ref_ld):
         M_annot = M_annot[:, ii_m]
     # -
     return M_annot, ref_ld, ii
+
+
 def _check_variance_v2(M_annot, ref_ld):
     ii = ref_ld.var() == 0
     if ii.all():
@@ -200,7 +205,7 @@ def _check_variance_v2(M_annot, ref_ld):
     elif not ii.any():
         print('No partitioned LD Scores have zero variance.')
     else:
-        ii_snp= ii_m = np.array(~ii)
+        ii_snp = ii_m = np.array(~ii)
         print(f'Removing {sum(ii)} partitioned LD Scores with zero variance.')
         ref_ld = ref_ld.iloc[:, ii_snp]
         M_annot = M_annot[:, ii_m]

@@ -9,8 +9,7 @@ from scipy.stats import norm
 
 from gsMap.config import DiagnosisConfig
 from gsMap.utils.manhattan_plot import ManhattanPlot
-from gsMap.visualize import draw_scatter, load_st_coord, estimate_point_size_for_plot,load_ldsc
-
+from gsMap.visualize import draw_scatter, load_st_coord, estimate_point_size_for_plot, load_ldsc
 
 warnings.filterwarnings("ignore", category=FutureWarning)
 logger = logging.getLogger(__name__)
@@ -23,7 +22,8 @@ def convert_z_to_p(gwas_data):
     gwas_data['P'] = gwas_data['P'].clip(lower=min_p_value)
     return gwas_data
 
-def load_gene_diagnostic_info(config:DiagnosisConfig):
+
+def load_gene_diagnostic_info(config: DiagnosisConfig):
     """Load or compute gene diagnostic info."""
     gene_diagnostic_info_save_path = config.get_gene_diagnostic_info_save_path(config.trait_name)
     if gene_diagnostic_info_save_path.exists():
@@ -91,14 +91,14 @@ def compute_gene_diagnostic_info(config: DiagnosisConfig):
     return gene_diagnostic_info.reset_index()
 
 
-def load_gwas_data(config:DiagnosisConfig):
+def load_gwas_data(config: DiagnosisConfig):
     """Load and process GWAS data."""
     logger.info('Loading and processing GWAS data...')
     gwas_data = pd.read_csv(config.sumstats_file, compression='gzip', sep='\t')
     return convert_z_to_p(gwas_data)
 
 
-def load_snp_gene_pairs(config:DiagnosisConfig):
+def load_snp_gene_pairs(config: DiagnosisConfig):
     """Load SNP-gene pairs from multiple chromosomes."""
     ldscore_save_dir = Path(config.ldscore_save_dir)
     return pd.concat([
@@ -167,7 +167,8 @@ def generate_GSS_distribution(config: DiagnosisConfig):
     if config.selected_genes is not None:
         logger.info(f'Generating GSS & Expression distribution plot for selected genes: {plot_genes}...')
     else:
-        logger.info(f'Generating GSS & Expression distribution plot for top {config.top_corr_genes} correlated genes...')
+        logger.info(
+            f'Generating GSS & Expression distribution plot for top {config.top_corr_genes} correlated genes...')
 
     if config.customize_fig:
         pixel_width, pixel_height, point_size = config.fig_width, config.fig_height, config.point_size
@@ -179,8 +180,9 @@ def generate_GSS_distribution(config: DiagnosisConfig):
     config.get_GSS_plot_select_gene_file(config.trait_name).write_text('\n'.join(plot_genes))
 
     for selected_gene in plot_genes:
-        expression_series = pd.Series(adata[:, selected_gene].X.toarray().flatten(), index=adata.obs.index,name='Expression')
-        threshold = np.quantile(expression_series,0.9999)
+        expression_series = pd.Series(adata[:, selected_gene].X.toarray().flatten(), index=adata.obs.index,
+                                      name='Expression')
+        threshold = np.quantile(expression_series, 0.9999)
         expression_series[expression_series > threshold] = threshold
         generate_and_save_plots(adata, mk_score, expression_series, selected_gene, point_size, pixel_width,
                                 pixel_height, sub_fig_save_dir, config.sample_name, config.annotation)
@@ -207,6 +209,7 @@ def generate_and_save_plots(adata, mk_score, expression_series, selected_gene, p
     # for trace in sub_fig_2.data:
     #     combined_fig.add_trace(trace, row=1, col=2)
     #
+
 
 def save_plot(sub_fig, sub_fig_save_dir, sample_name, selected_gene, plot_type):
     """Save the plot to HTML and PNG."""
@@ -251,7 +254,7 @@ def run_Diagnosis(config: DiagnosisConfig):
     """Main function to run the diagnostic plot generation."""
     global adata
     adata = sc.read_h5ad(config.hdf5_with_latent_path)
-    if 'log1p' not in adata.uns.keys() and adata.X.max() > 14: 
+    if 'log1p' not in adata.uns.keys() and adata.X.max() > 14:
         sc.pp.normalize_total(adata, target_sum=1e4)
         sc.pp.log1p(adata)
 

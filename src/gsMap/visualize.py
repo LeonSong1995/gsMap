@@ -12,12 +12,12 @@ from gsMap.config import VisualizeConfig
 
 def load_ldsc(ldsc_input_file):
     ldsc = pd.read_csv(
-            ldsc_input_file,
-            compression='gzip',
-            dtype={'spot': str, 'p': float},
-            index_col='spot',
-            usecols=['spot', 'p']
-        )
+        ldsc_input_file,
+        compression='gzip',
+        dtype={'spot': str, 'p': float},
+        index_col='spot',
+        usecols=['spot', 'p']
+    )
     ldsc['logp'] = -np.log10(ldsc.p)
     return ldsc
 
@@ -43,7 +43,7 @@ def load_st_coord(adata, feature_series: pd.Series, annotation):
     return space_coord_concat
 
 
-def estimate_point_size_for_plot(coordinates, DEFAULT_PIXEL_WIDTH = 1000):
+def estimate_point_size_for_plot(coordinates, DEFAULT_PIXEL_WIDTH=1000):
     tree = KDTree(coordinates)
     distances, _ = tree.query(coordinates, k=2)
     avg_min_distance = np.mean(distances[:, 1])
@@ -133,18 +133,18 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
     )
     # Remove gridlines, axis labels, and ticks
     fig.update_xaxes(
-        showgrid=False,   # Hide x-axis gridlines
-        zeroline=False,   # Hide x-axis zero line
+        showgrid=False,  # Hide x-axis gridlines
+        zeroline=False,  # Hide x-axis zero line
         showticklabels=False,  # Hide x-axis tick labels
-        title=None,       # Remove x-axis title
+        title=None,  # Remove x-axis title
         scaleanchor='y',  # Link the x-axis scale to the y-axis scale
     )
 
     fig.update_yaxes(
-        showgrid=False,   # Hide y-axis gridlines
-        zeroline=False,   # Hide y-axis zero line
+        showgrid=False,  # Hide y-axis gridlines
+        zeroline=False,  # Hide y-axis zero line
         showticklabels=False,  # Hide y-axis tick labels
-        title=None        # Remove y-axis title
+        title=None  # Remove y-axis title
     )
 
     # Adjust margins to ensure no clipping and equal axis ratio
@@ -168,7 +168,6 @@ def draw_scatter(space_coord_concat, title=None, fig_style: Literal['dark', 'lig
     return fig
 
 
-
 def run_Visualize(config: VisualizeConfig):
     print(f'------Loading LDSC results of {config.ldsc_save_dir}...')
     ldsc = load_ldsc(ldsc_input_file=Path(config.ldsc_save_dir) / f'{config.sample_name}_{config.trait_name}.csv.gz')
@@ -185,7 +184,6 @@ def run_Visualize(config: VisualizeConfig):
                        height=config.fig_height,
                        annotation=config.annotation
                        )
-
 
     # Visualization
     output_dir = Path(config.output_dir)
