@@ -11,9 +11,13 @@ from gsMap.config import VisualizeConfig
 
 
 def load_ldsc(ldsc_input_file):
-    ldsc = pd.read_csv(ldsc_input_file, compression='gzip')
-    ldsc.spot = ldsc.spot.astype(str).replace('\.0', '', regex=True)
-    ldsc.index = ldsc.spot
+    ldsc = pd.read_csv(
+            ldsc_input_file,
+            compression='gzip',
+            dtype={'spot': str, 'p': float},
+            index_col='spot',
+            usecols=['spot', 'p']
+        )
     ldsc['logp'] = -np.log10(ldsc.p)
     return ldsc
 

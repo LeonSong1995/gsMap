@@ -9,7 +9,7 @@ from scipy.stats import norm
 
 from gsMap.config import DiagnosisConfig
 from gsMap.utils.manhattan_plot import ManhattanPlot
-from gsMap.visualize import draw_scatter, load_st_coord, estimate_point_size_for_plot
+from gsMap.visualize import draw_scatter, load_st_coord, estimate_point_size_for_plot,load_ldsc
 
 
 warnings.filterwarnings("ignore", category=FutureWarning)
@@ -22,16 +22,6 @@ def convert_z_to_p(gwas_data):
     min_p_value = 1e-300
     gwas_data['P'] = gwas_data['P'].clip(lower=min_p_value)
     return gwas_data
-
-
-def load_ldsc(ldsc_input_file):
-    """Load LDSC data and calculate logp."""
-    ldsc = pd.read_csv(ldsc_input_file, compression='gzip')
-    ldsc['spot'] = ldsc['spot'].astype(str).replace('\.0', '', regex=True)
-    ldsc.set_index('spot', inplace=True)
-    ldsc['logp'] = -np.log10(ldsc['p'])
-    return ldsc
-
 
 def load_gene_diagnostic_info(config:DiagnosisConfig):
     """Load or compute gene diagnostic info."""
