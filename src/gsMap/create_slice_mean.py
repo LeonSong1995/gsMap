@@ -46,7 +46,14 @@ def calculate_one_slice_mean(sample_name, file_path: Path, common_genes, zarr_gr
     # file_name = file_path.name
     gmean_zarr_group = zarr.open(zarr_group_path, mode='a')
     adata = anndata.read_h5ad(file_path)
-    adata.X = adata.layers[data_layer]
+
+    if data_layer in adata.layers.keys():
+        adata.X = adata.layers[data_layer]
+    elif data_layer == 'X':
+        pass
+    else:
+        raise ValueError(f"Data layer {data_layer} not found in {file_path}")
+
     adata = adata[:, common_genes].copy()
     n_cells = adata.shape[0]
     log_ranks = np.zeros((n_cells, adata.n_vars), dtype=np.float32)
