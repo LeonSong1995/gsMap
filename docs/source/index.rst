@@ -65,4 +65,3 @@ Users could upload their own GWAS summary statistics data to perform the analysi
     data
     api
     release
-

@@ -23,7 +23,7 @@ def label_loss(pred_label, true_label):
 class ModelTrainer:
     def __init__(self, node_x, graph_dict, params, label=None):
         """Initialize the ModelTrainer with data and hyperparameters."""
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.params = params
         self.epochs = params.epochs
         self.node_x = torch.FloatTensor(node_x).to(self.device)
@@ -38,17 +38,15 @@ class ModelTrainer:
         # Set up the model
         self.model = GATModel(self.params.feat_cell, self.params, self.num_classes).to(self.device)
         self.optimizer = torch.optim.Adam(
-            self.model.parameters(),
-            lr=self.params.gat_lr,
-            weight_decay=self.params.gcn_decay
+            self.model.parameters(), lr=self.params.gat_lr, weight_decay=self.params.gcn_decay
         )
 
     def run_train(self):
         """Train the model."""
         self.model.train()
-        prev_loss = float('inf')
-        logger.info('Start training...')
-        pbar = tqdm(range(self.epochs), desc='GAT-AE model train:', total=self.epochs)
+        prev_loss = float("inf")
+        logger.info("Start training...")
+        pbar = tqdm(range(self.epochs), desc="GAT-AE model train:", total=self.epochs)
         for epoch in range(self.epochs):
             start_time = time.time()
             self.optimizer.zero_grad()
@@ -67,18 +65,17 @@ class ModelTrainer:
             batch_time = time.time() - start_time
             left_time = batch_time * (self.epochs - epoch - 1) / 60  # in minutes
 
-            pbar.set_postfix({'Left time': f'{left_time:.2f} mins', 'Loss': f'{loss.item():.4f}'})
+            pbar.set_postfix({"Left time": f"{left_time:.2f} mins", "Loss": f"{loss.item():.4f}"})
             pbar.update(1)
 
             if abs(loss.item() - prev_loss) <= self.params.convergence_threshold and epoch >= 200:
                 pbar.close()
-                logger.info('Convergence reached. Training stopped.')
+                logger.info("Convergence reached. Training stopped.")
                 break
             prev_loss = loss.item()
         else:
             pbar.close()
-            logger.info('Max epochs reached. Training stopped.')
-
+            logger.info("Max epochs reached. Training stopped.")
 
     def get_latent(self):
         """Retrieve the latent representation from the model."""

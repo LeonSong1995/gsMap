@@ -3,13 +3,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch_geometric.nn import GATConv
 
+
 def full_block(in_features, out_features, p_drop):
     return nn.Sequential(
         nn.Linear(in_features, out_features),
         nn.BatchNorm1d(out_features),
         nn.ELU(),
-        nn.Dropout(p=p_drop)
+        nn.Dropout(p=p_drop),
     )
+
 
 class GATModel(nn.Module):
     def __init__(self, input_dim, params, num_classes=1):
@@ -21,7 +23,7 @@ class GATModel(nn.Module):
         # Encoder
         self.encoder = nn.Sequential(
             full_block(input_dim, params.feat_hidden1, params.p_drop),
-            full_block(params.feat_hidden1, params.feat_hidden2, params.p_drop)
+            full_block(params.feat_hidden1, params.feat_hidden2, params.p_drop),
         )
 
         # GAT Layers
@@ -29,14 +31,14 @@ class GATModel(nn.Module):
             in_channels=params.feat_hidden2,
             out_channels=params.gat_hidden1,
             heads=params.nheads,
-            dropout=params.p_drop
+            dropout=params.p_drop,
         )
         self.gat2 = GATConv(
             in_channels=params.gat_hidden1 * params.nheads,
             out_channels=params.gat_hidden2,
             heads=1,
             concat=False,
-            dropout=params.p_drop
+            dropout=params.p_drop,
         )
         if self.var:
             self.gat3 = GATConv(
@@ -44,20 +46,20 @@ class GATModel(nn.Module):
                 out_channels=params.gat_hidden2,
                 heads=1,
                 concat=False,
-                dropout=params.p_drop
+                dropout=params.p_drop,
             )
 
         # Decoder
         self.decoder = nn.Sequential(
             full_block(params.gat_hidden2, params.feat_hidden2, params.p_drop),
             full_block(params.feat_hidden2, params.feat_hidden1, params.p_drop),
-            nn.Linear(params.feat_hidden1, input_dim)
+            nn.Linear(params.feat_hidden1, input_dim),
         )
 
         # Clustering Layer
         self.cluster = nn.Sequential(
             full_block(params.gat_hidden2, params.feat_hidden2, params.p_drop),
-            nn.Linear(params.feat_hidden2, self.num_classes)
+            nn.Linear(params.feat_hidden2, self.num_classes),
         )
 
     def encode(self, x, edge_index):

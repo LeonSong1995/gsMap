@@ -180,7 +180,7 @@ If you run out of memory during this step or the next, you can reduce the `--spo
 
 ### 4. spatial ldsc
 
-**Objective**: Run spatial LDSC to associate spots with traits. 
+**Objective**: Run spatial LDSC to associate spots with traits.
 
 **Execution**: <span style="color:#31a354"> required memory: ~40G </span>
 
@@ -232,9 +232,9 @@ gsmap run_report \
 ## gsMap Advanced Usage
 
 ### Conditional analysis (optional)
-**Objective**: Perform conditional analysis by adjusting for other functional annotations or cell-type-level annotations. 
+**Objective**: Perform conditional analysis by adjusting for other functional annotations or cell-type-level annotations.
 
-This step extends `step 3: generate ldscore`, by adding additional functional annotations to the baseline with the aim of conducting a conditional analysis. The directory of additional annotations can be specified using the parameter `--additional_baseline_annotation`. The other steps are same to the tutorials above. 
+This step extends `step 3: generate ldscore`, by adding additional functional annotations to the baseline with the aim of conducting a conditional analysis. The directory of additional annotations can be specified using the parameter `--additional_baseline_annotation`. The other steps are same to the tutorials above.
 
 Download the additional annotations:
 ```bash
@@ -265,7 +265,7 @@ done
 ```
 
 ### Create slice mean for multiple samples (optional)
-**Objective**: Generate slice mean for multiple samples, and then use this gene expression slice mean rank to calculate the GSS. 
+**Objective**: Generate slice mean for multiple samples, and then use this gene expression slice mean rank to calculate the GSS.
 
 ```bash
 gsmap create_slice_mean \

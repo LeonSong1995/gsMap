@@ -1,5 +1,5 @@
-'''
+"""
 Genetics-informed pathogenic spatial mapping
-'''
+"""
 
-__version__ = '1.72.1'
+__version__ = "1.72.1"

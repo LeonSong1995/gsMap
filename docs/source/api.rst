@@ -62,7 +62,7 @@ Subcommands
 
 .. option:: quick_mode
 
-    Run entire gsMap Pipeline. 
+    Run entire gsMap Pipeline.
 
 .. option:: create_slice_mean
 
@@ -83,4 +83,3 @@ Subcommands
     api/cauchy_combination
     api/report
     api/create_slice_mean
-

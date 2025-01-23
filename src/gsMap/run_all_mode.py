@@ -3,14 +3,20 @@ import time
 from pathlib import Path
 
 from gsMap.cauchy_combination_test import run_Cauchy_combination
-from gsMap.config import GenerateLDScoreConfig, SpatialLDSCConfig, LatentToGeneConfig, \
-    FindLatentRepresentationsConfig, CauchyCombinationConfig, RunAllModeConfig, ReportConfig
+from gsMap.config import (
+    CauchyCombinationConfig,
+    FindLatentRepresentationsConfig,
+    GenerateLDScoreConfig,
+    LatentToGeneConfig,
+    ReportConfig,
+    RunAllModeConfig,
+    SpatialLDSCConfig,
+)
 from gsMap.find_latent_representation import run_find_latent_representation
 from gsMap.generate_ldscore import run_generate_ldscore
 from gsMap.latent_to_gene import run_latent_to_gene
 from gsMap.report import run_report
 from gsMap.spatial_ldsc_multiple_sumstats import run_spatial_ldsc
-
 
 
 def format_duration(seconds):
@@ -22,36 +28,45 @@ def format_duration(seconds):
 def run_pipeline(config: RunAllModeConfig):
     # # Set up logging
     _current_datatime = time.strftime("%Y%m%d_%H%M%S")
-    log_file = Path(config.workdir) / config.sample_name / f'gsMap_pipeline_{config.sample_name}_{_current_datatime}.log'
+    log_file = (
+        Path(config.workdir)
+        / config.sample_name
+        / f"gsMap_pipeline_{config.sample_name}_{_current_datatime}.log"
+    )
     log_file.parent.mkdir(parents=True, exist_ok=True)
     logging.basicConfig(
         level=logging.INFO,
-        format='[{asctime}] {levelname:.5s} | {name} - {message}',
+        format="[{asctime}] {levelname:.5s} | {name} - {message}",
         handlers=[
             logging.FileHandler(log_file),
         ],
-        style='{'
+        style="{",
     )
 
-    logger = logging.getLogger('gsMap.pipeline')
+    logger = logging.getLogger("gsMap.pipeline")
     logger.info("Starting pipeline with configuration: %s", config)
     pipeline_start_time = time.time()
 
     # Step 1: Find latent representations
     if config.latent_representation is not None:
         logger.warning(
-            f'Using the provided latent representation: {config.latent_representation} in {config.hdf5_path}. This would skip the Find_latent_representations step.')
-        logger.info('Skipping step 1: Find latent representations, as latent representation is provided.')
+            f"Using the provided latent representation: {config.latent_representation} in {config.hdf5_path}. This would skip the Find_latent_representations step."
+        )
+        logger.info(
+            "Skipping step 1: Find latent representations, as latent representation is provided."
+        )
         latent_to_gene_input_hdf5_path = config.hdf5_path
     else:
         latent_to_gene_input_hdf5_path = None
-        logger.info("No latent representation provided. Will run the Find_latent_representations step.")
+        logger.info(
+            "No latent representation provided. Will run the Find_latent_representations step."
+        )
         find_latent_config = FindLatentRepresentationsConfig(
             workdir=config.workdir,
             input_hdf5_path=config.hdf5_path,
             sample_name=config.sample_name,
             annotation=config.annotation,
-            data_layer=config.data_layer
+            data_layer=config.data_layer,
         )
 
         # Step 1: Find latent representations
@@ -60,14 +75,15 @@ def run_pipeline(config: RunAllModeConfig):
         logger.info("Step 1: Finding latent representations")
         if Path(find_latent_config.hdf5_with_latent_path).exists():
             logger.info(
-                f"Find latent representations already done. Results saved at {find_latent_config.hdf5_with_latent_path}. Skipping...")
+                f"Find latent representations already done. Results saved at {find_latent_config.hdf5_with_latent_path}. Skipping..."
+            )
         else:
             run_find_latent_representation(find_latent_config)
         end_time = time.time()
         logger.info(f"Step 1 completed in {format_duration(end_time - start_time)}.")
 
     latent_to_gene_config = LatentToGeneConfig(
-        input_hdf5_path = latent_to_gene_input_hdf5_path,
+        input_hdf5_path=latent_to_gene_input_hdf5_path,
         workdir=config.workdir,
         sample_name=config.sample_name,
         annotation=config.annotation,
@@ -81,14 +97,14 @@ def run_pipeline(config: RunAllModeConfig):
     ldscore_config = GenerateLDScoreConfig(
         workdir=config.workdir,
         sample_name=config.sample_name,
-        chrom='all',
+        chrom="all",
         bfile_root=config.bfile_root,
         keep_snp_root=config.keep_snp_root,
         gtf_annotation_file=config.gtffile,
         spots_per_chunk=5_000,
         baseline_annotation_dir=config.baseline_annotation_dir,
         SNP_gene_pair_dir=config.SNP_gene_pair_dir,
-        ldscore_save_format='quick_mode'
+        ldscore_save_format="quick_mode",
     )
 
     # Step 2: Latent to gene
@@ -96,7 +112,8 @@ def run_pipeline(config: RunAllModeConfig):
     logger.info("Step 2: Mapping latent representations to genes")
     if Path(latent_to_gene_config.mkscore_feather_path).exists():
         logger.info(
-            f"Latent to gene mapping already done. Results saved at {latent_to_gene_config.mkscore_feather_path}. Skipping...")
+            f"Latent to gene mapping already done. Results saved at {latent_to_gene_config.mkscore_feather_path}. Skipping..."
+        )
     else:
         run_latent_to_gene(latent_to_gene_config)
     end_time = time.time()
@@ -107,9 +124,13 @@ def run_pipeline(config: RunAllModeConfig):
     logger.info("Step 3: Generating LDScores")
 
     # check if LDscore has been generated by the done file
-    ldsc_done_file = Path(ldscore_config.ldscore_save_dir) / f"{config.sample_name}_generate_ldscore.done"
+    ldsc_done_file = (
+        Path(ldscore_config.ldscore_save_dir) / f"{config.sample_name}_generate_ldscore.done"
+    )
     if ldsc_done_file.exists():
-        logger.info(f"Basic LDScore generation already done. Results saved at {ldscore_config.ldscore_save_dir}. Skipping...")
+        logger.info(
+            f"Basic LDScore generation already done. Results saved at {ldscore_config.ldscore_save_dir}. Skipping..."
+        )
     else:
         run_generate_ldscore(ldscore_config)
         end_time = time.time()
@@ -125,11 +146,14 @@ def run_pipeline(config: RunAllModeConfig):
     for trait_name in sumstats_config:
         logger.info("Running spatial LDSC for trait: %s", trait_name)
         # detect if the spatial LDSC has been done:
-        spatial_ldsc_result_file = Path(config.ldsc_save_dir) / f"{config.sample_name}_{trait_name}.csv.gz"
+        spatial_ldsc_result_file = (
+            Path(config.ldsc_save_dir) / f"{config.sample_name}_{trait_name}.csv.gz"
+        )
 
         if spatial_ldsc_result_file.exists():
             logger.info(
-                f"Spatial LDSC already done for trait {trait_name}. Results saved at {spatial_ldsc_result_file}. Skipping...")
+                f"Spatial LDSC already done for trait {trait_name}. Results saved at {spatial_ldsc_result_file}. Skipping..."
+            )
             continue
 
         spatial_ldsc_config_trait = SpatialLDSCConfig(
@@ -141,7 +165,7 @@ def run_pipeline(config: RunAllModeConfig):
             # ldscore_save_dir=spatial_ldsc_config.ldscore_save_dir,
             # ldsc_save_dir=spatial_ldsc_config.ldsc_save_dir,
             num_processes=config.max_processes,
-            ldscore_save_format='quick_mode',
+            ldscore_save_format="quick_mode",
             snp_gene_weight_adata_path=config.snp_gene_weight_adata_path,
         )
         run_spatial_ldsc(spatial_ldsc_config_trait)
@@ -156,7 +180,8 @@ def run_pipeline(config: RunAllModeConfig):
         cauchy_result_file = config.get_cauchy_result_file(trait_name)
         if cauchy_result_file.exists():
             logger.info(
-                f"Cauchy combination already done for trait {trait_name}. Results saved at {cauchy_result_file}. Skipping...")
+                f"Cauchy combination already done for trait {trait_name}. Results saved at {cauchy_result_file}. Skipping..."
+            )
             continue
         cauchy_config = CauchyCombinationConfig(
             workdir=config.workdir,
@@ -176,7 +201,7 @@ def run_pipeline(config: RunAllModeConfig):
             sample_name=config.sample_name,
             annotation=config.annotation,
             trait_name=trait_name,
-            plot_type='all',
+            plot_type="all",
             top_corr_genes=50,
             selected_genes=None,
             sumstats_file=sumstats_config[trait_name],
@@ -184,7 +209,8 @@ def run_pipeline(config: RunAllModeConfig):
         gsMap_report_file = report_config.get_gsMap_report_file(trait_name)
         if Path(gsMap_report_file).exists():
             logger.info(
-                f"Final report already generated for trait {trait_name}. Results saved at {gsMap_report_file}. Skipping...")
+                f"Final report already generated for trait {trait_name}. Results saved at {gsMap_report_file}. Skipping..."
+            )
             continue
 
         # Create the run parameters dictionary for each trait
