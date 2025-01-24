@@ -25,5 +25,6 @@ The tutorials are organized as follows:
     :maxdepth: 1
 
     quick_mode.md
-    mouse
+    step_by_step.md
+    advanced_usage.md
     data_format.md
