@@ -21,7 +21,7 @@ def get_common_genes(h5ad_files, config: CreateSliceMeanConfig):
     """
     common_genes = None
     for file in tqdm(h5ad_files, desc="Finding common genes"):
-        adata = sc.read(file)
+        adata = sc.read_h5ad(file)
         adata.var_names_make_unique()
         if common_genes is None:
             common_genes = adata.var_names
