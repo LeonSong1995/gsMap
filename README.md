@@ -1,4 +1,4 @@
-[![GitHub Stars](https://img.shields.io/github/stars/LeonSong1995/gsMap?logo=GitHub&color=yellow)](https://github.com/LeonSong1995/gsMap/stargazers)
+[![GitHub Stars](https://img.shields.io/github/stars/JianYang-Lab/gsMap?logo=GitHub&color=yellow)](https://github.com/LeonSong1995/gsMap/stargazers)
 [![PyPI Version](https://img.shields.io/pypi/v/gsMap)](https://pypi.org/project/gsMap)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
