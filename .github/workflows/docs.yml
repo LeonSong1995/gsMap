@@ -8,7 +8,7 @@ on:
 
 jobs:
   deploy_docs:
-    runs-on: self-hosted # Ensure this runs on your self-hosted runner with "cpu" label if needed
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
@@ -17,7 +17,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
+          python-version: '3.12'
 
       # --- Build 'docs' documentation ---
       - name: Install 'docs' dependencies
@@ -34,7 +34,7 @@ jobs:
         run: |
           DOCS_OUTPUT_DIR="/mnt/website_docs/gsmap"  # Adjust if you want a different subfolder
           mkdir -p "$DOCS_OUTPUT_DIR"
-          rsync -avz ./docs/_build/html/ "$DOCS_OUTPUT_DIR/"
+          rsync -avz ./docs/build/html/ "$DOCS_OUTPUT_DIR/"
           echo "Documentation for 'docs' deployed to: $DOCS_OUTPUT_DIR"
 
 #      # --- Build 'visualization_web_docs' documentation ---
@@ -52,5 +52,5 @@ jobs:
 #        run: |
 #          DOCS_OUTPUT_DIR="/mnt/website_docs/visualization_web_docs" # Deploy to a separate folder
 #          mkdir -p "$DOCS_OUTPUT_DIR"
-#          rsync -avz ./visualization_web_docs/_build/html/ "$DOCS_OUTPUT_DIR/"
+#          rsync -avz ./visualization_web_docs/build/html/ "$DOCS_OUTPUT_DIR/"
 #          echo "Documentation for 'visualization_web_docs' deployed to: $DOCS_OUTPUT_DIR"
