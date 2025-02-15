@@ -30,7 +30,7 @@ rs12184279	A	C	1.050	226224
 rs116801199	T	G	0.300	226626
 ```
 
-####  How to format the GWAS data
+###  How to format the GWAS data
 You can convert GWAS summary data into the required format using custom code. For convenience, gsMap provides a command to do this. Below is an example of how to use the command.
 
 Download the human height GWAS data and decompress it.

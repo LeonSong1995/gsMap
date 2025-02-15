@@ -52,7 +52,7 @@ How to use ``gsMap``, check out the `tutorials <tutorials.rst>`__
 
 
 Online Analysis Service (coming soon)
----------
+--------------------------------------
 Users could upload their own GWAS summary statistics data to perform the analysis.
 
 
