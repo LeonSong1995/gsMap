@@ -16,7 +16,7 @@ or via the source code:
 
 .. code-block:: bash
 
-    git clone https://github.com/LeonSong1995/gsMap.git
+    git clone https://github.com/JianYang-Lab/gsMap
     cd gsMap
     pip install -e .
 

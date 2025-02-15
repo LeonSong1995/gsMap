@@ -41,7 +41,7 @@ Schmatics of ``gsMap`` method. For more details about the ``gsMap``, please chec
 Installation
 ------------
 
-``gsMap`` is available on `gsMap GitHub <https://github.com/LeonSong1995/gsMap>`__.
+``gsMap`` is available on `gsMap GitHub <https://github.com/JianYang-Lab/gsMap>`__.
 
 
 How to install ``gsMap``, check out the `installation guide <install.rst>`__
