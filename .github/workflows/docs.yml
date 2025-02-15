@@ -1,0 +1,56 @@
+name: Build and Deploy Documentation
+
+on:
+  push:
+    paths:
+      - 'docs/**'
+      - 'visualization_web_docs/**'
+
+jobs:
+  deploy_docs:
+    runs-on: self-hosted # Ensure this runs on your self-hosted runner with "cpu" label if needed
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # --- Build 'docs' documentation ---
+      - name: Install 'docs' dependencies
+        working-directory: ./docs
+        run: |
+          python -m pip install -r requirements.txt
+
+      - name: Build 'docs' documentation
+        working-directory: ./docs
+        run: |
+          make html
+
+      - name: Deploy 'docs' to website_docs
+        run: |
+          DOCS_OUTPUT_DIR="/mnt/website_docs/gsmap"  # Adjust if you want a different subfolder
+          mkdir -p "$DOCS_OUTPUT_DIR"
+          rsync -avz ./docs/_build/html/ "$DOCS_OUTPUT_DIR/"
+          echo "Documentation for 'docs' deployed to: $DOCS_OUTPUT_DIR"
+
+#      # --- Build 'visualization_web_docs' documentation ---
+#      - name: Install 'visualization_web_docs' dependencies
+#        working-directory: ./visualization_web_docs
+#        run: |
+#          python -m pip install -r requirements.txt
+#
+#      - name: Build 'visualization_web_docs' documentation
+#        working-directory: ./visualization_web_docs
+#        run: |
+#          make html
+#
+#      - name: Deploy 'visualization_web_docs' to website_docs
+#        run: |
+#          DOCS_OUTPUT_DIR="/mnt/website_docs/visualization_web_docs" # Deploy to a separate folder
+#          mkdir -p "$DOCS_OUTPUT_DIR"
+#          rsync -avz ./visualization_web_docs/_build/html/ "$DOCS_OUTPUT_DIR/"
+#          echo "Documentation for 'visualization_web_docs' deployed to: $DOCS_OUTPUT_DIR"
