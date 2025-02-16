@@ -1,6 +1,6 @@
 # Mouse Embryo (Quick Mode)
 
-The `Quick Mode` option allows you to execute the entire `gsMap` pipeline in a simplified and efficient way, utilizing pre-calculated resources to minimize running time and configuration complexity. This mode is ideal for users who prefer a streamlined approach. For a more customizable experience with adjustable parameters, please refer to the {doc}`Step by Step <mouse_example>` guide.
+The `Quick Mode` option provides a simplified and efficient way to execute the entire `gsMap` pipeline. It minimizes running time and configuration complexity by utilizing pre-calculated weights based on the 1000G EUR reference panel and protein-coding genes from gtf file of Gencode v46. This mode is ideal for users who prefer a streamlined approach. For a more customizable experience, such as using custom GTF files, reference panels, and adjustable parameters, please refer to the {doc}`Step by Step <mouse_example>` guide.
 
 ## Preparation
 
